@@ -1,9 +1,9 @@
 :root {
-  --rojo: #ef3b2d;
-  --rojo-oscuro: #c82f24;
+  --primario: #4e7398;
+  --primario-oscuro: #345575;
   --verde: #16a34a;
   --verde-suave: #e8f7ee;
-  --rojo-suave: #fff0ee;
+  --primario-suave: #e8f0f7;
   --fondo: #f7f8f5;
   --panel: #ffffff;
   --sidebar: #ffffff;
@@ -83,9 +83,9 @@ button {
   width: 30px;
   height: 30px;
   color: #ffffff;
-  background: var(--rojo);
+  background: var(--primario);
   border-radius: 8px;
-  box-shadow: 0 8px 18px rgba(239, 59, 45, 0.22);
+  box-shadow: 0 8px 18px rgba(78, 115, 152, 0.18);
 }
 
 .brand-title {
@@ -136,22 +136,22 @@ button {
 
 .nav-link:hover,
 .nav-link.activo {
-  color: var(--rojo);
-  background: var(--rojo-suave);
+  color: var(--primario);
+  background: var(--primario-suave);
 }
 
 .nav-parent.activo {
-  border: 1px solid var(--rojo);
+  border: 1px solid var(--primario);
 }
 
 .nav-group-highlight > .nav-link {
-  background: var(--rojo);
+  background: var(--primario);
   color: #ffffff;
 }
 
 .nav-group-highlight > .nav-link:hover,
 .nav-group-highlight > .nav-link.activo {
-  background: var(--rojo);
+  background: var(--primario);
   color: #ffffff;
 }
 
@@ -232,13 +232,13 @@ button {
 }
 
 .icon-button:hover {
-  color: var(--rojo);
+  color: var(--primario);
 }
 
 .logout-button:hover {
   color: #ffffff;
-  background: var(--rojo);
-  border-color: var(--rojo);
+  background: var(--primario);
+  border-color: var(--primario);
 }
 
 .user-chip {
@@ -334,7 +334,7 @@ button {
 }
 
 .empty-state a {
-  color: var(--rojo);
+  color: var(--primario);
   font-weight: 800;
 }
 

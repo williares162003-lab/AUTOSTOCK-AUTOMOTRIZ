@@ -54,9 +54,9 @@
   background: #fef3c7;
 }
 
-.stat-red {
-  border-color: #ef4444;
-  background: #fee2e2;
+.stat-primary {
+  border-color: var(--primario);
+  background: var(--primario-suave);
 }
 
 .dashboard-layout {
@@ -98,7 +98,7 @@
 }
 
 .heading-icon {
-  color: var(--rojo);
+  color: var(--primario);
 }
 
 .chart-legend {
@@ -123,7 +123,7 @@
 }
 
 .chart-legend .salida::before {
-  background: var(--rojo);
+  background: var(--primario);
 }
 
 .bar-chart {
@@ -164,7 +164,7 @@
 }
 
 .bar-salida {
-  background: var(--rojo);
+  background: var(--primario);
 }
 
 .bar-group p {
