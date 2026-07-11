@@ -2,6 +2,44 @@
 
 Sistema de gestion de almacen e inventario para un negocio automotriz.
 
+## Estructura del proyecto
+
+La organizacion sigue el estilo de la intranet CCPL, adaptada a Django y con nombres en espanol:
+
+```text
+autostock-automotriz/
+  aplicaciones/
+    inicio/
+      management/commands/
+      migrations/
+      forms.py
+      urls.py
+      views.py
+  configuracion/
+    settings.py
+    urls.py
+    wsgi.py
+  plantillas/
+    admin/
+      panel.html
+    almacen/
+    base.html
+    login.html
+  estaticos/
+    css/
+      admin/
+      almacen/
+      base.css
+      login.css
+    imagenes/
+    js/
+      admin/
+      app.js
+  base_datos/
+  requirements.txt
+  manage.py
+```
+
 ## Desarrollo local
 
 ```bash

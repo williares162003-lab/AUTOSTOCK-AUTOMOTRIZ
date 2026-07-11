@@ -9,7 +9,7 @@ from django.urls import reverse
 
 class LoginFlowTests(TestCase):
     def test_dashboard_requires_login(self):
-        response = self.client.get(reverse('dashboard'))
+        response = self.client.get(reverse('panel'))
 
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse('login'), response['Location'])
@@ -23,7 +23,7 @@ class LoginFlowTests(TestCase):
             {'username': 'almacen', 'password': 'StrongPass123'},
         )
 
-        self.assertRedirects(response, reverse('dashboard'))
+        self.assertRedirects(response, reverse('panel'))
 
 
 class BootstrapUsersCommandTests(TestCase):

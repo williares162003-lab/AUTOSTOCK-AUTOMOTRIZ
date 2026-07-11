@@ -5,13 +5,13 @@ from .forms import StyledAuthenticationForm
 from . import views
 
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
+    path('', views.panel, name='panel'),
     path(
         'login/',
         LoginView.as_view(
             authentication_form=StyledAuthenticationForm,
             redirect_authenticated_user=True,
-            template_name='registration/login.html',
+            template_name='login.html',
         ),
         name='login',
     ),

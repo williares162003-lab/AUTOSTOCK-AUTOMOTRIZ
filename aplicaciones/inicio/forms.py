@@ -8,7 +8,7 @@ class StyledAuthenticationForm(AuthenticationForm):
         super().__init__(request, *args, **kwargs)
         self.fields['username'].widget.attrs.update(
             {
-                'class': 'form-control',
+                'class': 'login-input',
                 'placeholder': 'Usuario',
                 'autocomplete': 'username',
                 'autofocus': True,
@@ -16,7 +16,7 @@ class StyledAuthenticationForm(AuthenticationForm):
         )
         self.fields['password'].widget.attrs.update(
             {
-                'class': 'form-control',
+                'class': 'login-input',
                 'placeholder': 'Contrasena',
                 'autocomplete': 'current-password',
             }
