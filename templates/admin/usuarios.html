@@ -32,7 +32,28 @@
   <div class="table-header">
     <div>
       <h2>Listado de usuarios</h2>
-      <p>{{ resumen.total }} usuarios encontrados</p>
+      <p><span data-result-count>{{ resumen.total }}</span> usuarios encontrados</p>
+    </div>
+    <div class="table-actions">
+      <label class="search-box" aria-label="Buscar usuarios">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search" placeholder="Buscar usuario" data-user-search>
+      </label>
+      <select data-role-filter aria-label="Filtrar por rol">
+        <option value="">Todos los roles</option>
+        <option value="ADMIN">Administrador</option>
+        <option value="ALMACEN">Almacen</option>
+      </select>
+      <select data-status-filter aria-label="Filtrar por estado">
+        <option value="">Todos los estados</option>
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+        <option value="suspendido">Suspendido</option>
+      </select>
+      <button class="primary-button" type="button" data-open-create>
+        <span class="material-symbols-outlined">person_add</span>
+        Nuevo usuario
+      </button>
     </div>
   </div>
 
@@ -45,17 +66,23 @@
           <th>Rol</th>
           <th>Estado</th>
           <th>Ultimo acceso</th>
+          <th class="actions-column">Acciones</th>
         </tr>
       </thead>
       <tbody>
         {% for usuario in usuarios %}
-          <tr>
+          <tr
+            data-user-row
+            data-search="{{ (usuario.nombre ~ ' ' ~ usuario.usuario ~ ' ' ~ usuario.correo ~ ' ' ~ usuario.documento)|lower|e }}"
+            data-role="{{ usuario.rol }}"
+            data-status="{{ usuario.estado }}"
+          >
             <td>
               <div class="user-cell">
-                <span>{{ usuario.nombre[:1] }}</span>
+                <span>{{ usuario.nombre[:1]|upper }}</span>
                 <div>
                   <strong>{{ usuario.nombre }}</strong>
-                  <small>{{ usuario.correo }}</small>
+                  <small>{{ usuario.usuario }} · {{ usuario.correo }}</small>
                 </div>
               </div>
             </td>
@@ -63,10 +90,137 @@
             <td><span class="role-badge">{{ usuario.rol }}</span></td>
             <td><span class="status-badge status-{{ usuario.estado }}">{{ usuario.estado|capitalize }}</span></td>
             <td>{{ usuario.ultimo_acceso or "Nunca" }}</td>
+            <td>
+              <div class="row-actions">
+                <button
+                  class="action-button"
+                  type="button"
+                  title="Editar usuario"
+                  data-edit-user
+                  data-action="{{ url_for('editar_usuario', usuario_id=usuario.id) }}"
+                  data-usuario="{{ usuario.usuario|e }}"
+                  data-nombre="{{ usuario.nombre|e }}"
+                  data-correo="{{ usuario.correo|e }}"
+                  data-documento="{{ usuario.documento|e }}"
+                  data-rol="{{ usuario.rol }}"
+                  data-estado="{{ usuario.estado }}"
+                >
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button
+                  class="action-button"
+                  type="button"
+                  title="Cambiar contrasena"
+                  data-password-user
+                  data-action="{{ url_for('actualizar_password_usuario', usuario_id=usuario.id) }}"
+                  data-nombre="{{ usuario.nombre|e }}"
+                >
+                  <span class="material-symbols-outlined">key</span>
+                </button>
+                <form
+                  method="post"
+                  action="{{ url_for('actualizar_estado_usuario', usuario_id=usuario.id) }}"
+                  data-state-form
+                  data-user-name="{{ usuario.nombre|e }}"
+                  data-next-state="{{ 'suspendido' if usuario.estado == 'activo' else 'activo' }}"
+                >
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="estado" value="{{ 'suspendido' if usuario.estado == 'activo' else 'activo' }}">
+                  <button
+                    class="action-button {{ 'danger' if usuario.estado == 'activo' else 'success' }}"
+                    type="submit"
+                    title="{{ 'Suspender usuario' if usuario.estado == 'activo' else 'Activar usuario' }}"
+                    {% if usuario.id == profile.id %}disabled{% endif %}
+                  >
+                    <span class="material-symbols-outlined">{{ 'person_cancel' if usuario.estado == 'activo' else 'person_check' }}</span>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty-table">No hay usuarios registrados.</td>
           </tr>
         {% endfor %}
+        <tr class="filter-empty" data-filter-empty hidden>
+          <td colspan="6">No se encontraron usuarios con esos filtros.</td>
+        </tr>
       </tbody>
     </table>
   </div>
 </section>
+
+<dialog class="user-dialog" data-create-dialog>
+  <form method="post" action="{{ url_for('crear_usuario') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="dialog-heading">
+      <div>
+        <h2>Nuevo usuario</h2>
+        <p>Crea una cuenta para administrar u operar el almacen.</p>
+      </div>
+      <button class="dialog-close" type="button" title="Cerrar" data-close-dialog>
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="form-grid">
+      <label><span>Usuario</span><input name="usuario" required minlength="3" maxlength="40"></label>
+      <label><span>Nombre completo</span><input name="nombre" required minlength="3" maxlength="160"></label>
+      <label><span>Correo</span><input name="correo" type="email" required maxlength="160"></label>
+      <label><span>DNI/DOC</span><input name="documento" required maxlength="30"></label>
+      <label><span>Rol</span><select name="rol" required><option value="ALMACEN">Almacen</option><option value="ADMIN">Administrador</option></select></label>
+      <label><span>Estado</span><select name="estado" required><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+      <label><span>Contrasena</span><input name="contrasena" type="password" required minlength="8" autocomplete="new-password"></label>
+      <label><span>Confirmar contrasena</span><input name="confirmar_contrasena" type="password" required minlength="8" autocomplete="new-password"></label>
+    </div>
+    <div class="dialog-actions">
+      <button class="secondary-button" type="button" data-close-dialog>Cancelar</button>
+      <button class="primary-button" type="submit"><span class="material-symbols-outlined">person_add</span>Crear usuario</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="user-dialog" data-edit-dialog>
+  <form method="post" data-edit-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="dialog-heading">
+      <div><h2>Editar usuario</h2><p>Actualiza los datos y permisos de la cuenta.</p></div>
+      <button class="dialog-close" type="button" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="form-grid">
+      <label><span>Usuario</span><input name="usuario" required minlength="3" maxlength="40"></label>
+      <label><span>Nombre completo</span><input name="nombre" required minlength="3" maxlength="160"></label>
+      <label><span>Correo</span><input name="correo" type="email" required maxlength="160"></label>
+      <label><span>DNI/DOC</span><input name="documento" required maxlength="30"></label>
+      <label><span>Rol</span><select name="rol" required><option value="ALMACEN">Almacen</option><option value="ADMIN">Administrador</option></select></label>
+      <label><span>Estado</span><select name="estado" required><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="suspendido">Suspendido</option></select></label>
+    </div>
+    <div class="dialog-actions">
+      <button class="secondary-button" type="button" data-close-dialog>Cancelar</button>
+      <button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar cambios</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="user-dialog password-dialog" data-password-dialog>
+  <form method="post" data-password-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="dialog-heading">
+      <div><h2>Cambiar contrasena</h2><p data-password-name></p></div>
+      <button class="dialog-close" type="button" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="form-grid single-column">
+      <label><span>Nueva contrasena</span><input name="contrasena" type="password" required minlength="8" autocomplete="new-password"></label>
+      <label><span>Confirmar contrasena</span><input name="confirmar_contrasena" type="password" required minlength="8" autocomplete="new-password"></label>
+    </div>
+    <div class="dialog-actions">
+      <button class="secondary-button" type="button" data-close-dialog>Cancelar</button>
+      <button class="primary-button" type="submit"><span class="material-symbols-outlined">key</span>Actualizar contrasena</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/admin/usuarios.js') }}"></script>
 {% endblock %}

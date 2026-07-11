@@ -9,9 +9,17 @@ from admin_dashboardAD import (
     obtener_resumen_dashboard,
     obtener_serie_movimientos,
 )
-from admin_usuariosAD import listar_usuarios, resumen_usuarios
+from admin_usuariosAD import (
+    cambiar_estado_usuario,
+    cambiar_password_usuario,
+    crear_usuario as crear_usuario_ad,
+    editar_usuario as editar_usuario_ad,
+    listar_usuarios,
+    obtener_usuario,
+    resumen_usuarios,
+)
 from bd import inicializar_base_datos
-from helpers import contexto_base, login_requerido
+from helpers import admin_requerido, contexto_base, csrf_requerido, login_requerido
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
 
 
@@ -76,7 +84,7 @@ def dashboard():
 
 
 @app.route("/sistema/usuarios")
-@login_requerido
+@admin_requerido
 def usuarios():
     contexto = contexto_base("usuarios")
     contexto.update(
@@ -90,6 +98,53 @@ def usuarios():
     return render_template("admin/usuarios.html", **contexto)
 
 
+@app.post("/sistema/usuarios/crear")
+@admin_requerido
+@csrf_requerido
+def crear_usuario():
+    correcto, mensaje = crear_usuario_ad(request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("usuarios"))
+
+
+@app.post("/sistema/usuarios/<int:usuario_id>/editar")
+@admin_requerido
+@csrf_requerido
+def editar_usuario(usuario_id):
+    administrador_id = session["usuario"]["id"]
+    correcto, mensaje = editar_usuario_ad(usuario_id, request.form, administrador_id)
+    if correcto and usuario_id == administrador_id:
+        session["usuario"] = obtener_usuario(usuario_id)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("usuarios"))
+
+
+@app.post("/sistema/usuarios/<int:usuario_id>/estado")
+@admin_requerido
+@csrf_requerido
+def actualizar_estado_usuario(usuario_id):
+    correcto, mensaje = cambiar_estado_usuario(
+        usuario_id,
+        request.form.get("estado", ""),
+        session["usuario"]["id"],
+    )
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("usuarios"))
+
+
+@app.post("/sistema/usuarios/<int:usuario_id>/password")
+@admin_requerido
+@csrf_requerido
+def actualizar_password_usuario(usuario_id):
+    correcto, mensaje = cambiar_password_usuario(
+        usuario_id,
+        request.form.get("contrasena", ""),
+        request.form.get("confirmar_contrasena", ""),
+    )
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("usuarios"))
+
+
 @app.route("/api/dashboard/resumen")
 @login_requerido
 def api_dashboard_resumen():
@@ -97,7 +152,7 @@ def api_dashboard_resumen():
 
 
 @app.route("/api/usuarios")
-@login_requerido
+@admin_requerido
 def api_usuarios():
     return jsonify({"usuarios": listar_usuarios(), "resumen": resumen_usuarios()})
 

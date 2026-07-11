@@ -82,6 +82,78 @@
   font-size: 12px;
 }
 
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+  min-height: 40px;
+  padding: 0 10px;
+  color: #64748b;
+  background: #ffffff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.search-box input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+}
+
+.table-actions select,
+.form-grid select,
+.form-grid input {
+  min-height: 40px;
+  color: #263447;
+  background: #ffffff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  outline: 0;
+}
+
+.table-actions select {
+  padding: 0 32px 0 10px;
+}
+
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.primary-button {
+  color: #ffffff;
+  background: var(--primario);
+  border: 1px solid var(--primario);
+}
+
+.primary-button:hover {
+  background: var(--primario-oscuro);
+  border-color: var(--primario-oscuro);
+}
+
+.secondary-button {
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid var(--borde);
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -105,6 +177,53 @@ td {
   padding: 16px 22px;
   color: #4b5563;
   border-top: 1px solid #edf0f5;
+}
+
+.actions-column {
+  width: 150px;
+  text-align: right;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 126px;
+}
+
+.row-actions form {
+  margin: 0;
+}
+
+.action-button,
+.dialog-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: #475569;
+  background: #f4f7fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.action-button:hover {
+  color: var(--primario-oscuro);
+  background: var(--primario-suave);
+  border-color: #b9cce0;
+}
+
+.action-button.danger {
+  color: #b91c1c;
+}
+
+.action-button.success {
+  color: #15803d;
+}
+
+.action-button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
 }
 
 .user-cell {
@@ -174,6 +293,106 @@ td {
   background: #fee2e2;
 }
 
+.empty-table,
+.filter-empty td {
+  height: 110px;
+  color: var(--texto-suave);
+  text-align: center;
+}
+
+.user-dialog {
+  width: min(680px, calc(100% - 32px));
+  max-height: calc(100vh - 40px);
+  padding: 0;
+  overflow: auto;
+  color: var(--texto);
+  background: #ffffff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+}
+
+.user-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.44);
+}
+
+.user-dialog form {
+  padding: 22px;
+}
+
+.dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.dialog-heading h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.dialog-heading p {
+  margin: 6px 0 0;
+  color: var(--texto-suave);
+  font-size: 12px;
+}
+
+.dialog-close {
+  flex: 0 0 auto;
+  background: #ffffff;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.form-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
+.form-grid label,
+.form-grid label > span {
+  display: block;
+}
+
+.form-grid label > span {
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  padding: 8px 10px;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.table-actions select:focus,
+.search-box:focus-within {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px rgba(78, 115, 152, 0.12);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #edf0f5;
+}
+
+.password-dialog {
+  width: min(480px, calc(100% - 32px));
+}
+
 @media (max-width: 1100px) {
   .user-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -183,10 +402,38 @@ td {
     align-items: stretch;
     flex-direction: column;
   }
+
+  .table-actions {
+    align-items: stretch;
+  }
+
+  .search-box {
+    flex: 1 1 220px;
+  }
 }
 
 @media (max-width: 640px) {
   .user-stats {
     grid-template-columns: 1fr;
+  }
+
+  .table-actions,
+  .dialog-actions {
+    flex-direction: column;
+  }
+
+  .search-box,
+  .table-actions select,
+  .table-actions .primary-button {
+    width: 100%;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-actions .primary-button,
+  .dialog-actions .secondary-button {
+    width: 100%;
   }
 }

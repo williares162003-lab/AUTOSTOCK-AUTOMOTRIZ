@@ -1,6 +1,7 @@
 from functools import wraps
+from secrets import compare_digest, token_urlsafe
 
-from flask import redirect, session, url_for
+from flask import flash, redirect, request, session, url_for
 
 
 def usuario_actual():
@@ -17,8 +18,41 @@ def login_requerido(vista):
     return wrapper
 
 
-def nav_items():
-    return [
+def admin_requerido(vista):
+    @wraps(vista)
+    def wrapper(*args, **kwargs):
+        usuario = usuario_actual()
+        if not usuario:
+            return redirect(url_for("login"))
+        if usuario.get("rol") != "ADMIN":
+            flash("No tienes permisos para acceder a esta seccion.", "error")
+            return redirect(url_for("dashboard"))
+        return vista(*args, **kwargs)
+
+    return wrapper
+
+
+def token_csrf():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = token_urlsafe(32)
+    return session["_csrf_token"]
+
+
+def csrf_requerido(vista):
+    @wraps(vista)
+    def wrapper(*args, **kwargs):
+        token_sesion = session.get("_csrf_token", "")
+        token_formulario = request.form.get("csrf_token", "")
+        if not token_sesion or not compare_digest(token_sesion, token_formulario):
+            flash("La solicitud vencio. Vuelve a intentarlo.", "error")
+            return redirect(url_for("usuarios"))
+        return vista(*args, **kwargs)
+
+    return wrapper
+
+
+def nav_items(usuario):
+    items = [
         {"label": "Dashboard", "icon": "dashboard", "endpoint": "dashboard"},
         {
             "label": "Inventario",
@@ -41,7 +75,11 @@ def nav_items():
         },
         {"label": "Proveedores", "icon": "local_shipping", "endpoint": None},
         {"label": "Reportes", "icon": "monitoring", "endpoint": None},
-        {
+    ]
+
+    if usuario and usuario.get("rol") == "ADMIN":
+        items.append(
+            {
             "label": "Sistema",
             "icon": "settings",
             "endpoint": None,
@@ -51,14 +89,18 @@ def nav_items():
                 {"label": "Usuarios", "icon": "group", "endpoint": "usuarios"},
                 {"label": "Permisos", "icon": "lock", "endpoint": None},
             ],
-        },
-    ]
+            }
+        )
+
+    return items
 
 
 def contexto_base(active_page):
+    usuario = usuario_actual()
     return {
-        "profile": usuario_actual(),
-        "nav_items": nav_items(),
+        "profile": usuario,
+        "nav_items": nav_items(usuario),
         "active_page": active_page,
         "empresa": "AUTOMAN Chiclayo E.I.R.L.",
+        "csrf_token": token_csrf(),
     }
