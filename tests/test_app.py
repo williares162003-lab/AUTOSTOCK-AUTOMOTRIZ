@@ -1,19 +1,23 @@
-import os
-import tempfile
 import unittest
-from pathlib import Path
+from unittest.mock import patch
+
+from app import app
 
 
-TEMP_DIR = tempfile.TemporaryDirectory()
-os.environ["AUTOMAN_DATABASE"] = str(Path(TEMP_DIR.name) / "automan_test.sqlite3")
-os.environ["AUTOMAN_SECRET_KEY"] = "test-secret-key"
-
-from app import app, inicializar_sistema  # noqa: E402
+USUARIO_PRUEBA = {
+    "id": 1,
+    "usuario": "admin",
+    "nombre": "Administrador AUTOMAN",
+    "correo": "admin@automan.local",
+    "documento": "00000000",
+    "rol": "ADMIN",
+    "estado": "activo",
+    "ultimo_acceso": None,
+}
 
 
 class AutomanAppTests(unittest.TestCase):
     def setUp(self):
-        inicializar_sistema(reset=True)
         app.config.update(TESTING=True, SECRET_KEY="test-secret-key")
         self.client = app.test_client()
 
@@ -21,8 +25,10 @@ class AutomanAppTests(unittest.TestCase):
         response = self.client.get("/login")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"AUTOMAN", response.data)
+        self.assertNotIn(b"Atlantica", response.data)
 
-    def test_user_can_login_and_open_dashboard(self):
+    @patch("app.autenticar_usuario", return_value=(USUARIO_PRUEBA, None))
+    def test_user_can_login_and_open_dashboard(self, _autenticar):
         response = self.client.post(
             "/login",
             data={"usuario": "admin", "contrasena": "admin123"},
@@ -37,7 +43,8 @@ class AutomanAppTests(unittest.TestCase):
         self.assertIn("/login", response.location)
 
     def test_dashboard_api_returns_summary_after_login(self):
-        self.client.post("/login", data={"usuario": "almacen", "contrasena": "almacen123"})
+        with self.client.session_transaction() as sesion:
+            sesion["usuario"] = USUARIO_PRUEBA
         response = self.client.get("/api/dashboard/resumen")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["usuarios_activos"], 2)

@@ -1,9 +1,9 @@
 # Base de datos
 
-El sistema usa SQLite para desarrollo y despliegue inicial en PythonAnywhere.
+El sistema usa MySQL/MariaDB: XAMPP en desarrollo y MySQL en PythonAnywhere.
 
 - `schema.sql`: estructura de tablas.
-- `automan.sqlite3`: base local generada, no se sube a GitHub.
+- `schema.sql`: crea las tablas del sistema en la base indicada por `DB_NAME`.
 
 Inicializacion:
 

@@ -2,10 +2,6 @@
 .venv/
 venv/
 env/
-db.sqlite3
-*.sqlite3
-database/*.sqlite3
-staticfiles/
 __pycache__/
 *.py[cod]
 .pytest_cache/

@@ -12,7 +12,6 @@
   --texto-suave: #5f6673;
   --texto-claro: #9ca3af;
   --borde: #dde1e8;
-  --sombra: 0 18px 45px rgba(16, 24, 40, 0.08);
   --radio: 8px;
 }
 
@@ -34,9 +33,7 @@ a {
 }
 
 button,
-input,
-select,
-textarea {
+input {
   font: inherit;
 }
 
@@ -74,7 +71,7 @@ button {
 
 .sidebar-brand {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  grid-template-columns: 32px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 8px 8px 20px;
@@ -104,17 +101,6 @@ button {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-}
-
-.sidebar-toggle {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  color: var(--texto);
-  background: #f3f5f7;
-  border: 0;
-  border-radius: var(--radio);
 }
 
 .sidebar-nav {
@@ -167,10 +153,6 @@ button {
 .nav-group-highlight > .nav-link.activo {
   background: var(--rojo);
   color: #ffffff;
-}
-
-.nav-caret {
-  margin-left: auto;
 }
 
 .nav-children {

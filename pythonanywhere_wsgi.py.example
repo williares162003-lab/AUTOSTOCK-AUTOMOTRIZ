@@ -1,0 +1,16 @@
+import os
+import sys
+
+
+PROJECT_HOME = "/home/TU_USUARIO/autostock-automotriz"
+if PROJECT_HOME not in sys.path:
+    sys.path.insert(0, PROJECT_HOME)
+
+os.environ["AUTOMAN_SECRET_KEY"] = "REEMPLAZA_CON_UNA_CLAVE_SEGURA"
+os.environ["DB_HOST"] = "TU_USUARIO.mysql.pythonanywhere-services.com"
+os.environ["DB_PORT"] = "3306"
+os.environ["DB_USER"] = "TU_USUARIO"
+os.environ["DB_PASSWORD"] = "CONTRASENA_MYSQL"
+os.environ["DB_NAME"] = "TU_USUARIO$automan_almacen"
+
+from app import app as application  # noqa: E402

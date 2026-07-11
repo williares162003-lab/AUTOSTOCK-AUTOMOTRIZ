@@ -26,7 +26,7 @@ def obtener_usuario_por_id(usuario_id):
         """
         SELECT id, usuario, nombre, correo, documento, rol, estado, ultimo_acceso
         FROM usuarios
-        WHERE id = ?
+        WHERE id = %s
         """,
         (usuario_id,),
     )
@@ -38,7 +38,7 @@ def obtener_usuario_por_nombre(usuario):
         """
         SELECT id, usuario, nombre, correo, documento, rol, estado, ultimo_acceso, password_hash
         FROM usuarios
-        WHERE usuario = ?
+        WHERE usuario = %s
         """,
         (usuario,),
     )
@@ -62,20 +62,20 @@ def autenticar_usuario(usuario, contrasena):
 
 def registrar_acceso(usuario_id):
     ejecutar(
-        "UPDATE usuarios SET ultimo_acceso = ? WHERE id = ?",
+        "UPDATE usuarios SET ultimo_acceso = %s WHERE id = %s",
         (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), usuario_id),
     )
 
 
 def crear_usuario_si_no_existe(usuario, contrasena, nombre, correo, documento, rol, estado="activo"):
-    existente = consultar_uno("SELECT id FROM usuarios WHERE usuario = ?", (usuario,))
+    existente = consultar_uno("SELECT id FROM usuarios WHERE usuario = %s", (usuario,))
     if existente:
         return False
 
     ejecutar(
         """
         INSERT INTO usuarios (usuario, password_hash, nombre, correo, documento, rol, estado)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """,
         (
             usuario,

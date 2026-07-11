@@ -17,6 +17,7 @@ autostock-automotriz/
   database/
     schema.sql
     README.md
+  pythonanywhere_wsgi.py.example
   templates/
     base.html
     login.html
@@ -30,8 +31,6 @@ autostock-automotriz/
       admin/
         dashboard.css
         usuarios.css
-    js/
-      app.js
   tests/
 ```
 
@@ -44,6 +43,11 @@ python -m venv .venv
 .venv\Scripts\python app.py
 ```
 
+Antes de inicializar, inicia MySQL desde XAMPP. La configuracion local por defecto
+es `127.0.0.1:3306`, usuario `root`, sin contrasena y base `automan_almacen`.
+Puedes cambiarla con las variables `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`
+y `DB_NAME`.
+
 Usuarios iniciales de desarrollo:
 
 - `admin` / `admin123`
@@ -53,7 +57,16 @@ En produccion define las contrasenas con variables de entorno antes de ejecutar 
 
 ## Variables de entorno
 
-Usa `.env.example` como referencia. No subas `.env`, bases SQLite locales ni credenciales reales.
+Configura las variables `AUTOMAN_SECRET_KEY`,
+`AUTOMAN_ADMIN_USER`, `AUTOMAN_ADMIN_PASSWORD`, `AUTOMAN_ALMACEN_USER` y
+`AUTOMAN_ALMACEN_PASSWORD` segun el entorno. Las credenciales MySQL usan las
+variables `DB_*` indicadas arriba. No subas `.env` ni credenciales reales.
+
+## PythonAnywhere
+
+Usa `pythonanywhere_wsgi.py.example` como guia para el archivo WSGI del sitio.
+Reemplaza `TU_USUARIO`, la contrasena y la clave secreta directamente en el WSGI
+privado de PythonAnywhere; ese archivo real no se sube al repositorio.
 
 ## Pruebas
 

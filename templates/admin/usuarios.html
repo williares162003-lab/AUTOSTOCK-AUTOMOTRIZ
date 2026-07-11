@@ -34,14 +34,6 @@
       <h2>Listado de usuarios</h2>
       <p>{{ resumen.total }} usuarios encontrados</p>
     </div>
-    <div class="table-actions">
-      <label class="search-box">
-        <span class="material-symbols-outlined">search</span>
-        <input type="search" placeholder="Buscar por nombre, correo">
-      </label>
-      <button type="button" class="btn-muted">Exportar</button>
-      <button type="button" class="btn-primary">Nuevo usuario</button>
-    </div>
   </div>
 
   <div class="table-wrap">
@@ -53,7 +45,6 @@
           <th>Rol</th>
           <th>Estado</th>
           <th>Ultimo acceso</th>
-          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -72,11 +63,6 @@
             <td><span class="role-badge">{{ usuario.rol }}</span></td>
             <td><span class="status-badge status-{{ usuario.estado }}">{{ usuario.estado|capitalize }}</span></td>
             <td>{{ usuario.ultimo_acceso or "Nunca" }}</td>
-            <td>
-              <button class="row-menu" type="button" title="Acciones">
-                <span class="material-symbols-outlined">more_vert</span>
-              </button>
-            </td>
           </tr>
         {% endfor %}
       </tbody>

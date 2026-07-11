@@ -103,9 +103,9 @@ def api_usuarios():
 
 
 @app.errorhandler(404)
-def pagina_no_encontrada(error):
+def pagina_no_encontrada(_error):
     contexto = contexto_base("error")
-    contexto.update({"page_title": "Pagina no encontrada", "error": error})
+    contexto.update({"page_title": "Pagina no encontrada"})
     return render_template("error404.html", **contexto), 404
 
 
@@ -127,5 +127,4 @@ def ejecutar_comando():
 if __name__ == "__main__":
     if not ejecutar_comando():
         inicializar_sistema(reset=False)
-        puerto = int(os.environ.get("AUTOMAN_PORT", "5000"))
-        app.run(debug=True, port=puerto)
+        app.run(debug=True, port=5000, use_reloader=False)

@@ -1,29 +1,75 @@
 import os
-import sqlite3
+import re
 from pathlib import Path
+
+import pymysql
+from pymysql.cursors import DictCursor
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DATABASE_PATH = Path(os.environ.get("AUTOMAN_DATABASE", BASE_DIR / "database" / "automan.sqlite3"))
 SCHEMA_PATH = BASE_DIR / "database" / "schema.sql"
 
 
+def configuracion_bd(incluir_base=True):
+    configuracion = {
+        "host": os.environ.get("DB_HOST", "127.0.0.1"),
+        "port": int(os.environ.get("DB_PORT", "3306")),
+        "user": os.environ.get("DB_USER", "root"),
+        "password": os.environ.get("DB_PASSWORD", ""),
+        "charset": "utf8mb4",
+        "cursorclass": DictCursor,
+        "autocommit": False,
+    }
+    if incluir_base:
+        configuracion["database"] = os.environ.get("DB_NAME", "automan_almacen")
+    return configuracion
+
+
+def _crear_base_si_no_existe():
+    nombre_bd = os.environ.get("DB_NAME", "automan_almacen")
+    if not re.fullmatch(r"[A-Za-z0-9_$]+", nombre_bd):
+        raise ValueError("DB_NAME contiene caracteres no permitidos.")
+
+    conexion = pymysql.connect(**configuracion_bd(incluir_base=False))
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{nombre_bd}` "
+                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
+        conexion.commit()
+    finally:
+        conexion.close()
+
+
 def obtener_conexion():
-    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conexion = sqlite3.connect(DATABASE_PATH)
-    conexion.row_factory = sqlite3.Row
-    return conexion
+    try:
+        return pymysql.connect(**configuracion_bd())
+    except pymysql.OperationalError as error:
+        if error.args and error.args[0] == 1049:
+            _crear_base_si_no_existe()
+            return pymysql.connect(**configuracion_bd())
+        raise
 
 
 def inicializar_base_datos(reset=False):
-    if reset and DATABASE_PATH.exists():
-        DATABASE_PATH.unlink()
-
     conexion = obtener_conexion()
     try:
-        with SCHEMA_PATH.open("r", encoding="utf-8") as archivo:
-            conexion.executescript(archivo.read())
+        with conexion.cursor() as cursor:
+            if reset:
+                cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+                cursor.execute("DROP TABLE IF EXISTS movimientos")
+                cursor.execute("DROP TABLE IF EXISTS usuarios")
+                cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+
+            contenido = SCHEMA_PATH.read_text(encoding="utf-8")
+            for sentencia in contenido.split(";"):
+                if sentencia.strip():
+                    cursor.execute(sentencia)
         conexion.commit()
+    except Exception:
+        conexion.rollback()
+        raise
     finally:
         conexion.close()
 
@@ -31,7 +77,9 @@ def inicializar_base_datos(reset=False):
 def consultar_uno(sql, parametros=()):
     conexion = obtener_conexion()
     try:
-        return conexion.execute(sql, parametros).fetchone()
+        with conexion.cursor() as cursor:
+            cursor.execute(sql, parametros)
+            return cursor.fetchone()
     finally:
         conexion.close()
 
@@ -39,7 +87,9 @@ def consultar_uno(sql, parametros=()):
 def consultar_todos(sql, parametros=()):
     conexion = obtener_conexion()
     try:
-        return conexion.execute(sql, parametros).fetchall()
+        with conexion.cursor() as cursor:
+            cursor.execute(sql, parametros)
+            return cursor.fetchall()
     finally:
         conexion.close()
 
@@ -47,8 +97,13 @@ def consultar_todos(sql, parametros=()):
 def ejecutar(sql, parametros=()):
     conexion = obtener_conexion()
     try:
-        cursor = conexion.execute(sql, parametros)
+        with conexion.cursor() as cursor:
+            cursor.execute(sql, parametros)
+            ultimo_id = cursor.lastrowid
         conexion.commit()
-        return cursor.lastrowid
+        return ultimo_id
+    except Exception:
+        conexion.rollback()
+        raise
     finally:
         conexion.close()
