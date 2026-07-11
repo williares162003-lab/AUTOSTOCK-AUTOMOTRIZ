@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }} | AUTOMAN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+  <main class="login-screen">
+    <section class="login-card">
+      <div class="login-side">
+        <div class="brand-block">
+          <div class="brand-logo">
+            <span class="material-symbols-outlined icon-fill">directions_car</span>
+          </div>
+          <div>
+            <strong>AUTOMAN</strong>
+            <span>Chiclayo E.I.R.L.</span>
+          </div>
+        </div>
+
+        <div class="login-copy">
+          <p class="eyebrow">Sistema de almacen</p>
+          <h1>Gestiona tu inventario automotriz de forma inteligente</h1>
+          <p>Controla repuestos, entradas, salidas, usuarios y alertas desde una sola plataforma.</p>
+        </div>
+
+        <div class="role-list">
+          <p>Roles del sistema</p>
+          <div>
+            <span>ADMIN</span>
+            <small>Administra usuarios, inventario y reportes.</small>
+          </div>
+          <div>
+            <span>ALMACEN</span>
+            <small>Registra movimientos y revisa el stock.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-form-area">
+        <form class="login-form" method="post">
+          <div>
+            <h2>Bienvenido</h2>
+            <p>Ingresa con tu cuenta asignada</p>
+          </div>
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div class="login-alerts">
+                {% for category, message in messages %}
+                  <div class="login-alert login-alert-{{ category }}">
+                    <span class="material-symbols-outlined icon-fill">
+                      {% if category == "success" %}check_circle{% else %}error{% endif %}
+                    </span>
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="login-alert login-alert-info">
+                <span class="material-symbols-outlined icon-fill">check_circle</span>
+                Debes iniciar sesion
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          <label for="usuario">Usuario</label>
+          <input id="usuario" name="usuario" type="text" placeholder="Tu nombre de usuario" autocomplete="username" required autofocus>
+
+          <label for="contrasena">Contrasena</label>
+          <input id="contrasena" name="contrasena" type="password" placeholder="Tu contrasena" autocomplete="current-password" required>
+
+          <button type="submit">Ingresar al sistema</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

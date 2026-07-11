@@ -1,43 +1,38 @@
-# Autostock Automotriz
+# AUTOMAN Almacen
 
-Sistema de gestion de almacen e inventario para un negocio automotriz.
+Sistema de gestion de almacen e inventario para **AUTOMAN Chiclayo E.I.R.L.**
 
 ## Estructura del proyecto
 
-La organizacion sigue el estilo de la intranet CCPL, adaptada a Django y con nombres en espanol:
+La organizacion sigue el estilo del proyecto Intranet CCPL: Flask como entrada principal, rutas y APIs en `app.py`, y funciones de datos/reglas en archivos `AD`.
 
 ```text
 autostock-automotriz/
-  aplicaciones/
-    inicio/
-      management/commands/
-      migrations/
-      forms.py
-      urls.py
-      views.py
-  configuracion/
-    settings.py
-    urls.py
-    wsgi.py
-  plantillas/
-    admin/
-      panel.html
-    almacen/
+  app.py
+  bd.py
+  helpers.py
+  loginAD.py
+  admin_dashboardAD.py
+  admin_usuariosAD.py
+  database/
+    schema.sql
+    README.md
+  templates/
     base.html
     login.html
-  estaticos/
+    admin/
+      dashboard.html
+      usuarios.html
+  static/
     css/
-      admin/
-      almacen/
       base.css
       login.css
-    imagenes/
-    js/
       admin/
+        dashboard.css
+        usuarios.css
+    js/
       app.js
-  base_datos/
-  requirements.txt
-  manage.py
+  tests/
 ```
 
 ## Desarrollo local
@@ -45,18 +40,23 @@ autostock-automotriz/
 ```bash
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python manage.py migrate
-.venv\Scripts\python manage.py bootstrap_users
-.venv\Scripts\python manage.py runserver
+.venv\Scripts\python app.py init-db
+.venv\Scripts\python app.py
 ```
 
-El comando `bootstrap_users` crea:
+Usuarios iniciales de desarrollo:
 
-- `admin`: administrador y superusuario.
-- `almacen`: operador para gestionar el almacen desde el sistema.
+- `admin` / `admin123`
+- `almacen` / `almacen123`
 
-Si no defines contrasenas, el comando genera una temporal y la muestra una sola vez.
+En produccion define las contrasenas con variables de entorno antes de ejecutar `init-db`.
 
 ## Variables de entorno
 
-Usa `.env.example` como referencia. No subas `.env`, bases de datos locales ni claves reales al repositorio.
+Usa `.env.example` como referencia. No subas `.env`, bases SQLite locales ni credenciales reales.
+
+## Pruebas
+
+```bash
+.venv\Scripts\python -m unittest
+```

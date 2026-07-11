@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+  <article class="stat-card stat-neutral">
+    <span class="material-symbols-outlined">inventory_2</span>
+    <strong>{{ stats.productos }}</strong>
+    <p>Total productos</p>
+  </article>
+  <article class="stat-card stat-green">
+    <span class="material-symbols-outlined">move_to_inbox</span>
+    <strong>{{ stats.entradas_mes }}</strong>
+    <p>Entradas del mes</p>
+  </article>
+  <article class="stat-card stat-yellow">
+    <span class="material-symbols-outlined">outbox</span>
+    <strong>{{ stats.salidas_mes }}</strong>
+    <p>Salidas del mes</p>
+  </article>
+  <article class="stat-card stat-red">
+    <span class="material-symbols-outlined">warning</span>
+    <strong>{{ stats.alertas_stock }}</strong>
+    <p>Alertas de stock</p>
+  </article>
+</div>
+
+<div class="dashboard-layout">
+  <article class="panel-card chart-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Movimientos del almacen</h2>
+        <p>Vista inicial de entradas y salidas</p>
+      </div>
+      <div class="chart-legend">
+        <span class="entrada">Entradas</span>
+        <span class="salida">Salidas</span>
+      </div>
+    </div>
+
+    <div class="bar-chart">
+      {% for item in serie_movimientos %}
+        <div class="bar-group">
+          <div class="bar-stack">
+            <span class="bar bar-entrada" style="height: {{ item.entradas }}%"></span>
+            <span class="bar bar-salida" style="height: {{ item.salidas }}%"></span>
+          </div>
+          <p>{{ item.dia }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel-card">
+    <div class="panel-heading">
+      <div>
+        <h2>Alertas de gestion</h2>
+        <p>Primeros pendientes del sistema</p>
+      </div>
+      <span class="material-symbols-outlined heading-icon">notifications_active</span>
+    </div>
+
+    <div class="alert-list">
+      {% for alerta in alertas %}
+        <div class="alert-item alert-{{ alerta.tipo }}">
+          <span class="material-symbols-outlined">{{ alerta.icono }}</span>
+          <div>
+            <strong>{{ alerta.titulo }}</strong>
+            <p>{{ alerta.detalle }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+</div>
+
+<div class="dashboard-layout lower">
+  <article class="panel-card">
+    <div class="panel-heading">
+      <div>
+        <h2>Movimientos recientes</h2>
+        <p>Actividad del almacen</p>
+      </div>
+      <span class="material-symbols-outlined heading-icon">history</span>
+    </div>
+    <div class="activity-list">
+      {% for movimiento in movimientos %}
+        <div>
+          <strong>{{ movimiento.tipo }}</strong>
+          <p>{{ movimiento.detalle }}</p>
+          <span>{{ movimiento.fecha }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel-card status-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Estado operativo</h2>
+        <p>Base inicial lista</p>
+      </div>
+      <span class="material-symbols-outlined heading-icon">verified</span>
+    </div>
+    <div class="status-list">
+      <div><span>Usuarios activos</span><strong>{{ stats.usuarios_activos }}</strong></div>
+      <div><span>Login Flask</span><strong>OK</strong></div>
+      <div><span>APIs internas</span><strong>OK</strong></div>
+      <div><span>Base SQLite</span><strong>OK</strong></div>
+    </div>
+  </article>
+</div>
+{% endblock %}

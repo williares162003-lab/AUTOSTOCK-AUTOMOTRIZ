@@ -1,4 +1,8 @@
-Django==5.2.16
-asgiref==3.11.1
-sqlparse==0.5.5
-tzdata==2026.3
+Flask==3.0.3
+Werkzeug==3.0.6
+Jinja2==3.1.6
+click==8.4.2
+itsdangerous==2.2.0
+blinker==1.9.0
+MarkupSafe==3.0.3
+colorama==0.4.6

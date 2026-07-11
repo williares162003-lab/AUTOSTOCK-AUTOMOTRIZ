@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/usuarios.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="user-stats">
+  <article class="user-stat neutral">
+    <span class="material-symbols-outlined">groups</span>
+    <strong>{{ resumen.total }}</strong>
+    <p>Total usuarios</p>
+  </article>
+  <article class="user-stat active">
+    <span class="material-symbols-outlined icon-fill">check_circle</span>
+    <strong>{{ resumen.activos }}</strong>
+    <p>Activos</p>
+  </article>
+  <article class="user-stat inactive">
+    <span class="material-symbols-outlined icon-fill">pause_circle</span>
+    <strong>{{ resumen.inactivos }}</strong>
+    <p>Inactivos</p>
+  </article>
+  <article class="user-stat suspended">
+    <span class="material-symbols-outlined icon-fill">block</span>
+    <strong>{{ resumen.suspendidos }}</strong>
+    <p>Suspendidos</p>
+  </article>
+</div>
+
+<section class="table-card">
+  <div class="table-header">
+    <div>
+      <h2>Listado de usuarios</h2>
+      <p>{{ resumen.total }} usuarios encontrados</p>
+    </div>
+    <div class="table-actions">
+      <label class="search-box">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search" placeholder="Buscar por nombre, correo">
+      </label>
+      <button type="button" class="btn-muted">Exportar</button>
+      <button type="button" class="btn-primary">Nuevo usuario</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>DNI/DOC</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Ultimo acceso</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for usuario in usuarios %}
+          <tr>
+            <td>
+              <div class="user-cell">
+                <span>{{ usuario.nombre[:1] }}</span>
+                <div>
+                  <strong>{{ usuario.nombre }}</strong>
+                  <small>{{ usuario.correo }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ usuario.documento }}</td>
+            <td><span class="role-badge">{{ usuario.rol }}</span></td>
+            <td><span class="status-badge status-{{ usuario.estado }}">{{ usuario.estado|capitalize }}</span></td>
+            <td>{{ usuario.ultimo_acceso or "Nunca" }}</td>
+            <td>
+              <button class="row-menu" type="button" title="Acciones">
+                <span class="material-symbols-outlined">more_vert</span>
+              </button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="empty-state">
+  <span class="material-symbols-outlined">search_off</span>
+  <h2>Pagina no encontrada</h2>
+  <p>La ruta solicitada no existe en el sistema.</p>
+  <a href="{{ url_for('dashboard') }}">Volver al dashboard</a>
+</section>
+{% endblock %}

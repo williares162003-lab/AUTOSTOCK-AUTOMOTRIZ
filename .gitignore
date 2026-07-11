@@ -4,6 +4,7 @@ venv/
 env/
 db.sqlite3
 *.sqlite3
+database/*.sqlite3
 staticfiles/
 __pycache__/
 *.py[cod]
@@ -12,4 +13,5 @@ __pycache__/
 htmlcov/
 .DS_Store
 server*.log
+*.log
 server.pid

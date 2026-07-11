@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }} | AUTOMAN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark">
+          <span class="material-symbols-outlined icon-fill">directions_car</span>
+        </div>
+        <div>
+          <p class="brand-title">AUTOMAN</p>
+          <p class="brand-subtitle">Chiclayo E.I.R.L.</p>
+        </div>
+        <button class="sidebar-toggle" type="button" title="Menu">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Navegacion principal">
+        {% for item in nav_items %}
+          {% set item_active = active_page == item.endpoint or active_page == item.active_prefix %}
+          <div class="nav-group {% if item.highlight %}nav-group-highlight{% endif %}">
+            {% if item.children %}
+              <button class="nav-link nav-parent {% if item_active %}activo{% endif %}" type="button">
+                <span class="material-symbols-outlined">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+                <span class="material-symbols-outlined nav-caret">expand_more</span>
+              </button>
+              <div class="nav-children">
+                {% for child in item.children %}
+                  {% if child.endpoint %}
+                    <a href="{{ url_for(child.endpoint) }}" class="nav-child {% if active_page == child.endpoint %}activo{% endif %}">
+                      <span class="material-symbols-outlined">{{ child.icon }}</span>
+                      <span>{{ child.label }}</span>
+                    </a>
+                  {% else %}
+                    <span class="nav-child deshabilitado">
+                      <span class="material-symbols-outlined">{{ child.icon }}</span>
+                      <span>{{ child.label }}</span>
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% elif item.endpoint %}
+              <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}activo{% endif %}">
+                <span class="material-symbols-outlined">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+              </a>
+            {% else %}
+              <span class="nav-link deshabilitado">
+                <span class="material-symbols-outlined">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+              </span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </nav>
+    </aside>
+
+    <main class="contenido">
+      <header class="topbar">
+        <div>
+          <p class="breadcrumb">Dashboard &gt; {{ page_title }}</p>
+          <h1>{{ page_title }}</h1>
+          {% if page_subtitle %}
+            <p class="page-subtitle">{{ page_subtitle }}</p>
+          {% endif %}
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" title="Notificaciones">
+            <span class="material-symbols-outlined">notifications</span>
+          </button>
+          <div class="user-chip">
+            <span>{{ profile.nombre[0] if profile else "A" }}</span>
+            <div>
+              <strong>{{ profile.nombre if profile else "Usuario" }}</strong>
+              <small>{{ profile.rol if profile else "" }}</small>
+            </div>
+          </div>
+          <a class="icon-button logout-button" href="{{ url_for('logout') }}" title="Cerrar sesion">
+            <span class="material-symbols-outlined">logout</span>
+          </a>
+        </div>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="messages">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">
+                <span class="material-symbols-outlined icon-fill">
+                  {% if category == "success" %}check_circle{% else %}error{% endif %}
+                </span>
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <section class="page-content">
+        {% block content %}{% endblock %}
+      </section>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
