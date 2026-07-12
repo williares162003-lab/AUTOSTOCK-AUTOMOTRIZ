@@ -403,17 +403,72 @@
 .category-dialog { width: min(480px, calc(100% - 32px)); }
 .category-target { margin-bottom: 18px; }
 
+.category-manage-dialog {
+  width: min(640px, calc(100% - 32px));
+  overflow: hidden;
+}
+
+.category-manage-dialog .dialog-header {
+  margin: 0;
+  padding: 18px 20px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.category-manage-dialog .category-target,
+.category-manage-dialog .category-add-section,
+.category-manage-dialog .dialog-actions {
+  padding-right: 20px;
+  padding-left: 20px;
+}
+
+.category-manage-dialog form {
+  padding: 0;
+}
+
+.category-manage-dialog .category-target {
+  margin: 0;
+  padding-top: 18px;
+  padding-bottom: 16px;
+}
+
+.category-manage-dialog .category-target select,
+.category-inline-form select,
+.category-inline-form input {
+  min-height: 42px;
+  padding: 0 12px;
+  color: #263447;
+  font: inherit;
+  background: #ffffff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  outline: 0;
+}
+
+.category-manage-dialog .category-target select:focus,
+.category-inline-form select:focus,
+.category-inline-form input:focus {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px rgba(78, 115, 152, 0.12);
+}
+
 .category-add-section {
-  padding: 16px 0;
+  padding-top: 18px;
+  padding-bottom: 18px;
   border-top: 1px solid #edf0f5;
+}
+
+.category-add-section .section-heading h3 {
+  color: #263447;
+  font-size: 14px;
 }
 
 .category-inline-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
   align-items: end;
-  gap: 10px;
+  gap: 12px;
   margin-top: 12px;
+  padding: 0;
 }
 
 .category-inline-form label,
@@ -421,8 +476,28 @@
 .category-inline-form label > span { margin-bottom: 6px; color: #334155; font-size: 12px; font-weight: 800; }
 .category-inline-form select,
 .category-inline-form input { width: 100%; }
+.category-inline-form .primary-button,
+.category-inline-form .secondary-button {
+  width: 100%;
+  min-height: 42px;
+  white-space: nowrap;
+}
 .category-inline-form button:disabled { cursor: not-allowed; opacity: 0.5; }
-.category-empty-option { margin: 12px 0 0; color: #64748b; font-size: 12px; }
+.category-empty-option {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  color: #64748b;
+  background: #f7f9fb;
+  border: 1px dashed var(--borde);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.category-manage-dialog .dialog-actions {
+  margin-top: 0;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  background: #f9fbfd;
+}
 .stock-dialog { width: min(520px, calc(100% - 32px)); }
 
 .current-stock {

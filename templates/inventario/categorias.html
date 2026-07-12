@@ -81,7 +81,7 @@
   </form>
 </dialog>
 
-<dialog class="inventory-dialog category-dialog" data-category-dialog>
+<dialog class="inventory-dialog category-dialog category-manage-dialog" data-category-dialog>
   <div class="dialog-header"><h2>Agregar categoria</h2><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
   <div class="product-form-grid single-column category-target">
     <label><span>Tipo de producto</span><select required data-category-target-type>{% for tipo in tipos %}<option value="{{ tipo.id }}"{% if tipo_seleccionado == tipo.id %} selected{% endif %}>{{ tipo.nombre }}</option>{% endfor %}</select></label>
