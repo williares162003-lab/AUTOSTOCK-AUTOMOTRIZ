@@ -24,10 +24,13 @@ from inventario_productosAD import (
     ajustar_stock_producto,
     crear_categoria as crear_categoria_ad,
     crear_producto as crear_producto_ad,
+    crear_tipo as crear_tipo_ad,
     editar_categoria as editar_categoria_ad,
     editar_producto as editar_producto_ad,
+    editar_tipo as editar_tipo_ad,
     eliminar_categoria as eliminar_categoria_ad,
     eliminar_producto as eliminar_producto_ad,
+    eliminar_tipo as eliminar_tipo_ad,
     listar_categorias,
     listar_ajustes_stock,
     listar_productos,
@@ -175,13 +178,40 @@ def categorias():
     contexto = contexto_base("categorias")
     contexto.update(
         {
-            "page_title": "Categorias",
-            "page_subtitle": "Organiza los productos por tipo y familia.",
+            "page_title": "Tipos y categorias",
+            "page_subtitle": "Organiza las familias de productos del almacen.",
             "categorias": listar_categorias(),
             "tipos": listar_tipos(),
         }
     )
     return render_template("inventario/categorias.html", **contexto)
+
+
+@app.post("/inventario/tipos/crear")
+@login_requerido
+@csrf_requerido
+def crear_tipo():
+    correcto, mensaje = crear_tipo_ad(request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("categorias"))
+
+
+@app.post("/inventario/tipos/<int:tipo_id>/editar")
+@login_requerido
+@csrf_requerido
+def editar_tipo(tipo_id):
+    correcto, mensaje = editar_tipo_ad(tipo_id, request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("categorias"))
+
+
+@app.post("/inventario/tipos/<int:tipo_id>/eliminar")
+@login_requerido
+@csrf_requerido
+def eliminar_tipo(tipo_id):
+    correcto, mensaje = eliminar_tipo_ad(tipo_id)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("categorias"))
 
 
 @app.post("/inventario/categorias/crear")

@@ -10,6 +10,7 @@ from inventario_productosAD import (
     crear_producto,
     eliminar_categoria,
     eliminar_producto,
+    eliminar_tipo,
 )
 from tests.test_app import USUARIO_ALMACEN
 
@@ -130,6 +131,30 @@ class InventarioAppTests(unittest.TestCase):
         correcto, mensaje = eliminar_categoria(3)
         self.assertFalse(correcto)
         self.assertIn("contiene productos", mensaje)
+
+    @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "categorias": 4, "productos": 0})
+    def test_type_with_categories_cannot_be_deleted(self, _consultar):
+        correcto, mensaje = eliminar_tipo(1)
+        self.assertFalse(correcto)
+        self.assertIn("contiene categorias", mensaje)
+
+    @patch("app.listar_tipos", return_value=TIPOS)
+    @patch("app.listar_categorias", return_value=CATEGORIAS)
+    def test_almacen_can_manage_types_and_categories(self, _categorias, _tipos):
+        response = self.client.get("/inventario/categorias")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Nuevo tipo", response.data)
+        self.assertIn(b"Nueva categoria", response.data)
+
+    @patch("app.crear_tipo_ad", return_value=(True, "Tipo de producto creado correctamente."))
+    def test_almacen_can_submit_new_type(self, crear_tipo_ad):
+        response = self.client.post(
+            "/inventario/tipos/crear",
+            data={"csrf_token": "csrf-inventario", "nombre": "Consumible"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/inventario/categorias", response.location)
+        crear_tipo_ad.assert_called_once()
 
 
 if __name__ == "__main__":

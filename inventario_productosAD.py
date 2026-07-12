@@ -7,6 +7,50 @@ def listar_tipos():
     return [dict(fila) for fila in consultar_todos("SELECT id, nombre FROM tipos_producto ORDER BY id")]
 
 
+def crear_tipo(datos):
+    nombre = datos.get("nombre", "").strip()
+    if len(nombre) < 3:
+        return False, "Ingresa un nombre de tipo valido."
+    if consultar_uno("SELECT id FROM tipos_producto WHERE LOWER(nombre) = LOWER(%s)", (nombre,)):
+        return False, "Ese tipo de producto ya existe."
+    ejecutar("INSERT INTO tipos_producto (nombre) VALUES (%s)", (nombre,))
+    return True, "Tipo de producto creado correctamente."
+
+
+def editar_tipo(tipo_id, datos):
+    nombre = datos.get("nombre", "").strip()
+    if len(nombre) < 3:
+        return False, "Ingresa un nombre de tipo valido."
+    if not consultar_uno("SELECT id FROM tipos_producto WHERE id = %s", (tipo_id,)):
+        return False, "El tipo solicitado no existe."
+    if consultar_uno(
+        "SELECT id FROM tipos_producto WHERE LOWER(nombre) = LOWER(%s) AND id <> %s",
+        (nombre, tipo_id),
+    ):
+        return False, "Ese tipo de producto ya existe."
+    ejecutar("UPDATE tipos_producto SET nombre = %s WHERE id = %s", (nombre, tipo_id))
+    return True, "Tipo de producto actualizado correctamente."
+
+
+def eliminar_tipo(tipo_id):
+    tipo = consultar_uno(
+        """
+        SELECT t.id,
+               (SELECT COUNT(*) FROM categorias c WHERE c.tipo_id = t.id) AS categorias,
+               (SELECT COUNT(*) FROM productos p WHERE p.tipo_id = t.id) AS productos
+        FROM tipos_producto t
+        WHERE t.id = %s
+        """,
+        (tipo_id,),
+    )
+    if not tipo:
+        return False, "El tipo solicitado no existe."
+    if tipo["categorias"] > 0 or tipo["productos"] > 0:
+        return False, "No puedes eliminar un tipo que contiene categorias o productos."
+    ejecutar("DELETE FROM tipos_producto WHERE id = %s", (tipo_id,))
+    return True, "Tipo de producto eliminado correctamente."
+
+
 def listar_unidades():
     filas = consultar_todos(
         "SELECT id, nombre, abreviatura, permite_decimal FROM unidades_medida ORDER BY id"

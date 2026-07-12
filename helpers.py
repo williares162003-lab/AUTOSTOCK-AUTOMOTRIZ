@@ -63,7 +63,7 @@ def nav_items(usuario):
             "active_pages": ["productos", "categorias"],
             "children": [
                 {"label": "Productos", "icon": "inventory_2", "endpoint": "productos"},
-                {"label": "Categorias", "icon": "category", "endpoint": "categorias"},
+                {"label": "Tipos y categorias", "icon": "category", "endpoint": "categorias"},
             ],
         },
         {
