@@ -135,11 +135,19 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("motivo", mensaje)
 
-    @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "stock_actual": Decimal("3"), "ajustes": 1})
-    def test_product_with_stock_history_cannot_be_deleted(self, _consultar):
+    @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "stock_actual": Decimal("3")})
+    def test_product_with_stock_cannot_be_deleted(self, _consultar):
         correcto, mensaje = eliminar_producto(1)
         self.assertFalse(correcto)
-        self.assertIn("historial", mensaje)
+        self.assertIn("stock", mensaje)
+
+    @patch("inventario_productosAD.ejecutar_transaccion")
+    @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "stock_actual": Decimal("0")})
+    def test_product_without_stock_can_be_deleted_with_history_cleanup(self, _consultar, ejecutar_transaccion):
+        correcto, mensaje = eliminar_producto(1)
+        self.assertTrue(correcto)
+        self.assertIn("eliminado", mensaje)
+        ejecutar_transaccion.assert_called_once()
 
     @patch("inventario_productosAD.consultar_uno", return_value={"id": 3, "nombre": "Filtros", "productos": 2})
     def test_category_with_products_cannot_be_deleted(self, _consultar):

@@ -407,8 +407,7 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
 def eliminar_producto(producto_id):
     producto = consultar_uno(
         """
-        SELECT p.id, p.stock_actual,
-               (SELECT COUNT(*) FROM ajustes_stock a WHERE a.producto_id = p.id) AS ajustes
+        SELECT p.id, p.stock_actual
         FROM productos p
         WHERE p.id = %s
         """,
@@ -416,9 +415,15 @@ def eliminar_producto(producto_id):
     )
     if not producto:
         return False, "El producto solicitado no existe."
-    if producto["stock_actual"] != 0 or producto["ajustes"] > 0:
-        return False, "No puedes eliminar un producto que ya tiene historial de stock."
-    ejecutar("DELETE FROM productos WHERE id = %s", (producto_id,))
+    if producto["stock_actual"] != 0:
+        return False, "Primero ajusta el stock del producto a cero para poder eliminarlo."
+
+    def operacion(cursor):
+        cursor.execute("DELETE FROM ajustes_stock WHERE producto_id = %s", (producto_id,))
+        cursor.execute("DELETE FROM presentaciones_producto WHERE producto_id = %s", (producto_id,))
+        cursor.execute("DELETE FROM productos WHERE id = %s", (producto_id,))
+
+    ejecutar_transaccion(operacion)
     return True, "Producto eliminado correctamente."
 
 
