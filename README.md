@@ -44,7 +44,7 @@ python -m venv .venv
 ```
 
 Antes de inicializar, inicia MySQL desde XAMPP. La configuracion local por defecto
-es `127.0.0.1:3306`, usuario `root`, sin contrasena y base `automan_almacen`.
+es `localhost:3306`, usuario `root`, sin contrasena y base `automan_almacen`.
 Puedes cambiarla con las variables `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`
 y `DB_NAME`.
 

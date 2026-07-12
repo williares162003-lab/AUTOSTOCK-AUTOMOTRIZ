@@ -14,7 +14,7 @@ from inventario_productosAD import (
     preparar_categorias_generales,
     resumen_productos,
 )
-from movimientos_entradasAD import registrar_entrada
+from movimientos_entradasAD import abrir_balde, registrar_entrada
 from movimientos_salidasAD import registrar_salida
 from tests.test_app import USUARIO_ALMACEN
 
@@ -34,6 +34,9 @@ PRODUCTO_ACEITE = {
     "marca": None,
     "descripcion": None,
     "stock_actual": Decimal("10.000"),
+    "stock_suelto": Decimal("8.000"),
+    "stock_balde_abierto": Decimal("2.000"),
+    "stock_baldes_cerrados": Decimal("1.000"),
     "stock_minimo": Decimal("2.000"),
     "observaciones": None,
     "tipo_id": 2,
@@ -79,6 +82,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Balde", response.data)
         self.assertIn(b"Con stock", response.data)
         self.assertIn(b"Disponible", response.data)
+        self.assertIn(b"Balde abierto", response.data)
         self.assertIn(b"data-view-product", response.data)
 
     @patch("app.crear_producto_ad", return_value=(True, "Producto registrado correctamente."))
@@ -137,14 +141,32 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("motivo", mensaje)
 
-    @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "stock_actual": Decimal("3")})
+    @patch(
+        "inventario_productosAD.consultar_uno",
+        return_value={
+            "id": 1,
+            "stock_actual": Decimal("3"),
+            "stock_suelto": Decimal("3"),
+            "stock_balde_abierto": Decimal("0"),
+            "stock_baldes_cerrados": Decimal("0"),
+        },
+    )
     def test_product_with_stock_cannot_be_deleted(self, _consultar):
         correcto, mensaje = eliminar_producto(1)
         self.assertFalse(correcto)
         self.assertIn("stock", mensaje)
 
     @patch("inventario_productosAD.ejecutar_transaccion")
-    @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "stock_actual": Decimal("0")})
+    @patch(
+        "inventario_productosAD.consultar_uno",
+        return_value={
+            "id": 1,
+            "stock_actual": Decimal("0"),
+            "stock_suelto": Decimal("0"),
+            "stock_balde_abierto": Decimal("0"),
+            "stock_baldes_cerrados": Decimal("0"),
+        },
+    )
     def test_product_without_stock_can_be_deleted_with_history_cleanup(self, _consultar, ejecutar_transaccion):
         correcto, mensaje = eliminar_producto(1)
         self.assertTrue(correcto)
@@ -208,12 +230,14 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn("Sin clasificar", ejecutar.call_args.args[0])
 
     @patch("app.resumen_entradas", return_value={"total": 0, "hoy": 0, "mes": 0, "productos": 0})
+    @patch("app.listar_aperturas_balde", return_value=[])
     @patch("app.listar_entradas", return_value=[])
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_entries(self, _productos, _entradas, _resumen):
+    def test_almacen_can_open_entries(self, _productos, _entradas, _aperturas, _resumen):
         response = self.client.get("/movimientos/entradas")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nueva entrada", response.data)
+        self.assertIn(b"Abrir balde", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
 
     @patch("app.registrar_entrada", return_value=(True, "Entrada registrada correctamente."))
@@ -240,6 +264,14 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("mayor que cero", mensaje)
 
+    def test_open_bucket_rejects_invalid_quantity(self):
+        correcto, mensaje = abrir_balde(
+            {"producto_id": "1", "baldes_abiertos": "0", "contenido_por_balde": "5"},
+            usuario_id=2,
+        )
+        self.assertFalse(correcto)
+        self.assertIn("mayor que cero", mensaje)
+
     @patch("app.resumen_salidas", return_value={"total": 0, "hoy": 0, "mes": 0, "vehiculos": 0})
     @patch("app.listar_salidas", return_value=[])
     @patch("app.listar_vehiculos", return_value=[{"id": 1, "placa": "ABC-123", "modelo": "Toyota Yaris"}])
@@ -250,6 +282,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Nueva salida", response.data)
         self.assertIn(b"ABC-123", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
+        self.assertIn(b"Sale de", response.data)
 
     @patch("app.registrar_salida", return_value=(True, "Salida registrada correctamente."))
     def test_almacen_can_submit_output(self, registrar):
@@ -261,6 +294,7 @@ class InventarioAppTests(unittest.TestCase):
                 "modelo": "Toyota Yaris",
                 "trabajador": "Juan Perez",
                 "producto_id": "1",
+                "origen_stock": "suelto",
                 "cantidad": "2",
             },
         )
@@ -286,9 +320,32 @@ class InventarioAppTests(unittest.TestCase):
 
     def test_product_summary_tracks_stock_states(self):
         productos = [
-            {**PRODUCTO_ACEITE, "stock_actual": Decimal("0.000"), "stock_minimo": Decimal("2.000")},
-            {**PRODUCTO_ACEITE, "id": 2, "stock_actual": Decimal("1.000"), "stock_minimo": Decimal("2.000")},
-            {**PRODUCTO_ACEITE, "id": 3, "stock_actual": Decimal("8.000"), "stock_minimo": Decimal("2.000")},
+            {
+                **PRODUCTO_ACEITE,
+                "stock_actual": Decimal("0.000"),
+                "stock_suelto": Decimal("0.000"),
+                "stock_balde_abierto": Decimal("0.000"),
+                "stock_baldes_cerrados": Decimal("0.000"),
+                "stock_minimo": Decimal("2.000"),
+            },
+            {
+                **PRODUCTO_ACEITE,
+                "id": 2,
+                "stock_actual": Decimal("0.000"),
+                "stock_suelto": Decimal("0.000"),
+                "stock_balde_abierto": Decimal("0.000"),
+                "stock_baldes_cerrados": Decimal("2.000"),
+                "stock_minimo": Decimal("2.000"),
+            },
+            {
+                **PRODUCTO_ACEITE,
+                "id": 3,
+                "stock_actual": Decimal("1.000"),
+                "stock_suelto": Decimal("1.000"),
+                "stock_balde_abierto": Decimal("0.000"),
+                "stock_baldes_cerrados": Decimal("0.000"),
+                "stock_minimo": Decimal("2.000"),
+            },
         ]
         resumen = resumen_productos(productos)
         self.assertEqual(resumen["con_stock"], 2)

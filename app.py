@@ -39,7 +39,13 @@ from inventario_productosAD import (
     resumen_productos,
 )
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
-from movimientos_entradasAD import listar_entradas, registrar_entrada, resumen_entradas
+from movimientos_entradasAD import (
+    abrir_balde,
+    listar_aperturas_balde,
+    listar_entradas,
+    registrar_entrada,
+    resumen_entradas,
+)
 from movimientos_salidasAD import (
     listar_salidas,
     listar_vehiculos,
@@ -190,6 +196,7 @@ def entradas():
             "page_subtitle": "Registra compras y reposiciones para aumentar el stock del almacen.",
             "productos": listar_productos(),
             "entradas": listar_entradas(),
+            "aperturas": listar_aperturas_balde(),
             "resumen": resumen_entradas(),
         }
     )
@@ -201,6 +208,15 @@ def entradas():
 @csrf_requerido
 def crear_entrada():
     correcto, mensaje = registrar_entrada(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("entradas"))
+
+
+@app.post("/movimientos/entradas/abrir-balde")
+@login_requerido
+@csrf_requerido
+def abrir_balde_entrada():
+    correcto, mensaje = abrir_balde(request.form, session["usuario"]["id"])
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("entradas"))
 

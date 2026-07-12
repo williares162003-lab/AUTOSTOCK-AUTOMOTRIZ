@@ -21,6 +21,13 @@
     <form method="post" action="{{ url_for('crear_entrada') }}" class="entry-form" data-entry-form>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="product-form-grid">
+        <label>
+          <span>Tipo de entrada</span>
+          <select name="tipo_entrada" required data-entry-type>
+            <option value="suelto">Stock suelto</option>
+            <option value="balde_cerrado">Baldes cerrados</option>
+          </select>
+        </label>
         <label class="span-two">
           <span>Producto</span>
           <select name="producto_id" required data-product-select>
@@ -28,6 +35,9 @@
               <option
                 value="{{ producto.id }}"
                 data-stock="{{ producto.stock_actual }}"
+                data-stock-suelto="{{ producto.stock_suelto }}"
+                data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+                data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
                 data-unidad="{{ producto.unidad|e }}"
                 data-abreviatura="{{ producto.abreviatura|e }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
@@ -36,12 +46,12 @@
             {% endfor %}
           </select>
         </label>
-        <label>
+        <label data-presentation-field>
           <span>Presentacion</span>
           <select name="presentacion_id" required data-presentation-select></select>
         </label>
         <label>
-          <span>Cantidad que ingresa</span>
+          <span data-quantity-label>Cantidad que ingresa</span>
           <input name="cantidad" type="number" min="0.001" step="0.001" required data-entry-quantity>
         </label>
         <label>
@@ -58,9 +68,9 @@
         </label>
       </div>
       <div class="entry-preview" data-entry-preview>
-        <div><span>Stock actual</span><strong data-current-stock>-</strong></div>
-        <div><span>Entrada al stock</span><strong data-base-quantity>-</strong></div>
-        <div><span>Stock estimado</span><strong data-estimated-stock>-</strong></div>
+        <div><span data-current-label>Stock disponible</span><strong data-current-stock>-</strong></div>
+        <div><span data-entry-label>Entrada al stock</span><strong data-base-quantity>-</strong></div>
+        <div><span data-estimated-label>Stock estimado</span><strong data-estimated-stock>-</strong></div>
       </div>
       <div class="dialog-actions">
         <button class="primary-button" type="submit"><span class="material-symbols-outlined">move_to_inbox</span>Registrar entrada</button>
@@ -71,9 +81,68 @@
   <aside class="entry-help">
     <span class="material-symbols-outlined">info</span>
     <h2>Como suma el stock</h2>
-    <p>Si eliges una presentacion, la cantidad se convierte a la unidad base del producto.</p>
-    <div><strong>Balde</strong><span>2 baldes x 5 gal = 10 gal al stock</span></div>
+    <p>El stock suelto queda disponible para entregar. Los baldes cerrados se guardan aparte hasta que los abras.</p>
+    <div><strong>Orden</strong><span>Baldes cerrados no se mezclan con galones o litros sueltos.</span></div>
   </aside>
+</section>
+
+<section class="inventory-table bucket-panel">
+  <div class="inventory-toolbar">
+    <div><h2>Abrir balde</h2><p>Pasa un balde cerrado a stock de balde abierto cuando ya sepas su rendimiento.</p></div>
+  </div>
+  <form method="post" action="{{ url_for('abrir_balde_entrada') }}" class="entry-form bucket-form" data-bucket-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="product-form-grid">
+      <label class="span-two">
+        <span>Producto</span>
+        <select name="producto_id" required data-bucket-product>
+          {% for producto in productos %}
+            <option
+              value="{{ producto.id }}"
+              data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
+              data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+              data-abreviatura="{{ producto.abreviatura|e }}"
+            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Baldes a abrir</span>
+        <input name="baldes_abiertos" type="number" min="1" step="1" required data-bucket-count>
+      </label>
+      <label>
+        <span>Contenido por balde</span>
+        <input name="contenido_por_balde" type="number" min="0.001" step="0.001" required data-bucket-content>
+      </label>
+    </div>
+    <div class="entry-preview">
+      <div><span>Baldes cerrados</span><strong data-bucket-closed>-</strong></div>
+      <div><span>Agrega a balde abierto</span><strong data-bucket-added>-</strong></div>
+      <div><span>Balde abierto estimado</span><strong data-bucket-open>-</strong></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="primary-button" type="submit"><span class="material-symbols-outlined">oil_barrel</span>Abrir balde</button>
+    </div>
+  </form>
+  {% if aperturas %}
+  <div class="table-scroll bucket-history">
+    <table>
+      <thead><tr><th>Fecha</th><th>Producto</th><th>Baldes</th><th>Contenido</th><th>Balde abierto</th><th>Usuario</th></tr></thead>
+      <tbody>
+        {% for apertura in aperturas %}
+        <tr>
+          <td>{{ apertura.creado_en }}</td>
+          <td><strong>{{ apertura.producto }}</strong><small>{{ apertura.marca or "Sin marca" }}</small></td>
+          <td>{{ apertura.stock_baldes_anterior|float|round(3) }} -> <strong>{{ apertura.stock_baldes_nuevo|float|round(3) }}</strong></td>
+          <td>+{{ apertura.cantidad_base|float|round(3) }} {{ apertura.abreviatura }}<small>{{ apertura.baldes_abiertos|float|round(3) }} x {{ apertura.contenido_por_balde|float|round(3) }}</small></td>
+          <td>{{ apertura.stock_abierto_anterior|float|round(3) }} -> <strong>{{ apertura.stock_abierto_nuevo|float|round(3) }}</strong></td>
+          <td>{{ apertura.usuario }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 </section>
 
 <section class="inventory-table history-panel">
@@ -82,20 +151,27 @@
   </div>
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Fecha</th><th>Producto</th><th>Entrada</th><th>Stock</th><th>Proveedor</th><th>Documento</th><th>Usuario</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Producto</th><th>Origen</th><th>Entrada</th><th>Stock disponible</th><th>Proveedor</th><th>Documento</th><th>Usuario</th></tr></thead>
       <tbody>
         {% for entrada in entradas %}
         <tr>
           <td>{{ entrada.creado_en }}</td>
           <td><strong>{{ entrada.producto }}</strong><small>{{ entrada.marca or "Sin marca" }}</small></td>
-          <td><strong class="adjustment-value positive">+{{ entrada.cantidad_base|float|round(3) }} {{ entrada.abreviatura }}</strong><small>{{ entrada.cantidad|float|round(3) }} {{ entrada.presentacion_nombre }}</small></td>
+          <td>{{ entrada.origen_texto }}</td>
+          <td>
+            {% if entrada.origen_stock == "balde_cerrado" %}
+              <strong class="adjustment-value positive">+{{ entrada.cantidad|float|round(3) }} balde(s)</strong><small>{{ entrada.presentacion_nombre }}</small>
+            {% else %}
+              <strong class="adjustment-value positive">+{{ entrada.cantidad_base|float|round(3) }} {{ entrada.abreviatura }}</strong><small>{{ entrada.cantidad|float|round(3) }} {{ entrada.presentacion_nombre }}</small>
+            {% endif %}
+          </td>
           <td>{{ entrada.stock_anterior|float|round(3) }} &rarr; <strong>{{ entrada.stock_nuevo|float|round(3) }}</strong></td>
           <td>{{ entrada.proveedor or "-" }}</td>
           <td>{{ entrada.documento or "-" }}</td>
           <td>{{ entrada.usuario }}</td>
         </tr>
         {% else %}
-        <tr><td class="empty-row" colspan="7">Todavia no hay entradas registradas.</td></tr>
+        <tr><td class="empty-row" colspan="8">Todavia no hay entradas registradas.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS productos (
     descripcion TEXT NULL,
     unidad_base_id INT UNSIGNED NOT NULL,
     stock_actual DECIMAL(14,3) NOT NULL DEFAULT 0,
+    stock_suelto DECIMAL(14,3) NOT NULL DEFAULT 0,
+    stock_balde_abierto DECIMAL(14,3) NOT NULL DEFAULT 0,
+    stock_baldes_cerrados DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_minimo DECIMAL(14,3) NOT NULL DEFAULT 0,
     observaciones TEXT NULL,
     creado_por INT UNSIGNED NULL,
@@ -94,6 +97,7 @@ CREATE TABLE IF NOT EXISTS entradas_stock (
     factor DECIMAL(14,3) NOT NULL,
     cantidad DECIMAL(14,3) NOT NULL,
     cantidad_base DECIMAL(14,3) NOT NULL,
+    origen_stock VARCHAR(30) NOT NULL DEFAULT 'suelto',
     stock_anterior DECIMAL(14,3) NOT NULL,
     stock_nuevo DECIMAL(14,3) NOT NULL,
     proveedor VARCHAR(160) NULL,
@@ -112,6 +116,31 @@ CREATE TABLE IF NOT EXISTS entradas_stock (
         FOREIGN KEY (presentacion_id) REFERENCES presentaciones_producto (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_entradas_stock_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS aperturas_balde (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    producto_id INT UNSIGNED NOT NULL,
+    baldes_abiertos DECIMAL(14,3) NOT NULL,
+    contenido_por_balde DECIMAL(14,3) NOT NULL,
+    cantidad_base DECIMAL(14,3) NOT NULL,
+    stock_baldes_anterior DECIMAL(14,3) NOT NULL,
+    stock_baldes_nuevo DECIMAL(14,3) NOT NULL,
+    stock_abierto_anterior DECIMAL(14,3) NOT NULL,
+    stock_abierto_nuevo DECIMAL(14,3) NOT NULL,
+    stock_anterior DECIMAL(14,3) NOT NULL,
+    stock_nuevo DECIMAL(14,3) NOT NULL,
+    usuario_id INT UNSIGNED NULL,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_aperturas_balde_producto (producto_id),
+    KEY idx_aperturas_balde_usuario (usuario_id),
+    CONSTRAINT fk_aperturas_balde_producto
+        FOREIGN KEY (producto_id) REFERENCES productos (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_aperturas_balde_usuario
         FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -151,6 +180,7 @@ CREATE TABLE IF NOT EXISTS salidas_stock_detalle (
     salida_id INT UNSIGNED NOT NULL,
     producto_id INT UNSIGNED NOT NULL,
     cantidad_base DECIMAL(14,3) NOT NULL,
+    origen_stock VARCHAR(30) NOT NULL DEFAULT 'suelto',
     stock_anterior DECIMAL(14,3) NOT NULL,
     stock_nuevo DECIMAL(14,3) NOT NULL,
     PRIMARY KEY (id),

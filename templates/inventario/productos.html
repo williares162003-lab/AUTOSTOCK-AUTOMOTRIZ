@@ -19,7 +19,7 @@
       <label class="inventory-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar producto" data-product-search></label>
       <select data-type-filter aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select>
       <select data-category-filter aria-label="Filtrar por categoria"><option value="">Todas las categorias</option>{% for categoria in categorias %}<option value="{{ categoria.id }}">{{ categoria.nombre }}</option>{% endfor %}</select>
-      <select data-status-filter aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="bajo">Bajo minimo</option><option value="sin_stock">Sin stock</option></select>
+      <select data-status-filter aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="bajo">Bajo minimo</option><option value="baldes">Solo baldes</option><option value="sin_stock">Sin stock</option></select>
       <button class="primary-button" type="button" data-open-product><span class="material-symbols-outlined">add_box</span>Nuevo producto</button>
     </div>
   </div>
@@ -29,14 +29,23 @@
       <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Existencia</th><th>Estado</th><th>Presentaciones</th><th class="action-heading">Accion</th></tr></thead>
       <tbody>
         {% for producto in productos %}
-        {% set sin_stock = producto.stock_actual <= 0 %}
+        {% set solo_baldes = producto.stock_actual <= 0 and producto.stock_baldes_cerrados > 0 %}
+        {% set sin_stock = producto.stock_actual <= 0 and producto.stock_baldes_cerrados <= 0 %}
         {% set bajo_stock = producto.stock_actual > 0 and producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}
-        {% set estado_stock = 'sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible') %}
-        {% set estado_texto = 'Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible') %}
+        {% set estado_stock = 'baldes' if solo_baldes else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
+        {% set estado_texto = 'Solo baldes' if solo_baldes else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
         <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
           <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></div></div></td>
           <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.categoria }}</small></td>
-          <td><strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</strong><small>Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</small></td>
+          <td>
+            <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</strong>
+            <small>Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</small>
+            <div class="stock-breakdown">
+              <span>Suelto: {{ producto.stock_suelto|float|round(3) }}</span>
+              <span>Balde abierto: {{ producto.stock_balde_abierto|float|round(3) }}</span>
+              <span>Cerrados: {{ producto.stock_baldes_cerrados|float|round(3) }}</span>
+            </div>
+          </td>
           <td><span class="stock-badge {{ estado_stock }}">{{ estado_texto }}</span><small class="unit-label">{{ producto.unidad }}</small></td>
           <td>
             <div class="presentation-tags">
@@ -57,6 +66,9 @@
                 data-unidad="{{ producto.unidad|e }}"
                 data-abreviatura="{{ producto.abreviatura|e }}"
                 data-stock="{{ producto.stock_actual }}"
+                data-stock-suelto="{{ producto.stock_suelto }}"
+                data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+                data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
                 data-minimo="{{ producto.stock_minimo }}"
                 data-estado="{{ estado_texto }}"
                 data-descripcion="{{ (producto.descripcion or 'Sin descripcion')|e }}"
@@ -87,6 +99,9 @@
                 data-action="{{ url_for('ajustar_stock', producto_id=producto.id) }}"
                 data-nombre="{{ producto.nombre|e }}"
                 data-stock="{{ producto.stock_actual }}"
+                data-stock-suelto="{{ producto.stock_suelto }}"
+                data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+                data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
                 data-unidad="{{ producto.abreviatura }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
               ><span class="material-symbols-outlined">tune</span></button>
@@ -136,7 +151,10 @@
     <button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button>
   </div>
   <div class="detail-stock-summary">
-    <div><span>Stock actual</span><strong data-detail-stock></strong></div>
+    <div><span>Disponible</span><strong data-detail-stock></strong></div>
+    <div><span>Stock suelto</span><strong data-detail-stock-loose></strong></div>
+    <div><span>Balde abierto</span><strong data-detail-stock-open-bucket></strong></div>
+    <div><span>Baldes cerrados</span><strong data-detail-stock-closed-buckets></strong></div>
     <div><span>Stock minimo</span><strong data-detail-minimum></strong></div>
     <div><span>Estado</span><strong data-detail-status></strong></div>
   </div>
@@ -184,9 +202,11 @@
   <form method="post" data-stock-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="dialog-header"><div><h2>Ajustar stock</h2><p data-stock-product></p></div><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
-    <div class="current-stock"><span>Stock actual</span><strong data-current-stock></strong></div>
+    <div class="current-stock"><span>Stock disponible actual</span><strong data-current-stock></strong></div>
     <div class="product-form-grid single-column">
-      <label><span>Nuevo stock</span><input name="stock_nuevo" type="number" min="0" required data-new-stock></label>
+      <label><span>Stock suelto</span><input name="stock_suelto_nuevo" type="number" min="0" required data-new-stock-loose></label>
+      <label><span>Balde abierto</span><input name="stock_balde_abierto_nuevo" type="number" min="0" required data-new-stock-open-bucket></label>
+      <label><span>Baldes cerrados</span><input name="stock_baldes_cerrados_nuevo" type="number" min="0" step="1" required data-new-stock-closed-buckets></label>
       <label><span>Motivo</span><textarea name="motivo" rows="3" required minlength="3" maxlength="255"></textarea></label>
     </div>
     <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar ajuste</button></div>

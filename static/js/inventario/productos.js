@@ -85,6 +85,9 @@ document.querySelectorAll("[data-view-product]").forEach((button) => {
     detailDialog.querySelector("[data-detail-name]").textContent = button.dataset.nombre;
     detailDialog.querySelector("[data-detail-meta]").textContent = `${button.dataset.tipo} / ${button.dataset.categoria}`;
     detailDialog.querySelector("[data-detail-stock]").textContent = `${button.dataset.stock} ${button.dataset.abreviatura}`;
+    detailDialog.querySelector("[data-detail-stock-loose]").textContent = `${button.dataset.stockSuelto} ${button.dataset.abreviatura}`;
+    detailDialog.querySelector("[data-detail-stock-open-bucket]").textContent = `${button.dataset.stockBaldeAbierto} ${button.dataset.abreviatura}`;
+    detailDialog.querySelector("[data-detail-stock-closed-buckets]").textContent = `${button.dataset.stockBaldesCerrados} balde(s)`;
     detailDialog.querySelector("[data-detail-minimum]").textContent = `${button.dataset.minimo} ${button.dataset.abreviatura}`;
     detailDialog.querySelector("[data-detail-status]").textContent = button.dataset.estado;
     detailDialog.querySelector("[data-detail-type]").textContent = button.dataset.tipo;
@@ -118,16 +121,22 @@ document.querySelectorAll("[data-adjust-stock]").forEach((button) => {
     stockForm.action = button.dataset.action;
     stockDialog.querySelector("[data-stock-product]").textContent = button.dataset.nombre;
     stockDialog.querySelector("[data-current-stock]").textContent = `${button.dataset.stock} ${button.dataset.unidad}`;
-    const input = stockDialog.querySelector("[data-new-stock]");
-    input.value = button.dataset.stock;
-    input.step = button.dataset.decimal === "1" ? "0.001" : "1";
+    const looseInput = stockDialog.querySelector("[data-new-stock-loose]");
+    const openBucketInput = stockDialog.querySelector("[data-new-stock-open-bucket]");
+    const closedBucketsInput = stockDialog.querySelector("[data-new-stock-closed-buckets]");
+    const step = button.dataset.decimal === "1" ? "0.001" : "1";
+    looseInput.value = button.dataset.stockSuelto;
+    openBucketInput.value = button.dataset.stockBaldeAbierto;
+    closedBucketsInput.value = button.dataset.stockBaldesCerrados;
+    looseInput.step = step;
+    openBucketInput.step = step;
     stockDialog.showModal();
   });
 });
 
 document.querySelectorAll("[data-delete-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
-    if (!window.confirm(`¿Eliminar ${form.dataset.name}?`)) event.preventDefault();
+    if (!window.confirm(`Eliminar ${form.dataset.name}?`)) event.preventDefault();
   });
 });
 

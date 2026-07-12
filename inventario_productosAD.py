@@ -102,7 +102,9 @@ def listar_productos():
         dict(fila)
         for fila in consultar_todos(
             """
-            SELECT p.id, p.nombre, p.marca, p.descripcion, p.stock_actual, p.stock_minimo,
+            SELECT p.id, p.nombre, p.marca, p.descripcion, p.stock_actual,
+                   p.stock_suelto, p.stock_balde_abierto, p.stock_baldes_cerrados,
+                   p.stock_minimo,
                    p.observaciones, p.tipo_id, t.nombre AS tipo, p.categoria_id,
                    c.nombre AS categoria, p.unidad_base_id, u.nombre AS unidad,
                    u.abreviatura, u.permite_decimal
@@ -127,11 +129,19 @@ def listar_productos():
 
 def resumen_productos(productos=None):
     productos = productos if productos is not None else listar_productos()
-    con_stock = sum(1 for producto in productos if producto["stock_actual"] > 0)
+    con_stock = sum(
+        1
+        for producto in productos
+        if producto["stock_actual"] > 0 or producto.get("stock_baldes_cerrados", 0) > 0
+    )
     return {
         "total": len(productos),
         "con_stock": con_stock,
-        "sin_stock": sum(1 for producto in productos if producto["stock_actual"] <= 0),
+        "sin_stock": sum(
+            1
+            for producto in productos
+            if producto["stock_actual"] <= 0 and producto.get("stock_baldes_cerrados", 0) <= 0
+        ),
         "repuestos": sum(1 for producto in productos if producto["tipo"] == "Repuesto"),
         "lubricantes": sum(1 for producto in productos if producto["tipo"] == "Lubricante"),
         "bajo_stock": sum(
@@ -276,13 +286,14 @@ def crear_producto(datos, usuario_id):
             """
             INSERT INTO productos
                 (nombre, tipo_id, categoria_id, marca, descripcion, unidad_base_id,
-                 stock_actual, stock_minimo, observaciones, creado_por)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 stock_actual, stock_suelto, stock_minimo, observaciones, creado_por)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 valores["nombre"], valores["tipo_id"], valores["categoria_id"],
                 valores["marca"], valores["descripcion"], valores["unidad_base_id"],
-                valores["stock_actual"], valores["stock_minimo"], valores["observaciones"],
+                valores["stock_actual"], valores["stock_actual"],
+                valores["stock_minimo"], valores["observaciones"],
                 usuario_id,
             ),
         )
@@ -315,7 +326,12 @@ def crear_producto(datos, usuario_id):
 
 def editar_producto(producto_id, datos):
     actual = consultar_uno(
-        "SELECT id, unidad_base_id, stock_actual FROM productos WHERE id = %s",
+        """
+        SELECT id, unidad_base_id, stock_actual, stock_suelto,
+               stock_balde_abierto, stock_baldes_cerrados
+        FROM productos
+        WHERE id = %s
+        """,
         (producto_id,),
     )
     if not actual:
@@ -323,7 +339,8 @@ def editar_producto(producto_id, datos):
     valores, error = _datos_producto(datos)
     if error:
         return False, error
-    if actual["stock_actual"] != 0 and valores["unidad_base_id"] != actual["unidad_base_id"]:
+    stock_total = actual["stock_suelto"] + actual["stock_balde_abierto"] + actual["stock_baldes_cerrados"]
+    if stock_total != 0 and valores["unidad_base_id"] != actual["unidad_base_id"]:
         return False, "No puedes cambiar la unidad base de un producto que ya tiene stock."
     error = _validar_producto(valores, producto_id=producto_id)
     if error:
@@ -356,17 +373,32 @@ def editar_producto(producto_id, datos):
 
 
 def ajustar_stock_producto(producto_id, datos, usuario_id):
-    stock_nuevo, error = _decimal(datos.get("stock_nuevo"), "El nuevo stock")
+    stock_suelto, error_suelto = _decimal(
+        datos.get("stock_suelto_nuevo", datos.get("stock_nuevo")),
+        "El stock suelto",
+    )
+    stock_balde_abierto, error_balde_abierto = _decimal(
+        datos.get("stock_balde_abierto_nuevo", "0"),
+        "El stock de balde abierto",
+    )
+    stock_baldes_cerrados, error_baldes_cerrados = _decimal(
+        datos.get("stock_baldes_cerrados_nuevo", "0"),
+        "Los baldes cerrados",
+    )
     motivo = datos.get("motivo", "").strip()
+    error = error_suelto or error_balde_abierto or error_baldes_cerrados
     if error:
         return False, error
     if len(motivo) < 3:
         return False, "Ingresa el motivo del ajuste."
+    if stock_baldes_cerrados != stock_baldes_cerrados.to_integral_value():
+        return False, "Los baldes cerrados deben ser enteros."
 
     def operacion(cursor):
         cursor.execute(
             """
-            SELECT p.id, p.stock_actual, u.permite_decimal
+            SELECT p.id, p.stock_actual, p.stock_suelto, p.stock_balde_abierto,
+                   p.stock_baldes_cerrados, u.permite_decimal
             FROM productos p
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
             WHERE p.id = %s
@@ -377,13 +409,32 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
         producto = cursor.fetchone()
         if not producto:
             return False, "El producto solicitado no existe."
-        if not producto["permite_decimal"] and stock_nuevo != stock_nuevo.to_integral_value():
-            return False, "El stock debe ser entero para la unidad seleccionada."
+        if not producto["permite_decimal"]:
+            cantidades = [stock_suelto, stock_balde_abierto]
+            if any(cantidad != cantidad.to_integral_value() for cantidad in cantidades):
+                return False, "El stock debe ser entero para la unidad seleccionada."
 
-        diferencia = stock_nuevo - producto["stock_actual"]
-        if diferencia == 0:
+        sin_cambios = (
+            stock_suelto == producto["stock_suelto"]
+            and stock_balde_abierto == producto["stock_balde_abierto"]
+            and stock_baldes_cerrados == producto["stock_baldes_cerrados"]
+        )
+        if sin_cambios:
             return False, "El nuevo stock es igual al stock actual."
-        cursor.execute("UPDATE productos SET stock_actual = %s WHERE id = %s", (stock_nuevo, producto_id))
+
+        stock_nuevo = stock_suelto + stock_balde_abierto
+        diferencia = stock_nuevo - producto["stock_actual"]
+        cursor.execute(
+            """
+            UPDATE productos
+            SET stock_suelto = %s,
+                stock_balde_abierto = %s,
+                stock_baldes_cerrados = %s,
+                stock_actual = %s
+            WHERE id = %s
+            """,
+            (stock_suelto, stock_balde_abierto, stock_baldes_cerrados, stock_nuevo, producto_id),
+        )
         cursor.execute(
             """
             INSERT INTO ajustes_stock
@@ -407,7 +458,8 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
 def eliminar_producto(producto_id):
     producto = consultar_uno(
         """
-        SELECT p.id, p.stock_actual
+        SELECT p.id, p.stock_actual, p.stock_suelto,
+               p.stock_balde_abierto, p.stock_baldes_cerrados
         FROM productos p
         WHERE p.id = %s
         """,
@@ -415,10 +467,12 @@ def eliminar_producto(producto_id):
     )
     if not producto:
         return False, "El producto solicitado no existe."
-    if producto["stock_actual"] != 0:
+    stock_total = producto["stock_suelto"] + producto["stock_balde_abierto"] + producto["stock_baldes_cerrados"]
+    if stock_total != 0:
         return False, "Primero ajusta el stock del producto a cero para poder eliminarlo."
 
     def operacion(cursor):
+        cursor.execute("DELETE FROM aperturas_balde WHERE producto_id = %s", (producto_id,))
         cursor.execute("DELETE FROM salidas_stock_detalle WHERE producto_id = %s", (producto_id,))
         cursor.execute(
             """

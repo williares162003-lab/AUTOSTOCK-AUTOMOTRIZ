@@ -12,7 +12,7 @@ SCHEMA_PATH = BASE_DIR / "database" / "schema.sql"
 
 def configuracion_bd(incluir_base=True):
     configuracion = {
-        "host": os.environ.get("DB_HOST", "127.0.0.1"),
+        "host": os.environ.get("DB_HOST", "localhost"),
         "port": int(os.environ.get("DB_PORT", "3306")),
         "user": os.environ.get("DB_USER", "root"),
         "password": os.environ.get("DB_PASSWORD", ""),
@@ -52,6 +52,68 @@ def obtener_conexion():
         raise
 
 
+def _columna_existe(cursor, tabla, columna):
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS total
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = %s
+          AND COLUMN_NAME = %s
+        """,
+        (tabla, columna),
+    )
+    return cursor.fetchone()["total"] > 0
+
+
+def _asegurar_columna(cursor, tabla, columna, definicion):
+    if not _columna_existe(cursor, tabla, columna):
+        cursor.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {definicion}")
+
+
+def _aplicar_migraciones(cursor):
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_suelto",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_actual",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_balde_abierto",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_suelto",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_baldes_cerrados",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_balde_abierto",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "origen_stock",
+        "VARCHAR(30) NOT NULL DEFAULT 'suelto' AFTER cantidad_base",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock_detalle",
+        "origen_stock",
+        "VARCHAR(30) NOT NULL DEFAULT 'suelto' AFTER cantidad_base",
+    )
+    cursor.execute(
+        """
+        UPDATE productos
+        SET stock_suelto = stock_actual
+        WHERE stock_actual > 0
+          AND stock_suelto = 0
+          AND stock_balde_abierto = 0
+          AND stock_baldes_cerrados = 0
+        """
+    )
+
+
 def inicializar_base_datos(reset=False):
     conexion = obtener_conexion()
     try:
@@ -59,6 +121,7 @@ def inicializar_base_datos(reset=False):
             if reset:
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
                 cursor.execute("DROP TABLE IF EXISTS ajustes_stock")
+                cursor.execute("DROP TABLE IF EXISTS aperturas_balde")
                 cursor.execute("DROP TABLE IF EXISTS salidas_stock_detalle")
                 cursor.execute("DROP TABLE IF EXISTS salidas_stock")
                 cursor.execute("DROP TABLE IF EXISTS vehiculos_atendidos")
@@ -76,6 +139,7 @@ def inicializar_base_datos(reset=False):
             for sentencia in contenido.split(";"):
                 if sentencia.strip():
                     cursor.execute(sentencia)
+            _aplicar_migraciones(cursor)
         conexion.commit()
     except Exception:
         conexion.rollback()

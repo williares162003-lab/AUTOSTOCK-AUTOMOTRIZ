@@ -3,6 +3,10 @@ from decimal import Decimal, InvalidOperation
 from bd import consultar_todos, consultar_uno, ejecutar_transaccion
 
 
+ORIGEN_SUELTO = "suelto"
+ORIGEN_BALDE_ABIERTO = "balde_abierto"
+
+
 def _entero(valor):
     try:
         return int(valor)
@@ -25,6 +29,10 @@ def _lista(datos, nombre):
         return datos.getlist(nombre)
     valor = datos.get(nombre, [])
     return valor if isinstance(valor, list) else [valor]
+
+
+def _origen_texto(origen):
+    return "Balde abierto" if origen == ORIGEN_BALDE_ABIERTO else "Suelto"
 
 
 def listar_vehiculos():
@@ -63,7 +71,8 @@ def listar_salidas(limite=30):
         marcadores = ", ".join(["%s"] * len(ids))
         detalles = consultar_todos(
             f"""
-            SELECT d.salida_id, d.cantidad_base, d.stock_anterior, d.stock_nuevo,
+            SELECT d.salida_id, d.cantidad_base, d.origen_stock,
+                   d.stock_anterior, d.stock_nuevo,
                    p.nombre AS producto, p.marca, u.abreviatura
             FROM salidas_stock_detalle d
             INNER JOIN productos p ON p.id = d.producto_id
@@ -75,7 +84,9 @@ def listar_salidas(limite=30):
         )
     por_salida = {}
     for detalle in detalles:
-        por_salida.setdefault(detalle["salida_id"], []).append(dict(detalle))
+        detalle = dict(detalle)
+        detalle["origen_texto"] = _origen_texto(detalle["origen_stock"])
+        por_salida.setdefault(detalle["salida_id"], []).append(detalle)
     for salida in salidas:
         salida["detalles"] = por_salida.get(salida["id"], [])
     return salidas
@@ -103,18 +114,25 @@ def resumen_salidas():
 def _lineas_desde_formulario(datos):
     productos = _lista(datos, "producto_id")
     cantidades = _lista(datos, "cantidad")
+    origenes = _lista(datos, "origen_stock")
     lineas = {}
 
-    for producto_texto, cantidad_texto in zip(productos, cantidades):
+    if len(origenes) < len(productos):
+        origenes.extend([ORIGEN_SUELTO] * (len(productos) - len(origenes)))
+
+    for producto_texto, cantidad_texto, origen in zip(productos, cantidades, origenes):
         producto_id = _entero(producto_texto)
         cantidad, error = _decimal(cantidad_texto, "La cantidad")
         if not producto_id and not cantidad_texto:
             continue
         if not producto_id:
             return None, "Selecciona un producto en cada linea."
+        if origen not in (ORIGEN_SUELTO, ORIGEN_BALDE_ABIERTO):
+            return None, "Selecciona un origen de stock valido."
         if error:
             return None, error
-        lineas[producto_id] = lineas.get(producto_id, Decimal("0.000")) + cantidad
+        clave = (producto_id, origen)
+        lineas[clave] = lineas.get(clave, Decimal("0.000")) + cantidad
 
     if not lineas:
         return None, "Agrega al menos un producto a la salida."
@@ -176,11 +194,13 @@ def registrar_salida(datos, usuario_id):
         salida_id = cursor.lastrowid
 
         nombres = []
-        for producto_id in sorted(lineas):
-            cantidad = lineas[producto_id].quantize(Decimal("0.001"))
+        for producto_id, origen in sorted(lineas):
+            cantidad = lineas[(producto_id, origen)].quantize(Decimal("0.001"))
             cursor.execute(
                 """
-                SELECT p.id, p.nombre, p.stock_actual, u.abreviatura, u.permite_decimal
+                SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
+                       p.stock_balde_abierto, p.stock_baldes_cerrados,
+                       u.abreviatura, u.permite_decimal
                 FROM productos p
                 INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
                 WHERE p.id = %s
@@ -193,21 +213,42 @@ def registrar_salida(datos, usuario_id):
                 return False, "Uno de los productos seleccionados no existe."
             if not producto["permite_decimal"] and cantidad != cantidad.to_integral_value():
                 return False, f"{producto['nombre']} debe salir en cantidades enteras."
-            if cantidad > producto["stock_actual"]:
-                return False, f"No hay stock suficiente de {producto['nombre']}."
+
+            disponible = (
+                producto["stock_balde_abierto"]
+                if origen == ORIGEN_BALDE_ABIERTO
+                else producto["stock_suelto"]
+            )
+            if cantidad > disponible:
+                return False, f"No hay stock suficiente de {producto['nombre']} en {_origen_texto(origen).lower()}."
 
             stock_anterior = producto["stock_actual"]
-            stock_nuevo = stock_anterior - cantidad
-            cursor.execute("UPDATE productos SET stock_actual = %s WHERE id = %s", (stock_nuevo, producto_id))
+            stock_suelto_nuevo = producto["stock_suelto"]
+            stock_balde_abierto_nuevo = producto["stock_balde_abierto"]
+            if origen == ORIGEN_BALDE_ABIERTO:
+                stock_balde_abierto_nuevo -= cantidad
+            else:
+                stock_suelto_nuevo -= cantidad
+            stock_nuevo = stock_suelto_nuevo + stock_balde_abierto_nuevo
+            cursor.execute(
+                """
+                UPDATE productos
+                SET stock_suelto = %s,
+                    stock_balde_abierto = %s,
+                    stock_actual = %s
+                WHERE id = %s
+                """,
+                (stock_suelto_nuevo, stock_balde_abierto_nuevo, stock_nuevo, producto_id),
+            )
             cursor.execute(
                 """
                 INSERT INTO salidas_stock_detalle
-                    (salida_id, producto_id, cantidad_base, stock_anterior, stock_nuevo)
-                VALUES (%s, %s, %s, %s, %s)
+                    (salida_id, producto_id, cantidad_base, origen_stock, stock_anterior, stock_nuevo)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
-                (salida_id, producto_id, cantidad, stock_anterior, stock_nuevo),
+                (salida_id, producto_id, cantidad, origen, stock_anterior, stock_nuevo),
             )
-            motivo = f"Salida {placa} / trabajador: {trabajador}"
+            motivo = f"Salida {placa} / trabajador: {trabajador} / {_origen_texto(origen)}"
             cursor.execute(
                 """
                 INSERT INTO ajustes_stock
@@ -216,7 +257,9 @@ def registrar_salida(datos, usuario_id):
                 """,
                 (producto_id, stock_anterior, stock_nuevo, -cantidad, motivo, usuario_id),
             )
-            nombres.append(f"{producto['nombre']} -{cantidad} {producto['abreviatura']}")
+            nombres.append(
+                f"{producto['nombre']} -{cantidad} {producto['abreviatura']} ({_origen_texto(origen)})"
+            )
 
         cursor.execute(
             """

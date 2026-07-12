@@ -126,6 +126,25 @@
   font-size: 11px;
 }
 
+.bucket-panel {
+  margin-bottom: 18px;
+}
+
+.bucket-form {
+  border-top: 1px solid #edf0f5;
+}
+
+.bucket-history {
+  border-top: 1px solid #edf0f5;
+}
+
+.bucket-history td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+
 @media (max-width: 1100px) {
   .entry-layout {
     grid-template-columns: 1fr;

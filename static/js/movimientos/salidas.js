@@ -34,6 +34,7 @@ function selectedProduct(row) {
 
 function updateLine(row) {
   const product = selectedProduct(row);
+  const origin = row.querySelector("[data-line-origin]");
   const quantity = row.querySelector("[data-line-quantity]");
   const stock = row.querySelector("[data-line-stock]");
   if (!product) {
@@ -41,7 +42,10 @@ function updateLine(row) {
     return;
   }
 
-  const available = toNumber(product.dataset.stock);
+  const originValue = origin.value;
+  const available = originValue === "balde_abierto"
+    ? toNumber(product.dataset.stockBaldeAbierto)
+    : toNumber(product.dataset.stockSuelto);
   const abbreviation = product.dataset.abreviatura;
   quantity.step = product.dataset.decimal === "1" ? "0.001" : "1";
   quantity.max = String(available);
@@ -52,6 +56,7 @@ function addLine() {
   const fragment = lineTemplate.content.cloneNode(true);
   const row = fragment.querySelector("[data-output-line]");
   row.querySelector("[data-line-product]").addEventListener("change", () => updateLine(row));
+  row.querySelector("[data-line-origin]").addEventListener("change", () => updateLine(row));
   row.querySelector("[data-remove-line]").addEventListener("click", () => {
     if (linesContainer.children.length > 1) row.remove();
   });

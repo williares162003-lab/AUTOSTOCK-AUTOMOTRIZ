@@ -59,7 +59,7 @@
     <span class="material-symbols-outlined">fact_check</span>
     <h2>Salida por placa</h2>
     <p>Si la placa ya fue usada, seleccionala y se completa el modelo. Cada pedido nuevo se guarda como otra salida.</p>
-    <div><strong>Aceites</strong><span>Se entregan por unidad base, no por balde.</span></div>
+    <div><strong>Aceites</strong><span>Pueden salir de stock suelto o de un balde abierto, pero nunca de baldes cerrados.</span></div>
   </aside>
 </section>
 
@@ -79,7 +79,7 @@
           <td>
             <div class="output-detail-tags">
               {% for detalle in salida.detalles %}
-                <span>{{ detalle.producto }}: -{{ detalle.cantidad_base|float|round(3) }} {{ detalle.abreviatura }}</span>
+                <span>{{ detalle.producto }}: -{{ detalle.cantidad_base|float|round(3) }} {{ detalle.abreviatura }} / {{ detalle.origen_texto }}</span>
               {% else %}
                 <small>Sin detalle</small>
               {% endfor %}
@@ -104,11 +104,20 @@
           <option
             value="{{ producto.id }}"
             data-stock="{{ producto.stock_actual }}"
+            data-stock-suelto="{{ producto.stock_suelto }}"
+            data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
             data-unidad="{{ producto.unidad|e }}"
             data-abreviatura="{{ producto.abreviatura|e }}"
             data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
           >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
         {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Sale de</span>
+      <select name="origen_stock" required data-line-origin>
+        <option value="suelto">Stock suelto</option>
+        <option value="balde_abierto">Balde abierto</option>
       </select>
     </label>
     <label>
