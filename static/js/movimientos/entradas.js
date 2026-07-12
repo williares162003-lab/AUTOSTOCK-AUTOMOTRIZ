@@ -18,7 +18,8 @@ function formatQuantity(value) {
 }
 
 function selectedProduct() {
-  return productSelect.options[productSelect.selectedIndex] || null;
+  const option = productSelect.options[productSelect.selectedIndex] || null;
+  return option?.value ? option : null;
 }
 
 function rebuildPresentations() {
