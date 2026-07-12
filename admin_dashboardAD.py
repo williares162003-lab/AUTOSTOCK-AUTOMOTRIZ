@@ -15,7 +15,7 @@ def obtener_resumen_dashboard():
     return {
         "productos": inventario["productos"],
         "entradas_mes": _entradas_mes(),
-        "salidas_mes": 0,
+        "salidas_mes": _salidas_mes(),
         "alertas_stock": int(inventario["alertas_stock"]),
         "usuarios_activos": usuarios["usuarios_activos"],
     }
@@ -26,6 +26,18 @@ def _entradas_mes():
         """
         SELECT COUNT(*) AS total
         FROM entradas_stock
+        WHERE YEAR(creado_en) = YEAR(CURDATE())
+          AND MONTH(creado_en) = MONTH(CURDATE())
+        """
+    )
+    return fila["total"]
+
+
+def _salidas_mes():
+    fila = consultar_uno(
+        """
+        SELECT COUNT(*) AS total
+        FROM salidas_stock
         WHERE YEAR(creado_en) = YEAR(CURDATE())
           AND MONTH(creado_en) = MONTH(CURDATE())
         """
@@ -67,7 +79,7 @@ def obtener_movimientos_recientes():
 
 
 def obtener_serie_movimientos():
-    filas = consultar_todos(
+    entradas = consultar_todos(
         """
         SELECT DATE(creado_en) AS fecha, COUNT(*) AS entradas
         FROM entradas_stock
@@ -75,7 +87,16 @@ def obtener_serie_movimientos():
         GROUP BY DATE(creado_en)
         """
     )
-    por_fecha = {str(fila["fecha"]): fila["entradas"] for fila in filas}
+    salidas = consultar_todos(
+        """
+        SELECT DATE(creado_en) AS fecha, COUNT(*) AS salidas
+        FROM salidas_stock
+        WHERE creado_en >= DATE_SUB(CURDATE(), INTERVAL 5 DAY)
+        GROUP BY DATE(creado_en)
+        """
+    )
+    entradas_por_fecha = {str(fila["fecha"]): fila["entradas"] for fila in entradas}
+    salidas_por_fecha = {str(fila["fecha"]): fila["salidas"] for fila in salidas}
     dias = consultar_todos(
         """
         SELECT DATE_SUB(CURDATE(), INTERVAL n.n DAY) AS fecha,
@@ -87,12 +108,16 @@ def obtener_serie_movimientos():
         ORDER BY fecha
         """
     )
-    maximo = max([int(valor) for valor in por_fecha.values()] + [1])
+    maximo = max(
+        [int(valor) for valor in entradas_por_fecha.values()]
+        + [int(valor) for valor in salidas_por_fecha.values()]
+        + [1]
+    )
     return [
         {
             "dia": fila["dia"],
-            "entradas": round((int(por_fecha.get(str(fila["fecha"]), 0)) / maximo) * 100),
-            "salidas": 0,
+            "entradas": round((int(entradas_por_fecha.get(str(fila["fecha"]), 0)) / maximo) * 100),
+            "salidas": round((int(salidas_por_fecha.get(str(fila["fecha"]), 0)) / maximo) * 100),
         }
         for fila in dias
     ]

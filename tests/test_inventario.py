@@ -15,6 +15,7 @@ from inventario_productosAD import (
     resumen_productos,
 )
 from movimientos_entradasAD import registrar_entrada
+from movimientos_salidasAD import registrar_salida
 from tests.test_app import USUARIO_ALMACEN
 
 
@@ -234,6 +235,50 @@ class InventarioAppTests(unittest.TestCase):
     def test_entry_rejects_invalid_quantity(self):
         correcto, mensaje = registrar_entrada(
             {"producto_id": "1", "presentacion_id": "base", "cantidad": "0", "motivo": "Compra"},
+            usuario_id=2,
+        )
+        self.assertFalse(correcto)
+        self.assertIn("mayor que cero", mensaje)
+
+    @patch("app.resumen_salidas", return_value={"total": 0, "hoy": 0, "mes": 0, "vehiculos": 0})
+    @patch("app.listar_salidas", return_value=[])
+    @patch("app.listar_vehiculos", return_value=[{"id": 1, "placa": "ABC-123", "modelo": "Toyota Yaris"}])
+    @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
+    def test_almacen_can_open_outputs(self, _productos, _vehiculos, _salidas, _resumen):
+        response = self.client.get("/movimientos/salidas")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Nueva salida", response.data)
+        self.assertIn(b"ABC-123", response.data)
+        self.assertIn(b"Aceite 20W50", response.data)
+
+    @patch("app.registrar_salida", return_value=(True, "Salida registrada correctamente."))
+    def test_almacen_can_submit_output(self, registrar):
+        response = self.client.post(
+            "/movimientos/salidas/crear",
+            data={
+                "csrf_token": "csrf-inventario",
+                "placa": "ABC-123",
+                "modelo": "Toyota Yaris",
+                "trabajador": "Juan Perez",
+                "producto_id": "1",
+                "cantidad": "2",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/movimientos/salidas", response.location)
+        registrar.assert_called_once()
+
+    def test_output_requires_worker(self):
+        correcto, mensaje = registrar_salida(
+            {"placa": "ABC-123", "trabajador": "", "producto_id": "1", "cantidad": "1"},
+            usuario_id=2,
+        )
+        self.assertFalse(correcto)
+        self.assertIn("trabajador", mensaje)
+
+    def test_output_rejects_invalid_quantity(self):
+        correcto, mensaje = registrar_salida(
+            {"placa": "ABC-123", "trabajador": "Juan Perez", "producto_id": "1", "cantidad": "0"},
             usuario_id=2,
         )
         self.assertFalse(correcto)

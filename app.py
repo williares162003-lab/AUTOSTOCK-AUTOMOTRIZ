@@ -40,6 +40,12 @@ from inventario_productosAD import (
 )
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
 from movimientos_entradasAD import listar_entradas, registrar_entrada, resumen_entradas
+from movimientos_salidasAD import (
+    listar_salidas,
+    listar_vehiculos,
+    registrar_salida,
+    resumen_salidas,
+)
 
 
 app = Flask(__name__)
@@ -197,6 +203,32 @@ def crear_entrada():
     correcto, mensaje = registrar_entrada(request.form, session["usuario"]["id"])
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("entradas"))
+
+
+@app.get("/movimientos/salidas")
+@login_requerido
+def salidas():
+    contexto = contexto_base("salidas")
+    contexto.update(
+        {
+            "page_title": "Salidas",
+            "page_subtitle": "Registra entregas internas por placa y trabajador.",
+            "productos": listar_productos(),
+            "vehiculos": listar_vehiculos(),
+            "salidas": listar_salidas(),
+            "resumen": resumen_salidas(),
+        }
+    )
+    return render_template("movimientos/salidas.html", **contexto)
+
+
+@app.post("/movimientos/salidas/crear")
+@login_requerido
+@csrf_requerido
+def crear_salida():
+    correcto, mensaje = registrar_salida(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("salidas"))
 
 
 @app.get("/inventario/categorias")

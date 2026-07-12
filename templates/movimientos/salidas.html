@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario/productos.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/movimientos/entradas.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/movimientos/salidas.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="inventory-stats">
+  <article class="inventory-stat neutral"><span class="material-symbols-outlined">outbox</span><strong>{{ resumen.total }}</strong><p>Salidas</p></article>
+  <article class="inventory-stat green"><span class="material-symbols-outlined">today</span><strong>{{ resumen.hoy }}</strong><p>Hoy</p></article>
+  <article class="inventory-stat primary"><span class="material-symbols-outlined">calendar_month</span><strong>{{ resumen.mes }}</strong><p>Este mes</p></article>
+  <article class="inventory-stat warning"><span class="material-symbols-outlined">directions_car</span><strong>{{ resumen.vehiculos }}</strong><p>Vehiculos</p></article>
+</div>
+
+<section class="entry-layout">
+  <article class="inventory-table entry-form-panel">
+    <div class="inventory-toolbar">
+      <div><h2>Nueva salida</h2><p>Entrega productos para un vehiculo y trabajador.</p></div>
+    </div>
+    <form method="post" action="{{ url_for('crear_salida') }}" class="entry-form output-form" data-output-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="product-form-grid">
+        <label>
+          <span>Placa</span>
+          <input name="placa" list="vehiculos-atendidos" maxlength="20" required data-vehicle-plate placeholder="ABC-123">
+          <datalist id="vehiculos-atendidos">
+            {% for vehiculo in vehiculos %}
+              <option value="{{ vehiculo.placa }}" data-modelo="{{ (vehiculo.modelo or '')|e }}">{{ vehiculo.modelo or "Sin modelo" }}</option>
+            {% endfor %}
+          </datalist>
+        </label>
+        <label>
+          <span>Vehiculo/modelo (opcional)</span>
+          <input name="modelo" maxlength="120" data-vehicle-model placeholder="Toyota Yaris">
+        </label>
+        <label class="span-two">
+          <span>Trabajador que recibe</span>
+          <input name="trabajador" maxlength="160" required placeholder="Nombre del trabajador">
+        </label>
+      </div>
+
+      <div class="output-lines-section">
+        <div class="section-heading">
+          <h3>Productos entregados</h3>
+          <button class="secondary-button" type="button" data-add-output-line><span class="material-symbols-outlined">add</span>Agregar linea</button>
+        </div>
+        <div class="output-lines" data-output-lines></div>
+      </div>
+
+      <div class="dialog-actions">
+        <button class="primary-button" type="submit"><span class="material-symbols-outlined">outbox</span>Registrar salida</button>
+      </div>
+    </form>
+  </article>
+
+  <aside class="entry-help">
+    <span class="material-symbols-outlined">fact_check</span>
+    <h2>Salida por placa</h2>
+    <p>Si la placa ya fue usada, seleccionala y se completa el modelo. Cada pedido nuevo se guarda como otra salida.</p>
+    <div><strong>Aceites</strong><span>Se entregan por unidad base, no por balde.</span></div>
+  </aside>
+</section>
+
+<section class="inventory-table history-panel">
+  <div class="inventory-toolbar">
+    <div><h2>Ultimas salidas</h2><p>{{ salidas|length }} registros recientes</p></div>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Fecha</th><th>Vehiculo</th><th>Trabajador</th><th>Productos</th><th>Usuario</th></tr></thead>
+      <tbody>
+        {% for salida in salidas %}
+        <tr>
+          <td>{{ salida.creado_en }}</td>
+          <td><strong>{{ salida.placa }}</strong><small>{{ salida.modelo or "Sin modelo" }}</small></td>
+          <td>{{ salida.trabajador }}</td>
+          <td>
+            <div class="output-detail-tags">
+              {% for detalle in salida.detalles %}
+                <span>{{ detalle.producto }}: -{{ detalle.cantidad_base|float|round(3) }} {{ detalle.abreviatura }}</span>
+              {% else %}
+                <small>Sin detalle</small>
+              {% endfor %}
+            </div>
+          </td>
+          <td>{{ salida.usuario }}</td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-row" colspan="5">Todavia no hay salidas registradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<template data-output-line-template>
+  <div class="output-line" data-output-line>
+    <label>
+      <span>Producto</span>
+      <select name="producto_id" required data-line-product>
+        {% for producto in productos %}
+          <option
+            value="{{ producto.id }}"
+            data-stock="{{ producto.stock_actual }}"
+            data-unidad="{{ producto.unidad|e }}"
+            data-abreviatura="{{ producto.abreviatura|e }}"
+            data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
+          >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Cantidad</span>
+      <input name="cantidad" type="number" min="0.001" step="0.001" required data-line-quantity>
+    </label>
+    <div class="line-stock">
+      <span>Disponible</span>
+      <strong data-line-stock>-</strong>
+    </div>
+    <button class="icon-action danger" type="button" title="Quitar linea" data-remove-line><span class="material-symbols-outlined">delete</span></button>
+  </div>
+</template>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/movimientos/salidas.js') }}"></script>
+{% endblock %}

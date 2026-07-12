@@ -116,6 +116,54 @@ CREATE TABLE IF NOT EXISTS entradas_stock (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS vehiculos_atendidos (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    placa VARCHAR(20) NOT NULL,
+    modelo VARCHAR(120) NULL,
+    ultimo_uso DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_vehiculos_atendidos_placa (placa)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS salidas_stock (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    vehiculo_id INT UNSIGNED NOT NULL,
+    placa VARCHAR(20) NOT NULL,
+    modelo VARCHAR(120) NULL,
+    trabajador VARCHAR(160) NOT NULL,
+    usuario_id INT UNSIGNED NULL,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_salidas_stock_vehiculo (vehiculo_id),
+    KEY idx_salidas_stock_usuario (usuario_id),
+    CONSTRAINT fk_salidas_stock_vehiculo
+        FOREIGN KEY (vehiculo_id) REFERENCES vehiculos_atendidos (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_salidas_stock_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS salidas_stock_detalle (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    salida_id INT UNSIGNED NOT NULL,
+    producto_id INT UNSIGNED NOT NULL,
+    cantidad_base DECIMAL(14,3) NOT NULL,
+    stock_anterior DECIMAL(14,3) NOT NULL,
+    stock_nuevo DECIMAL(14,3) NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_salidas_stock_detalle_salida (salida_id),
+    KEY idx_salidas_stock_detalle_producto (producto_id),
+    CONSTRAINT fk_salidas_stock_detalle_salida
+        FOREIGN KEY (salida_id) REFERENCES salidas_stock (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_salidas_stock_detalle_producto
+        FOREIGN KEY (producto_id) REFERENCES productos (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS ajustes_stock (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     producto_id INT UNSIGNED NOT NULL,
