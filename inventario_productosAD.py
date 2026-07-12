@@ -419,6 +419,7 @@ def eliminar_producto(producto_id):
         return False, "Primero ajusta el stock del producto a cero para poder eliminarlo."
 
     def operacion(cursor):
+        cursor.execute("DELETE FROM entradas_stock WHERE producto_id = %s", (producto_id,))
         cursor.execute("DELETE FROM ajustes_stock WHERE producto_id = %s", (producto_id,))
         cursor.execute("DELETE FROM presentaciones_producto WHERE producto_id = %s", (producto_id,))
         cursor.execute("DELETE FROM productos WHERE id = %s", (producto_id,))

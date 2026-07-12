@@ -86,6 +86,36 @@ CREATE TABLE IF NOT EXISTS presentaciones_producto (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS entradas_stock (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    producto_id INT UNSIGNED NOT NULL,
+    presentacion_id INT UNSIGNED NULL,
+    presentacion_nombre VARCHAR(80) NOT NULL,
+    factor DECIMAL(14,3) NOT NULL,
+    cantidad DECIMAL(14,3) NOT NULL,
+    cantidad_base DECIMAL(14,3) NOT NULL,
+    stock_anterior DECIMAL(14,3) NOT NULL,
+    stock_nuevo DECIMAL(14,3) NOT NULL,
+    proveedor VARCHAR(160) NULL,
+    documento VARCHAR(80) NULL,
+    motivo VARCHAR(255) NOT NULL,
+    usuario_id INT UNSIGNED NULL,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_entradas_stock_producto (producto_id),
+    KEY idx_entradas_stock_presentacion (presentacion_id),
+    KEY idx_entradas_stock_usuario (usuario_id),
+    CONSTRAINT fk_entradas_stock_producto
+        FOREIGN KEY (producto_id) REFERENCES productos (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_entradas_stock_presentacion
+        FOREIGN KEY (presentacion_id) REFERENCES presentaciones_producto (id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_entradas_stock_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS ajustes_stock (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     producto_id INT UNSIGNED NOT NULL,

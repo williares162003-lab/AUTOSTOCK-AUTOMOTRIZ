@@ -59,6 +59,7 @@ def inicializar_base_datos(reset=False):
             if reset:
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
                 cursor.execute("DROP TABLE IF EXISTS ajustes_stock")
+                cursor.execute("DROP TABLE IF EXISTS entradas_stock")
                 cursor.execute("DROP TABLE IF EXISTS presentaciones_producto")
                 cursor.execute("DROP TABLE IF EXISTS productos")
                 cursor.execute("DROP TABLE IF EXISTS categorias")

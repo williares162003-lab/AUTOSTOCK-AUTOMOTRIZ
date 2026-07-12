@@ -39,6 +39,7 @@ from inventario_productosAD import (
     resumen_productos,
 )
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
+from movimientos_entradasAD import listar_entradas, registrar_entrada, resumen_entradas
 
 
 app = Flask(__name__)
@@ -171,6 +172,31 @@ def eliminar_producto(producto_id):
     correcto, mensaje = eliminar_producto_ad(producto_id)
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("productos"))
+
+
+@app.get("/movimientos/entradas")
+@login_requerido
+def entradas():
+    contexto = contexto_base("entradas")
+    contexto.update(
+        {
+            "page_title": "Entradas",
+            "page_subtitle": "Registra compras y reposiciones para aumentar el stock del almacen.",
+            "productos": listar_productos(),
+            "entradas": listar_entradas(),
+            "resumen": resumen_entradas(),
+        }
+    )
+    return render_template("movimientos/entradas.html", **contexto)
+
+
+@app.post("/movimientos/entradas/crear")
+@login_requerido
+@csrf_requerido
+def crear_entrada():
+    correcto, mensaje = registrar_entrada(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("entradas"))
 
 
 @app.get("/inventario/categorias")

@@ -38,9 +38,11 @@ class AutomanAppTests(unittest.TestCase):
         self.assertIn(b"AUTOMAN", response.data)
         self.assertNotIn(b"Atlantica", response.data)
 
+    @patch("app.obtener_serie_movimientos", return_value=[])
+    @patch("app.obtener_movimientos_recientes", return_value=[])
     @patch("app.obtener_resumen_dashboard", return_value={"productos": 0, "entradas_mes": 0, "salidas_mes": 0, "alertas_stock": 0, "usuarios_activos": 2})
     @patch("app.autenticar_usuario", return_value=(USUARIO_PRUEBA, None))
-    def test_user_can_login_and_open_dashboard(self, _autenticar, _resumen):
+    def test_user_can_login_and_open_dashboard(self, _autenticar, _resumen, _movimientos, _serie):
         response = self.client.post(
             "/login",
             data={"usuario": "admin", "contrasena": "admin123"},

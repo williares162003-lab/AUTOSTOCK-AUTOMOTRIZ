@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario/productos.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/movimientos/entradas.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="inventory-stats">
+  <article class="inventory-stat neutral"><span class="material-symbols-outlined">receipt_long</span><strong>{{ resumen.total }}</strong><p>Entradas</p></article>
+  <article class="inventory-stat green"><span class="material-symbols-outlined">today</span><strong>{{ resumen.hoy }}</strong><p>Hoy</p></article>
+  <article class="inventory-stat primary"><span class="material-symbols-outlined">calendar_month</span><strong>{{ resumen.mes }}</strong><p>Este mes</p></article>
+  <article class="inventory-stat warning"><span class="material-symbols-outlined">inventory_2</span><strong>{{ resumen.productos }}</strong><p>Productos movidos</p></article>
+</div>
+
+<section class="entry-layout">
+  <article class="inventory-table entry-form-panel">
+    <div class="inventory-toolbar">
+      <div><h2>Nueva entrada</h2><p>Registra lo que llega al almacen.</p></div>
+    </div>
+    <form method="post" action="{{ url_for('crear_entrada') }}" class="entry-form" data-entry-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="product-form-grid">
+        <label class="span-two">
+          <span>Producto</span>
+          <select name="producto_id" required data-product-select>
+            {% for producto in productos %}
+              <option
+                value="{{ producto.id }}"
+                data-stock="{{ producto.stock_actual }}"
+                data-unidad="{{ producto.unidad|e }}"
+                data-abreviatura="{{ producto.abreviatura|e }}"
+                data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
+                data-presentaciones="{{ producto.presentaciones|tojson|forceescape }}"
+              >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>Presentacion</span>
+          <select name="presentacion_id" required data-presentation-select></select>
+        </label>
+        <label>
+          <span>Cantidad que ingresa</span>
+          <input name="cantidad" type="number" min="0.001" step="0.001" required data-entry-quantity>
+        </label>
+        <label>
+          <span>Proveedor (opcional)</span>
+          <input name="proveedor" maxlength="160" placeholder="Proveedor">
+        </label>
+        <label>
+          <span>Documento (opcional)</span>
+          <input name="documento" maxlength="80" placeholder="Factura, boleta, guia">
+        </label>
+        <label class="span-two">
+          <span>Motivo</span>
+          <textarea name="motivo" rows="3" maxlength="255" placeholder="Compra, reposicion o inventario recibido">Compra o reposicion</textarea>
+        </label>
+      </div>
+      <div class="entry-preview" data-entry-preview>
+        <div><span>Stock actual</span><strong data-current-stock>-</strong></div>
+        <div><span>Entrada al stock</span><strong data-base-quantity>-</strong></div>
+        <div><span>Stock estimado</span><strong data-estimated-stock>-</strong></div>
+      </div>
+      <div class="dialog-actions">
+        <button class="primary-button" type="submit"><span class="material-symbols-outlined">move_to_inbox</span>Registrar entrada</button>
+      </div>
+    </form>
+  </article>
+
+  <aside class="entry-help">
+    <span class="material-symbols-outlined">info</span>
+    <h2>Como suma el stock</h2>
+    <p>Si eliges una presentacion, la cantidad se convierte a la unidad base del producto.</p>
+    <div><strong>Balde</strong><span>2 baldes x 5 gal = 10 gal al stock</span></div>
+  </aside>
+</section>
+
+<section class="inventory-table history-panel">
+  <div class="inventory-toolbar">
+    <div><h2>Ultimas entradas</h2><p>{{ entradas|length }} registros recientes</p></div>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Fecha</th><th>Producto</th><th>Entrada</th><th>Stock</th><th>Proveedor</th><th>Documento</th><th>Usuario</th></tr></thead>
+      <tbody>
+        {% for entrada in entradas %}
+        <tr>
+          <td>{{ entrada.creado_en }}</td>
+          <td><strong>{{ entrada.producto }}</strong><small>{{ entrada.marca or "Sin marca" }}</small></td>
+          <td><strong class="adjustment-value positive">+{{ entrada.cantidad_base|float|round(3) }} {{ entrada.abreviatura }}</strong><small>{{ entrada.cantidad|float|round(3) }} {{ entrada.presentacion_nombre }}</small></td>
+          <td>{{ entrada.stock_anterior|float|round(3) }} &rarr; <strong>{{ entrada.stock_nuevo|float|round(3) }}</strong></td>
+          <td>{{ entrada.proveedor or "-" }}</td>
+          <td>{{ entrada.documento or "-" }}</td>
+          <td>{{ entrada.usuario }}</td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-row" colspan="7">Todavia no hay entradas registradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/movimientos/entradas.js') }}"></script>
+{% endblock %}

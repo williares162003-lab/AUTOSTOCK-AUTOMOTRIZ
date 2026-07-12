@@ -14,6 +14,7 @@ from inventario_productosAD import (
     preparar_categorias_generales,
     resumen_productos,
 )
+from movimientos_entradasAD import registrar_entrada
 from tests.test_app import USUARIO_ALMACEN
 
 
@@ -204,6 +205,39 @@ class InventarioAppTests(unittest.TestCase):
         preparar_categorias_generales()
         ejecutar.assert_called_once()
         self.assertIn("Sin clasificar", ejecutar.call_args.args[0])
+
+    @patch("app.resumen_entradas", return_value={"total": 0, "hoy": 0, "mes": 0, "productos": 0})
+    @patch("app.listar_entradas", return_value=[])
+    @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
+    def test_almacen_can_open_entries(self, _productos, _entradas, _resumen):
+        response = self.client.get("/movimientos/entradas")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Nueva entrada", response.data)
+        self.assertIn(b"Aceite 20W50", response.data)
+
+    @patch("app.registrar_entrada", return_value=(True, "Entrada registrada correctamente."))
+    def test_almacen_can_submit_entry(self, registrar):
+        response = self.client.post(
+            "/movimientos/entradas/crear",
+            data={
+                "csrf_token": "csrf-inventario",
+                "producto_id": "1",
+                "presentacion_id": "base",
+                "cantidad": "2",
+                "motivo": "Compra",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/movimientos/entradas", response.location)
+        registrar.assert_called_once()
+
+    def test_entry_rejects_invalid_quantity(self):
+        correcto, mensaje = registrar_entrada(
+            {"producto_id": "1", "presentacion_id": "base", "cantidad": "0", "motivo": "Compra"},
+            usuario_id=2,
+        )
+        self.assertFalse(correcto)
+        self.assertIn("mayor que cero", mensaje)
 
     def test_product_summary_tracks_stock_states(self):
         productos = [

@@ -69,8 +69,9 @@ def nav_items(usuario):
         {
             "label": "Movimientos",
             "icon": "sync_alt",
+            "active_pages": ["entradas"],
             "children": [
-                {"label": "Entradas", "icon": "move_to_inbox", "endpoint": None},
+                {"label": "Entradas", "icon": "move_to_inbox", "endpoint": "entradas"},
                 {"label": "Salidas", "icon": "outbox", "endpoint": None},
                 {"label": "Kardex", "icon": "fact_check", "endpoint": None},
             ],
