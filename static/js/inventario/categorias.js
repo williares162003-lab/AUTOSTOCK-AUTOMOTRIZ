@@ -1,7 +1,32 @@
 const categoryDialog = document.querySelector("[data-category-dialog]");
-const categoryForm = document.querySelector("[data-category-form]");
+const categoryTargetType = document.querySelector("[data-category-target-type]");
+const existingCategory = document.querySelector("[data-existing-category]");
+const existingCategoryForm = document.querySelector("[data-existing-category-form]");
+const newCategoryForm = document.querySelector("[data-new-category-form]");
 const typeDialog = document.querySelector("[data-type-dialog]");
 const typeForm = document.querySelector("[data-type-form]");
+
+function updateCategoryOptions() {
+  const typeId = categoryTargetType.value;
+  let firstAvailable = null;
+
+  document.querySelectorAll("[data-category-type-input]").forEach((input) => {
+    input.value = typeId;
+  });
+
+  Array.from(existingCategory.options).forEach((option) => {
+    const assignedTypes = option.dataset.tipos.split(",");
+    const available = !assignedTypes.includes(typeId);
+    option.hidden = !available;
+    option.disabled = !available;
+    if (available && !firstAvailable) firstAvailable = option;
+  });
+
+  existingCategory.value = firstAvailable?.value || "";
+  existingCategory.disabled = !firstAvailable;
+  existingCategoryForm.querySelector("[data-add-existing]").disabled = !firstAvailable;
+  document.querySelector("[data-no-existing]").hidden = Boolean(firstAvailable);
+}
 
 document.querySelector("[data-open-type]").addEventListener("click", () => {
   typeForm.reset();
@@ -20,11 +45,12 @@ document.querySelectorAll("[data-edit-type]").forEach((button) => {
 });
 
 document.querySelector("[data-open-category]").addEventListener("click", () => {
-  const selectedType = categoryForm.elements.tipo_id.value;
-  categoryForm.reset();
-  categoryForm.elements.tipo_id.value = selectedType;
+  newCategoryForm.reset();
+  updateCategoryOptions();
   categoryDialog.showModal();
 });
+
+categoryTargetType.addEventListener("change", updateCategoryOptions);
 
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog").close());

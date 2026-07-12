@@ -44,12 +44,12 @@
         </select>
         <button class="secondary-button filter-button" type="submit"><span class="material-symbols-outlined">filter_alt</span>Filtrar</button>
       </form>
-      <button class="primary-button" type="button" data-open-category><span class="material-symbols-outlined">create_new_folder</span>Nueva categoria</button>
+      <button class="primary-button" type="button" data-open-category><span class="material-symbols-outlined">playlist_add</span>Agregar categoria</button>
     </div>
   </div>
   <div class="category-grid">
     {% for categoria in categorias %}
-      <article class="category-item">
+      <article class="category-item" data-category-card data-category-name="{{ categoria.nombre|e }}">
         <span class="material-symbols-outlined">category</span>
         <div><strong>{{ categoria.nombre }}</strong><small>{{ categoria.tipo }}</small></div>
         <div class="category-actions">
@@ -82,15 +82,35 @@
 </dialog>
 
 <dialog class="inventory-dialog category-dialog" data-category-dialog>
-  <form method="post" action="{{ url_for('crear_categoria') }}" data-category-form>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <div class="dialog-header"><h2 data-category-title>Nueva categoria</h2><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
-    <div class="product-form-grid single-column">
-      <label><span>Tipo de producto</span><select name="tipo_id" required>{% for tipo in tipos %}<option value="{{ tipo.id }}"{% if tipo_seleccionado == tipo.id %} selected{% endif %}>{{ tipo.nombre }}</option>{% endfor %}</select></label>
+  <div class="dialog-header"><h2>Agregar categoria</h2><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
+  <div class="product-form-grid single-column category-target">
+    <label><span>Tipo de producto</span><select required data-category-target-type>{% for tipo in tipos %}<option value="{{ tipo.id }}"{% if tipo_seleccionado == tipo.id %} selected{% endif %}>{{ tipo.nombre }}</option>{% endfor %}</select></label>
+  </div>
+
+  <section class="category-add-section">
+    <div class="section-heading"><h3>Categoria existente</h3></div>
+    <form method="post" action="{{ url_for('crear_categoria') }}" class="category-inline-form" data-existing-category-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="tipo_id" data-category-type-input>
+      <label><span>Seleccionar categoria</span><select name="nombre" required data-existing-category>
+        {% for categoria in catalogo_categorias %}<option value="{{ categoria.nombre }}" data-tipos="{{ categoria.tipos|join(',') }}">{{ categoria.nombre }}</option>{% endfor %}
+      </select></label>
+      <button class="secondary-button" type="submit" data-add-existing><span class="material-symbols-outlined">add</span>Agregar al tipo</button>
+    </form>
+    <p class="category-empty-option" data-no-existing hidden>No hay otras categorias disponibles.</p>
+  </section>
+
+  <section class="category-add-section">
+    <div class="section-heading"><h3>Nueva categoria</h3></div>
+    <form method="post" action="{{ url_for('crear_categoria') }}" class="category-inline-form" data-new-category-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="tipo_id" data-category-type-input>
       <label><span>Nombre de la categoria</span><input name="nombre" required minlength="3" maxlength="100"></label>
-    </div>
-    <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar categoria</button></div>
-  </form>
+      <button class="primary-button" type="submit"><span class="material-symbols-outlined">create_new_folder</span>Crear categoria</button>
+    </form>
+  </section>
+
+  <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cerrar</button></div>
 </dialog>
 {% endblock %}
 

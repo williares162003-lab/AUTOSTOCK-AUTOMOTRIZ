@@ -187,6 +187,15 @@ def categorias():
         for categoria in categorias_registradas
         if not tipo_seleccionado or categoria["tipo_id"] == tipo_seleccionado
     ]
+    catalogo_por_nombre = {}
+    for categoria in categorias_registradas:
+        nombre = categoria["nombre"].strip()
+        clave = nombre.lower()
+        if clave == "sin clasificar":
+            continue
+        if clave not in catalogo_por_nombre:
+            catalogo_por_nombre[clave] = {"nombre": nombre, "tipos": []}
+        catalogo_por_nombre[clave]["tipos"].append(categoria["tipo_id"])
     contexto = contexto_base("categorias")
     contexto.update(
         {
@@ -195,6 +204,9 @@ def categorias():
             "categorias": categorias_visibles,
             "tipos": tipos_registrados,
             "tipo_seleccionado": tipo_seleccionado,
+            "catalogo_categorias": sorted(
+                catalogo_por_nombre.values(), key=lambda categoria: categoria["nombre"].lower()
+            ),
         }
     )
     return render_template("inventario/categorias.html", **contexto)

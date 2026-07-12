@@ -163,7 +163,8 @@ class InventarioAppTests(unittest.TestCase):
         response = self.client.get("/inventario/categorias?tipo_id=1")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Sin clasificar", response.data)
-        self.assertNotIn(b"Aceite de motor", response.data)
+        self.assertNotIn(b'data-category-name="Aceite de motor"', response.data)
+        self.assertIn(b'<option value="Aceite de motor" data-tipos="2">', response.data)
         self.assertIn(b'<option value="1" selected>', response.data)
 
     @patch("app.crear_tipo_ad", return_value=(True, "Tipo de producto creado correctamente."))
