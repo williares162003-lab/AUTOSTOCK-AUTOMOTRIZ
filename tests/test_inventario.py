@@ -11,6 +11,7 @@ from inventario_productosAD import (
     eliminar_categoria,
     eliminar_producto,
     eliminar_tipo,
+    preparar_categorias_generales,
 )
 from tests.test_app import USUARIO_ALMACEN
 
@@ -155,6 +156,12 @@ class InventarioAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/inventario/categorias", response.location)
         crear_tipo_ad.assert_called_once()
+
+    @patch("inventario_productosAD.ejecutar")
+    def test_general_category_backfill_is_available(self, ejecutar):
+        preparar_categorias_generales()
+        ejecutar.assert_called_once()
+        self.assertIn("Sin clasificar", ejecutar.call_args.args[0])
 
 
 if __name__ == "__main__":

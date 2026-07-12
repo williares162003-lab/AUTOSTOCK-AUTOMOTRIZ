@@ -13,7 +13,15 @@ def crear_tipo(datos):
         return False, "Ingresa un nombre de tipo valido."
     if consultar_uno("SELECT id FROM tipos_producto WHERE LOWER(nombre) = LOWER(%s)", (nombre,)):
         return False, "Ese tipo de producto ya existe."
-    ejecutar("INSERT INTO tipos_producto (nombre) VALUES (%s)", (nombre,))
+
+    def operacion(cursor):
+        cursor.execute("INSERT INTO tipos_producto (nombre) VALUES (%s)", (nombre,))
+        cursor.execute(
+            "INSERT INTO categorias (tipo_id, nombre) VALUES (%s, 'Sin clasificar')",
+            (cursor.lastrowid,),
+        )
+
+    ejecutar_transaccion(operacion)
     return True, "Tipo de producto creado correctamente."
 
 
@@ -36,7 +44,8 @@ def eliminar_tipo(tipo_id):
     tipo = consultar_uno(
         """
         SELECT t.id,
-               (SELECT COUNT(*) FROM categorias c WHERE c.tipo_id = t.id) AS categorias,
+               (SELECT COUNT(*) FROM categorias c
+                WHERE c.tipo_id = t.id AND LOWER(c.nombre) <> 'sin clasificar') AS categorias,
                (SELECT COUNT(*) FROM productos p WHERE p.tipo_id = t.id) AS productos
         FROM tipos_producto t
         WHERE t.id = %s
@@ -47,8 +56,26 @@ def eliminar_tipo(tipo_id):
         return False, "El tipo solicitado no existe."
     if tipo["categorias"] > 0 or tipo["productos"] > 0:
         return False, "No puedes eliminar un tipo que contiene categorias o productos."
-    ejecutar("DELETE FROM tipos_producto WHERE id = %s", (tipo_id,))
+
+    def operacion(cursor):
+        cursor.execute("DELETE FROM categorias WHERE tipo_id = %s", (tipo_id,))
+        cursor.execute("DELETE FROM tipos_producto WHERE id = %s", (tipo_id,))
+
+    ejecutar_transaccion(operacion)
     return True, "Tipo de producto eliminado correctamente."
+
+
+def preparar_categorias_generales():
+    ejecutar(
+        """
+        INSERT INTO categorias (tipo_id, nombre)
+        SELECT t.id, 'Sin clasificar'
+        FROM tipos_producto t
+        LEFT JOIN categorias c
+          ON c.tipo_id = t.id AND LOWER(c.nombre) = 'sin clasificar'
+        WHERE c.id IS NULL
+        """
+    )
 
 
 def listar_unidades():

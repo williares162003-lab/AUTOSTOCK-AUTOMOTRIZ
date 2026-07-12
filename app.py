@@ -36,6 +36,7 @@ from inventario_productosAD import (
     listar_productos,
     listar_tipos,
     listar_unidades,
+    preparar_categorias_generales,
     resumen_productos,
 )
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
@@ -47,6 +48,7 @@ app.config["SECRET_KEY"] = os.environ.get("AUTOMAN_SECRET_KEY", "automan-dev-sec
 
 def inicializar_sistema(reset=False):
     inicializar_base_datos(reset=reset)
+    preparar_categorias_generales()
     return preparar_usuarios_iniciales()
 
 
