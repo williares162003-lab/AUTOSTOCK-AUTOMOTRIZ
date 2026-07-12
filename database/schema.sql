@@ -86,6 +86,26 @@ CREATE TABLE IF NOT EXISTS presentaciones_producto (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS ajustes_stock (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    producto_id INT UNSIGNED NOT NULL,
+    stock_anterior DECIMAL(14,3) NOT NULL,
+    stock_nuevo DECIMAL(14,3) NOT NULL,
+    diferencia DECIMAL(14,3) NOT NULL,
+    motivo VARCHAR(255) NOT NULL,
+    usuario_id INT UNSIGNED NULL,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_ajustes_stock_producto (producto_id),
+    KEY idx_ajustes_stock_usuario (usuario_id),
+    CONSTRAINT fk_ajustes_stock_producto
+        FOREIGN KEY (producto_id) REFERENCES productos (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ajustes_stock_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO tipos_producto (id, nombre) VALUES
     (1, 'Repuesto'),
     (2, 'Lubricante'),

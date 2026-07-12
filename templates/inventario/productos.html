@@ -39,28 +39,69 @@
             </div>
           </td>
           <td>
-            <button
-              class="icon-action"
-              type="button"
-              title="Editar producto"
-              data-edit-product
-              data-action="{{ url_for('editar_producto', producto_id=producto.id) }}"
-              data-nombre="{{ producto.nombre|e }}"
-              data-tipo-id="{{ producto.tipo_id }}"
-              data-categoria-id="{{ producto.categoria_id }}"
-              data-marca="{{ (producto.marca or '')|e }}"
-              data-descripcion="{{ (producto.descripcion or '')|e }}"
-              data-unidad-base-id="{{ producto.unidad_base_id }}"
-              data-stock-minimo="{{ producto.stock_minimo }}"
-              data-observaciones="{{ (producto.observaciones or '')|e }}"
-              data-presentaciones="{{ producto.presentaciones|tojson|forceescape }}"
-            ><span class="material-symbols-outlined">edit</span></button>
+            <div class="product-actions">
+              <button
+                class="icon-action"
+                type="button"
+                title="Editar producto"
+                data-edit-product
+                data-action="{{ url_for('editar_producto', producto_id=producto.id) }}"
+                data-nombre="{{ producto.nombre|e }}"
+                data-tipo-id="{{ producto.tipo_id }}"
+                data-categoria-id="{{ producto.categoria_id }}"
+                data-marca="{{ (producto.marca or '')|e }}"
+                data-descripcion="{{ (producto.descripcion or '')|e }}"
+                data-unidad-base-id="{{ producto.unidad_base_id }}"
+                data-stock-minimo="{{ producto.stock_minimo }}"
+                data-observaciones="{{ (producto.observaciones or '')|e }}"
+                data-presentaciones="{{ producto.presentaciones|tojson|forceescape }}"
+              ><span class="material-symbols-outlined">edit</span></button>
+              <button
+                class="icon-action stock-action"
+                type="button"
+                title="Ajustar stock"
+                data-adjust-stock
+                data-action="{{ url_for('ajustar_stock', producto_id=producto.id) }}"
+                data-nombre="{{ producto.nombre|e }}"
+                data-stock="{{ producto.stock_actual }}"
+                data-unidad="{{ producto.abreviatura }}"
+                data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
+              ><span class="material-symbols-outlined">tune</span></button>
+              <form method="post" action="{{ url_for('eliminar_producto', producto_id=producto.id) }}" data-delete-form data-name="{{ producto.nombre|e }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="icon-action danger" type="submit" title="Eliminar producto"><span class="material-symbols-outlined">delete</span></button>
+              </form>
+            </div>
           </td>
         </tr>
         {% else %}
         <tr><td class="empty-row" colspan="6">Todavia no hay productos registrados.</td></tr>
         {% endfor %}
         <tr data-filter-empty hidden><td class="empty-row" colspan="6">No se encontraron productos.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="inventory-table history-panel">
+  <div class="inventory-toolbar"><div><h2>Historial de ajustes</h2><p>Ultimos {{ ajustes|length }} registros</p></div></div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Fecha</th><th>Producto</th><th>Cambio</th><th>Stock anterior</th><th>Stock nuevo</th><th>Motivo</th><th>Usuario</th></tr></thead>
+      <tbody>
+        {% for ajuste in ajustes %}
+        <tr>
+          <td>{{ ajuste.creado_en }}</td>
+          <td><strong>{{ ajuste.producto }}</strong></td>
+          <td><strong class="adjustment-value {{ 'positive' if ajuste.diferencia > 0 else 'negative' }}">{{ '+' if ajuste.diferencia > 0 else '' }}{{ ajuste.diferencia|float|round(3) }} {{ ajuste.abreviatura }}</strong></td>
+          <td>{{ ajuste.stock_anterior|float|round(3) }}</td>
+          <td>{{ ajuste.stock_nuevo|float|round(3) }}</td>
+          <td>{{ ajuste.motivo }}</td>
+          <td>{{ ajuste.usuario }}</td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-row" colspan="7">Todavia no hay ajustes de stock.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -88,6 +129,19 @@
     </div>
 
     <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar producto</button></div>
+  </form>
+</dialog>
+
+<dialog class="inventory-dialog stock-dialog" data-stock-dialog>
+  <form method="post" data-stock-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="dialog-header"><div><h2>Ajustar stock</h2><p data-stock-product></p></div><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
+    <div class="current-stock"><span>Stock actual</span><strong data-current-stock></strong></div>
+    <div class="product-form-grid single-column">
+      <label><span>Nuevo stock</span><input name="stock_nuevo" type="number" min="0" required data-new-stock></label>
+      <label><span>Motivo</span><textarea name="motivo" rows="3" required minlength="3" maxlength="255"></textarea></label>
+    </div>
+    <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar ajuste</button></div>
   </form>
 </dialog>
 {% endblock %}

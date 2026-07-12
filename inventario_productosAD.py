@@ -68,6 +68,24 @@ def resumen_productos(productos=None):
     }
 
 
+def listar_ajustes_stock(limite=20):
+    filas = consultar_todos(
+        """
+        SELECT a.id, a.stock_anterior, a.stock_nuevo, a.diferencia, a.motivo, a.creado_en,
+               p.nombre AS producto, u.abreviatura,
+               COALESCE(us.nombre, 'Usuario eliminado') AS usuario
+        FROM ajustes_stock a
+        INNER JOIN productos p ON p.id = a.producto_id
+        INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+        LEFT JOIN usuarios us ON us.id = a.usuario_id
+        ORDER BY a.id DESC
+        LIMIT %s
+        """,
+        (limite,),
+    )
+    return [dict(fila) for fila in filas]
+
+
 def _entero(valor):
     try:
         return int(valor)
@@ -198,6 +216,21 @@ def crear_producto(datos, usuario_id):
                 "INSERT INTO presentaciones_producto (producto_id, nombre, factor) VALUES (%s, %s, %s)",
                 (producto_id, presentacion["nombre"], presentacion["factor"]),
             )
+        if valores["stock_actual"] > 0:
+            cursor.execute(
+                """
+                INSERT INTO ajustes_stock
+                    (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+                VALUES (%s, 0, %s, %s, %s, %s)
+                """,
+                (
+                    producto_id,
+                    valores["stock_actual"],
+                    valores["stock_actual"],
+                    "Inventario inicial",
+                    usuario_id,
+                ),
+            )
         return producto_id
 
     ejecutar_transaccion(operacion)
@@ -246,6 +279,73 @@ def editar_producto(producto_id, datos):
     return True, "Producto actualizado correctamente."
 
 
+def ajustar_stock_producto(producto_id, datos, usuario_id):
+    stock_nuevo, error = _decimal(datos.get("stock_nuevo"), "El nuevo stock")
+    motivo = datos.get("motivo", "").strip()
+    if error:
+        return False, error
+    if len(motivo) < 3:
+        return False, "Ingresa el motivo del ajuste."
+
+    def operacion(cursor):
+        cursor.execute(
+            """
+            SELECT p.id, p.stock_actual, u.permite_decimal
+            FROM productos p
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            WHERE p.id = %s
+            FOR UPDATE
+            """,
+            (producto_id,),
+        )
+        producto = cursor.fetchone()
+        if not producto:
+            return False, "El producto solicitado no existe."
+        if not producto["permite_decimal"] and stock_nuevo != stock_nuevo.to_integral_value():
+            return False, "El stock debe ser entero para la unidad seleccionada."
+
+        diferencia = stock_nuevo - producto["stock_actual"]
+        if diferencia == 0:
+            return False, "El nuevo stock es igual al stock actual."
+        cursor.execute("UPDATE productos SET stock_actual = %s WHERE id = %s", (stock_nuevo, producto_id))
+        cursor.execute(
+            """
+            INSERT INTO ajustes_stock
+                (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                producto_id,
+                producto["stock_actual"],
+                stock_nuevo,
+                diferencia,
+                motivo,
+                usuario_id,
+            ),
+        )
+        return True, "Stock ajustado correctamente."
+
+    return ejecutar_transaccion(operacion)
+
+
+def eliminar_producto(producto_id):
+    producto = consultar_uno(
+        """
+        SELECT p.id, p.stock_actual,
+               (SELECT COUNT(*) FROM ajustes_stock a WHERE a.producto_id = p.id) AS ajustes
+        FROM productos p
+        WHERE p.id = %s
+        """,
+        (producto_id,),
+    )
+    if not producto:
+        return False, "El producto solicitado no existe."
+    if producto["stock_actual"] != 0 or producto["ajustes"] > 0:
+        return False, "No puedes eliminar un producto que ya tiene historial de stock."
+    ejecutar("DELETE FROM productos WHERE id = %s", (producto_id,))
+    return True, "Producto eliminado correctamente."
+
+
 def crear_categoria(datos):
     tipo_id = _entero(datos.get("tipo_id"))
     nombre = datos.get("nombre", "").strip()
@@ -276,3 +376,20 @@ def editar_categoria(categoria_id, datos):
         return False, "Esa categoria ya existe para el tipo seleccionado."
     ejecutar("UPDATE categorias SET tipo_id = %s, nombre = %s WHERE id = %s", (tipo_id, nombre, categoria_id))
     return True, "Categoria actualizada correctamente."
+
+
+def eliminar_categoria(categoria_id):
+    categoria = consultar_uno(
+        """
+        SELECT c.id, (SELECT COUNT(*) FROM productos p WHERE p.categoria_id = c.id) AS productos
+        FROM categorias c
+        WHERE c.id = %s
+        """,
+        (categoria_id,),
+    )
+    if not categoria:
+        return False, "La categoria solicitada no existe."
+    if categoria["productos"] > 0:
+        return False, "No puedes eliminar una categoria que contiene productos."
+    ejecutar("DELETE FROM categorias WHERE id = %s", (categoria_id,))
+    return True, "Categoria eliminada correctamente."

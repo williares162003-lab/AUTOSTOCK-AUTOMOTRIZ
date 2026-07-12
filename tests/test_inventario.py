@@ -5,7 +5,12 @@ from unittest.mock import patch
 from werkzeug.datastructures import MultiDict
 
 from app import app
-from inventario_productosAD import crear_producto
+from inventario_productosAD import (
+    ajustar_stock_producto,
+    crear_producto,
+    eliminar_categoria,
+    eliminar_producto,
+)
 from tests.test_app import USUARIO_ALMACEN
 
 
@@ -46,12 +51,13 @@ class InventarioAppTests(unittest.TestCase):
             sesion["usuario"] = USUARIO_ALMACEN
             sesion["_csrf_token"] = "csrf-inventario"
 
+    @patch("app.listar_ajustes_stock", return_value=[])
     @patch("app.listar_unidades", return_value=UNIDADES)
     @patch("app.listar_categorias", return_value=CATEGORIAS)
     @patch("app.listar_tipos", return_value=TIPOS)
     @patch("app.resumen_productos", return_value={"total": 1, "repuestos": 0, "lubricantes": 1, "bajo_stock": 0})
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_products(self, _productos, _resumen, _tipos, _categorias, _unidades):
+    def test_almacen_can_open_products(self, _productos, _resumen, _tipos, _categorias, _unidades, _ajustes):
         response = self.client.get("/inventario/productos")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Aceite 20W50", response.data)
@@ -103,6 +109,27 @@ class InventarioAppTests(unittest.TestCase):
         correcto, mensaje = crear_producto(datos, usuario_id=2)
         self.assertFalse(correcto)
         self.assertIn("enteras", mensaje)
+
+    def test_stock_adjustment_requires_reason(self):
+        correcto, mensaje = ajustar_stock_producto(
+            1,
+            {"stock_nuevo": "8", "motivo": ""},
+            usuario_id=2,
+        )
+        self.assertFalse(correcto)
+        self.assertIn("motivo", mensaje)
+
+    @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "stock_actual": Decimal("3"), "ajustes": 1})
+    def test_product_with_stock_history_cannot_be_deleted(self, _consultar):
+        correcto, mensaje = eliminar_producto(1)
+        self.assertFalse(correcto)
+        self.assertIn("historial", mensaje)
+
+    @patch("inventario_productosAD.consultar_uno", return_value={"id": 3, "productos": 2})
+    def test_category_with_products_cannot_be_deleted(self, _consultar):
+        correcto, mensaje = eliminar_categoria(3)
+        self.assertFalse(correcto)
+        self.assertIn("contiene productos", mensaje)
 
 
 if __name__ == "__main__":

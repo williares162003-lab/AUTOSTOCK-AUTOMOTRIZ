@@ -18,7 +18,13 @@
       <article class="category-item" data-category-item data-type="{{ categoria.tipo_id }}">
         <span class="material-symbols-outlined">category</span>
         <div><strong>{{ categoria.nombre }}</strong><small>{{ categoria.tipo }}</small></div>
-        <button class="icon-action" type="button" title="Editar categoria" data-edit-category data-action="{{ url_for('editar_categoria', categoria_id=categoria.id) }}" data-nombre="{{ categoria.nombre|e }}" data-tipo-id="{{ categoria.tipo_id }}"><span class="material-symbols-outlined">edit</span></button>
+        <div class="category-actions">
+          <button class="icon-action" type="button" title="Editar categoria" data-edit-category data-action="{{ url_for('editar_categoria', categoria_id=categoria.id) }}" data-nombre="{{ categoria.nombre|e }}" data-tipo-id="{{ categoria.tipo_id }}"><span class="material-symbols-outlined">edit</span></button>
+          <form method="post" action="{{ url_for('eliminar_categoria', categoria_id=categoria.id) }}" data-delete-form data-name="{{ categoria.nombre|e }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="icon-action danger" type="submit" title="Eliminar categoria"><span class="material-symbols-outlined">delete</span></button>
+          </form>
+        </div>
       </article>
     {% endfor %}
   </div>

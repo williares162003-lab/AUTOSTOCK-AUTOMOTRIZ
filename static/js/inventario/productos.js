@@ -78,6 +78,27 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog").close());
 });
 
+const stockDialog = document.querySelector("[data-stock-dialog]");
+const stockForm = document.querySelector("[data-stock-form]");
+document.querySelectorAll("[data-adjust-stock]").forEach((button) => {
+  button.addEventListener("click", () => {
+    stockForm.reset();
+    stockForm.action = button.dataset.action;
+    stockDialog.querySelector("[data-stock-product]").textContent = button.dataset.nombre;
+    stockDialog.querySelector("[data-current-stock]").textContent = `${button.dataset.stock} ${button.dataset.unidad}`;
+    const input = stockDialog.querySelector("[data-new-stock]");
+    input.value = button.dataset.stock;
+    input.step = button.dataset.decimal === "1" ? "0.001" : "1";
+    stockDialog.showModal();
+  });
+});
+
+document.querySelectorAll("[data-delete-form]").forEach((form) => {
+  form.addEventListener("submit", (event) => {
+    if (!window.confirm(`¿Eliminar ${form.dataset.name}?`)) event.preventDefault();
+  });
+});
+
 const productRows = Array.from(document.querySelectorAll("[data-product-row]"));
 const productSearch = document.querySelector("[data-product-search]");
 const typeFilter = document.querySelector("[data-type-filter]");

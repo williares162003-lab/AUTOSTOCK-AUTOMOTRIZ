@@ -29,3 +29,9 @@ typeFilter.addEventListener("change", () => {
     item.hidden = Boolean(typeFilter.value) && item.dataset.type !== typeFilter.value;
   });
 });
+
+document.querySelectorAll("[data-delete-form]").forEach((form) => {
+  form.addEventListener("submit", (event) => {
+    if (!window.confirm(`¿Eliminar la categoria ${form.dataset.name}?`)) event.preventDefault();
+  });
+});

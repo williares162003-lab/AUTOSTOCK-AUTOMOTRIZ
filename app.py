@@ -21,11 +21,15 @@ from admin_usuariosAD import (
 from bd import inicializar_base_datos
 from helpers import admin_requerido, contexto_base, csrf_requerido, login_requerido
 from inventario_productosAD import (
+    ajustar_stock_producto,
     crear_categoria as crear_categoria_ad,
     crear_producto as crear_producto_ad,
     editar_categoria as editar_categoria_ad,
     editar_producto as editar_producto_ad,
+    eliminar_categoria as eliminar_categoria_ad,
+    eliminar_producto as eliminar_producto_ad,
     listar_categorias,
+    listar_ajustes_stock,
     listar_productos,
     listar_tipos,
     listar_unidades,
@@ -123,6 +127,7 @@ def productos():
             "tipos": listar_tipos(),
             "categorias": listar_categorias(),
             "unidades": listar_unidades(),
+            "ajustes": listar_ajustes_stock(),
         }
     )
     return render_template("inventario/productos.html", **contexto)
@@ -142,6 +147,24 @@ def crear_producto():
 @csrf_requerido
 def editar_producto(producto_id):
     correcto, mensaje = editar_producto_ad(producto_id, request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("productos"))
+
+
+@app.post("/inventario/productos/<int:producto_id>/ajustar-stock")
+@login_requerido
+@csrf_requerido
+def ajustar_stock(producto_id):
+    correcto, mensaje = ajustar_stock_producto(producto_id, request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("productos"))
+
+
+@app.post("/inventario/productos/<int:producto_id>/eliminar")
+@login_requerido
+@csrf_requerido
+def eliminar_producto(producto_id):
+    correcto, mensaje = eliminar_producto_ad(producto_id)
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("productos"))
 
@@ -175,6 +198,15 @@ def crear_categoria():
 @csrf_requerido
 def editar_categoria(categoria_id):
     correcto, mensaje = editar_categoria_ad(categoria_id, request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("categorias"))
+
+
+@app.post("/inventario/categorias/<int:categoria_id>/eliminar")
+@login_requerido
+@csrf_requerido
+def eliminar_categoria(categoria_id):
+    correcto, mensaje = eliminar_categoria_ad(categoria_id)
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("categorias"))
 
