@@ -25,7 +25,6 @@ from inventario_productosAD import (
     crear_categoria as crear_categoria_ad,
     crear_producto as crear_producto_ad,
     crear_tipo as crear_tipo_ad,
-    editar_categoria as editar_categoria_ad,
     editar_producto as editar_producto_ad,
     editar_tipo as editar_tipo_ad,
     eliminar_categoria as eliminar_categoria_ad,
@@ -177,13 +176,25 @@ def eliminar_producto(producto_id):
 @app.get("/inventario/categorias")
 @login_requerido
 def categorias():
+    tipos_registrados = listar_tipos()
+    categorias_registradas = listar_categorias()
+    tipo_seleccionado = request.args.get("tipo_id", type=int)
+    ids_validos = {tipo["id"] for tipo in tipos_registrados}
+    if tipo_seleccionado not in ids_validos:
+        tipo_seleccionado = None
+    categorias_visibles = [
+        categoria
+        for categoria in categorias_registradas
+        if not tipo_seleccionado or categoria["tipo_id"] == tipo_seleccionado
+    ]
     contexto = contexto_base("categorias")
     contexto.update(
         {
             "page_title": "Tipos y categorias",
             "page_subtitle": "Organiza las familias de productos del almacen.",
-            "categorias": listar_categorias(),
-            "tipos": listar_tipos(),
+            "categorias": categorias_visibles,
+            "tipos": tipos_registrados,
+            "tipo_seleccionado": tipo_seleccionado,
         }
     )
     return render_template("inventario/categorias.html", **contexto)
@@ -222,16 +233,8 @@ def eliminar_tipo(tipo_id):
 def crear_categoria():
     correcto, mensaje = crear_categoria_ad(request.form)
     flash(mensaje, "success" if correcto else "error")
-    return redirect(url_for("categorias"))
-
-
-@app.post("/inventario/categorias/<int:categoria_id>/editar")
-@login_requerido
-@csrf_requerido
-def editar_categoria(categoria_id):
-    correcto, mensaje = editar_categoria_ad(categoria_id, request.form)
-    flash(mensaje, "success" if correcto else "error")
-    return redirect(url_for("categorias"))
+    tipo_id = request.form.get("tipo_id", type=int)
+    return redirect(url_for("categorias", tipo_id=tipo_id) if tipo_id else url_for("categorias"))
 
 
 @app.post("/inventario/categorias/<int:categoria_id>/eliminar")
@@ -240,7 +243,8 @@ def editar_categoria(categoria_id):
 def eliminar_categoria(categoria_id):
     correcto, mensaje = eliminar_categoria_ad(categoria_id)
     flash(mensaje, "success" if correcto else "error")
-    return redirect(url_for("categorias"))
+    tipo_id = request.form.get("tipo_id", type=int)
+    return redirect(url_for("categorias", tipo_id=tipo_id) if tipo_id else url_for("categorias"))
 
 
 @app.post("/sistema/usuarios/crear")

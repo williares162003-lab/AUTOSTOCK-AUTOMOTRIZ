@@ -433,26 +433,11 @@ def crear_categoria(datos):
     return True, "Categoria creada correctamente."
 
 
-def editar_categoria(categoria_id, datos):
-    tipo_id = _entero(datos.get("tipo_id"))
-    nombre = datos.get("nombre", "").strip()
-    if not tipo_id or len(nombre) < 3:
-        return False, "Selecciona un tipo e ingresa una categoria valida."
-    if not consultar_uno("SELECT id FROM categorias WHERE id = %s", (categoria_id,)):
-        return False, "La categoria solicitada no existe."
-    if consultar_uno(
-        "SELECT id FROM categorias WHERE tipo_id = %s AND LOWER(nombre) = LOWER(%s) AND id <> %s",
-        (tipo_id, nombre, categoria_id),
-    ):
-        return False, "Esa categoria ya existe para el tipo seleccionado."
-    ejecutar("UPDATE categorias SET tipo_id = %s, nombre = %s WHERE id = %s", (tipo_id, nombre, categoria_id))
-    return True, "Categoria actualizada correctamente."
-
-
 def eliminar_categoria(categoria_id):
     categoria = consultar_uno(
         """
-        SELECT c.id, (SELECT COUNT(*) FROM productos p WHERE p.categoria_id = c.id) AS productos
+        SELECT c.id, c.nombre,
+               (SELECT COUNT(*) FROM productos p WHERE p.categoria_id = c.id) AS productos
         FROM categorias c
         WHERE c.id = %s
         """,
@@ -460,6 +445,8 @@ def eliminar_categoria(categoria_id):
     )
     if not categoria:
         return False, "La categoria solicitada no existe."
+    if categoria["nombre"].strip().lower() == "sin clasificar":
+        return False, "La categoria Sin clasificar es necesaria para registrar productos generales."
     if categoria["productos"] > 0:
         return False, "No puedes eliminar una categoria que contiene productos."
     ejecutar("DELETE FROM categorias WHERE id = %s", (categoria_id,))

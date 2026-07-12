@@ -127,11 +127,20 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("historial", mensaje)
 
-    @patch("inventario_productosAD.consultar_uno", return_value={"id": 3, "productos": 2})
+    @patch("inventario_productosAD.consultar_uno", return_value={"id": 3, "nombre": "Filtros", "productos": 2})
     def test_category_with_products_cannot_be_deleted(self, _consultar):
         correcto, mensaje = eliminar_categoria(3)
         self.assertFalse(correcto)
         self.assertIn("contiene productos", mensaje)
+
+    @patch(
+        "inventario_productosAD.consultar_uno",
+        return_value={"id": 1, "nombre": "Sin clasificar", "productos": 0},
+    )
+    def test_general_category_cannot_be_deleted(self, _consultar):
+        correcto, mensaje = eliminar_categoria(1)
+        self.assertFalse(correcto)
+        self.assertIn("necesaria", mensaje)
 
     @patch("inventario_productosAD.consultar_uno", return_value={"id": 1, "categorias": 4, "productos": 0})
     def test_type_with_categories_cannot_be_deleted(self, _consultar):
@@ -146,6 +155,16 @@ class InventarioAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nuevo tipo", response.data)
         self.assertIn(b"Nueva categoria", response.data)
+        self.assertNotIn(b"Editar categoria", response.data)
+
+    @patch("app.listar_tipos", return_value=TIPOS)
+    @patch("app.listar_categorias", return_value=CATEGORIAS)
+    def test_category_type_filter_is_applied_by_server(self, _categorias, _tipos):
+        response = self.client.get("/inventario/categorias?tipo_id=1")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Sin clasificar", response.data)
+        self.assertNotIn(b"Aceite de motor", response.data)
+        self.assertIn(b'<option value="1" selected>', response.data)
 
     @patch("app.crear_tipo_ad", return_value=(True, "Tipo de producto creado correctamente."))
     def test_almacen_can_submit_new_type(self, crear_tipo_ad):
