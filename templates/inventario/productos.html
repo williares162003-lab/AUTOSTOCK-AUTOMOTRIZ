@@ -7,32 +7,37 @@
 {% block content %}
 <div class="inventory-stats">
   <article class="inventory-stat neutral"><span class="material-symbols-outlined">inventory_2</span><strong>{{ resumen.total }}</strong><p>Productos</p></article>
-  <article class="inventory-stat primary"><span class="material-symbols-outlined">build</span><strong>{{ resumen.repuestos }}</strong><p>Repuestos</p></article>
-  <article class="inventory-stat green"><span class="material-symbols-outlined">oil_barrel</span><strong>{{ resumen.lubricantes }}</strong><p>Lubricantes</p></article>
+  <article class="inventory-stat green"><span class="material-symbols-outlined">check_circle</span><strong>{{ resumen.con_stock }}</strong><p>Con stock</p></article>
   <article class="inventory-stat warning"><span class="material-symbols-outlined">inventory</span><strong>{{ resumen.bajo_stock }}</strong><p>Bajo minimo</p></article>
+  <article class="inventory-stat danger"><span class="material-symbols-outlined">production_quantity_limits</span><strong>{{ resumen.sin_stock }}</strong><p>Sin stock</p></article>
 </div>
 
 <section class="inventory-table">
   <div class="inventory-toolbar">
-    <div><h2>Productos registrados</h2><p><span data-product-count>{{ resumen.total }}</span> resultados</p></div>
+    <div><h2>Vista del almacen</h2><p><span data-product-count>{{ resumen.total }}</span> resultados</p></div>
     <div class="inventory-filters">
       <label class="inventory-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar producto" data-product-search></label>
       <select data-type-filter aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select>
       <select data-category-filter aria-label="Filtrar por categoria"><option value="">Todas las categorias</option>{% for categoria in categorias %}<option value="{{ categoria.id }}">{{ categoria.nombre }}</option>{% endfor %}</select>
+      <select data-status-filter aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="bajo">Bajo minimo</option><option value="sin_stock">Sin stock</option></select>
       <button class="primary-button" type="button" data-open-product><span class="material-symbols-outlined">add_box</span>Nuevo producto</button>
     </div>
   </div>
 
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Unidad base</th><th>Stock</th><th>Presentaciones</th><th class="action-heading">Accion</th></tr></thead>
+      <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Existencia</th><th>Estado</th><th>Presentaciones</th><th class="action-heading">Accion</th></tr></thead>
       <tbody>
         {% for producto in productos %}
-        <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.categoria)|lower|e }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}">
+        {% set sin_stock = producto.stock_actual <= 0 %}
+        {% set bajo_stock = producto.stock_actual > 0 and producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}
+        {% set estado_stock = 'sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible') %}
+        {% set estado_texto = 'Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible') %}
+        <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
           <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></div></div></td>
           <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.categoria }}</small></td>
-          <td>{{ producto.unidad }} <small>({{ producto.abreviatura }})</small></td>
-          <td><strong class="stock-value {% if producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}low{% endif %}">{{ producto.stock_actual|float|round(3) }}</strong><small>Min. {{ producto.stock_minimo|float|round(3) }}</small></td>
+          <td><strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</strong><small>Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</small></td>
+          <td><span class="stock-badge {{ estado_stock }}">{{ estado_texto }}</span><small class="unit-label">{{ producto.unidad }}</small></td>
           <td>
             <div class="presentation-tags">
               {% for presentacion in producto.presentaciones %}<span>{{ presentacion.nombre }} = {{ presentacion.factor|float|round(3) }} {{ producto.abreviatura }}</span>{% else %}<small>Unidad base</small>{% endfor %}
@@ -40,6 +45,24 @@
           </td>
           <td>
             <div class="product-actions">
+              <button
+                class="icon-action detail-action"
+                type="button"
+                title="Ver detalle"
+                data-view-product
+                data-nombre="{{ producto.nombre|e }}"
+                data-marca="{{ (producto.marca or 'Sin marca')|e }}"
+                data-tipo="{{ producto.tipo|e }}"
+                data-categoria="{{ producto.categoria|e }}"
+                data-unidad="{{ producto.unidad|e }}"
+                data-abreviatura="{{ producto.abreviatura|e }}"
+                data-stock="{{ producto.stock_actual }}"
+                data-minimo="{{ producto.stock_minimo }}"
+                data-estado="{{ estado_texto }}"
+                data-descripcion="{{ (producto.descripcion or 'Sin descripcion')|e }}"
+                data-observaciones="{{ (producto.observaciones or 'Sin observaciones')|e }}"
+                data-presentaciones="{{ producto.presentaciones|tojson|forceescape }}"
+              ><span class="material-symbols-outlined">visibility</span></button>
               <button
                 class="icon-action"
                 type="button"
@@ -106,6 +129,31 @@
     </table>
   </div>
 </section>
+
+<dialog class="inventory-dialog detail-dialog" data-detail-dialog>
+  <div class="dialog-header">
+    <div><h2 data-detail-name>Detalle del producto</h2><p data-detail-meta></p></div>
+    <button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button>
+  </div>
+  <div class="detail-stock-summary">
+    <div><span>Stock actual</span><strong data-detail-stock></strong></div>
+    <div><span>Stock minimo</span><strong data-detail-minimum></strong></div>
+    <div><span>Estado</span><strong data-detail-status></strong></div>
+  </div>
+  <dl class="detail-grid">
+    <div><dt>Tipo</dt><dd data-detail-type></dd></div>
+    <div><dt>Categoria</dt><dd data-detail-category></dd></div>
+    <div><dt>Unidad base</dt><dd data-detail-unit></dd></div>
+    <div><dt>Marca</dt><dd data-detail-brand></dd></div>
+    <div class="span-two"><dt>Descripcion</dt><dd data-detail-description></dd></div>
+    <div class="span-two"><dt>Observaciones</dt><dd data-detail-notes></dd></div>
+  </dl>
+  <div class="detail-presentations">
+    <h3>Presentaciones</h3>
+    <div class="presentation-tags" data-detail-presentations></div>
+  </div>
+  <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cerrar</button></div>
+</dialog>
 
 <dialog class="inventory-dialog" data-product-dialog>
   <form method="post" data-product-form>

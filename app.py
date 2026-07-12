@@ -125,7 +125,7 @@ def productos():
     contexto.update(
         {
             "page_title": "Productos",
-            "page_subtitle": "Registra los articulos y cantidades encontradas en el almacen.",
+            "page_subtitle": "Consulta que articulos hay, cuanto stock queda y que necesita reposicion.",
             "productos": productos_registrados,
             "resumen": resumen_productos(productos_registrados),
             "tipos": listar_tipos(),

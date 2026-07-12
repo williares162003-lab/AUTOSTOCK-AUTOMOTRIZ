@@ -127,14 +127,19 @@ def listar_productos():
 
 def resumen_productos(productos=None):
     productos = productos if productos is not None else listar_productos()
+    con_stock = sum(1 for producto in productos if producto["stock_actual"] > 0)
     return {
         "total": len(productos),
+        "con_stock": con_stock,
+        "sin_stock": sum(1 for producto in productos if producto["stock_actual"] <= 0),
         "repuestos": sum(1 for producto in productos if producto["tipo"] == "Repuesto"),
         "lubricantes": sum(1 for producto in productos if producto["tipo"] == "Lubricante"),
         "bajo_stock": sum(
             1
             for producto in productos
-            if producto["stock_minimo"] > 0 and producto["stock_actual"] <= producto["stock_minimo"]
+            if producto["stock_actual"] > 0
+            and producto["stock_minimo"] > 0
+            and producto["stock_actual"] <= producto["stock_minimo"]
         ),
     }
 

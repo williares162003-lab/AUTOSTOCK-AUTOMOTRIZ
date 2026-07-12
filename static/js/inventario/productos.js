@@ -78,6 +78,38 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog").close());
 });
 
+const detailDialog = document.querySelector("[data-detail-dialog]");
+const detailPresentations = document.querySelector("[data-detail-presentations]");
+document.querySelectorAll("[data-view-product]").forEach((button) => {
+  button.addEventListener("click", () => {
+    detailDialog.querySelector("[data-detail-name]").textContent = button.dataset.nombre;
+    detailDialog.querySelector("[data-detail-meta]").textContent = `${button.dataset.tipo} / ${button.dataset.categoria}`;
+    detailDialog.querySelector("[data-detail-stock]").textContent = `${button.dataset.stock} ${button.dataset.abreviatura}`;
+    detailDialog.querySelector("[data-detail-minimum]").textContent = `${button.dataset.minimo} ${button.dataset.abreviatura}`;
+    detailDialog.querySelector("[data-detail-status]").textContent = button.dataset.estado;
+    detailDialog.querySelector("[data-detail-type]").textContent = button.dataset.tipo;
+    detailDialog.querySelector("[data-detail-category]").textContent = button.dataset.categoria;
+    detailDialog.querySelector("[data-detail-unit]").textContent = `${button.dataset.unidad} (${button.dataset.abreviatura})`;
+    detailDialog.querySelector("[data-detail-brand]").textContent = button.dataset.marca;
+    detailDialog.querySelector("[data-detail-description]").textContent = button.dataset.descripcion;
+    detailDialog.querySelector("[data-detail-notes]").textContent = button.dataset.observaciones;
+
+    detailPresentations.innerHTML = "";
+    const presentations = JSON.parse(button.dataset.presentaciones || "[]");
+    if (!presentations.length) {
+      const empty = document.createElement("small");
+      empty.textContent = "Unidad base";
+      detailPresentations.appendChild(empty);
+    }
+    presentations.forEach((presentation) => {
+      const tag = document.createElement("span");
+      tag.textContent = `${presentation.nombre} = ${presentation.factor} ${button.dataset.abreviatura}`;
+      detailPresentations.appendChild(tag);
+    });
+    detailDialog.showModal();
+  });
+});
+
 const stockDialog = document.querySelector("[data-stock-dialog]");
 const stockForm = document.querySelector("[data-stock-form]");
 document.querySelectorAll("[data-adjust-stock]").forEach((button) => {
@@ -103,6 +135,7 @@ const productRows = Array.from(document.querySelectorAll("[data-product-row]"));
 const productSearch = document.querySelector("[data-product-search]");
 const typeFilter = document.querySelector("[data-type-filter]");
 const categoryFilter = document.querySelector("[data-category-filter]");
+const statusFilter = document.querySelector("[data-status-filter]");
 const productCount = document.querySelector("[data-product-count]");
 const filterEmpty = document.querySelector("[data-filter-empty]");
 
@@ -112,7 +145,8 @@ function filterProducts() {
   productRows.forEach((row) => {
     const matches = row.dataset.search.includes(search)
       && (!typeFilter.value || row.dataset.type === typeFilter.value)
-      && (!categoryFilter.value || row.dataset.category === categoryFilter.value);
+      && (!categoryFilter.value || row.dataset.category === categoryFilter.value)
+      && (!statusFilter.value || row.dataset.status === statusFilter.value);
     row.hidden = !matches;
     if (matches) visible += 1;
   });
@@ -120,4 +154,4 @@ function filterProducts() {
   filterEmpty.hidden = visible !== 0;
 }
 
-[productSearch, typeFilter, categoryFilter].forEach((control) => control.addEventListener("input", filterProducts));
+[productSearch, typeFilter, categoryFilter, statusFilter].forEach((control) => control.addEventListener("input", filterProducts));

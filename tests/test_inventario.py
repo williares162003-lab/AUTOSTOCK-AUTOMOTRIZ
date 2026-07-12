@@ -12,6 +12,7 @@ from inventario_productosAD import (
     eliminar_producto,
     eliminar_tipo,
     preparar_categorias_generales,
+    resumen_productos,
 )
 from tests.test_app import USUARIO_ALMACEN
 
@@ -57,13 +58,26 @@ class InventarioAppTests(unittest.TestCase):
     @patch("app.listar_unidades", return_value=UNIDADES)
     @patch("app.listar_categorias", return_value=CATEGORIAS)
     @patch("app.listar_tipos", return_value=TIPOS)
-    @patch("app.resumen_productos", return_value={"total": 1, "repuestos": 0, "lubricantes": 1, "bajo_stock": 0})
+    @patch(
+        "app.resumen_productos",
+        return_value={
+            "total": 1,
+            "con_stock": 1,
+            "sin_stock": 0,
+            "repuestos": 0,
+            "lubricantes": 1,
+            "bajo_stock": 0,
+        },
+    )
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
     def test_almacen_can_open_products(self, _productos, _resumen, _tipos, _categorias, _unidades, _ajustes):
         response = self.client.get("/inventario/productos")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Balde", response.data)
+        self.assertIn(b"Con stock", response.data)
+        self.assertIn(b"Disponible", response.data)
+        self.assertIn(b"data-view-product", response.data)
 
     @patch("app.crear_producto_ad", return_value=(True, "Producto registrado correctamente."))
     def test_almacen_can_submit_product(self, crear_producto_ad):
@@ -182,6 +196,17 @@ class InventarioAppTests(unittest.TestCase):
         preparar_categorias_generales()
         ejecutar.assert_called_once()
         self.assertIn("Sin clasificar", ejecutar.call_args.args[0])
+
+    def test_product_summary_tracks_stock_states(self):
+        productos = [
+            {**PRODUCTO_ACEITE, "stock_actual": Decimal("0.000"), "stock_minimo": Decimal("2.000")},
+            {**PRODUCTO_ACEITE, "id": 2, "stock_actual": Decimal("1.000"), "stock_minimo": Decimal("2.000")},
+            {**PRODUCTO_ACEITE, "id": 3, "stock_actual": Decimal("8.000"), "stock_minimo": Decimal("2.000")},
+        ]
+        resumen = resumen_productos(productos)
+        self.assertEqual(resumen["con_stock"], 2)
+        self.assertEqual(resumen["sin_stock"], 1)
+        self.assertEqual(resumen["bajo_stock"], 1)
 
 
 if __name__ == "__main__":
