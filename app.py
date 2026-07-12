@@ -20,6 +20,17 @@ from admin_usuariosAD import (
 )
 from bd import inicializar_base_datos
 from helpers import admin_requerido, contexto_base, csrf_requerido, login_requerido
+from inventario_productosAD import (
+    crear_categoria as crear_categoria_ad,
+    crear_producto as crear_producto_ad,
+    editar_categoria as editar_categoria_ad,
+    editar_producto as editar_producto_ad,
+    listar_categorias,
+    listar_productos,
+    listar_tipos,
+    listar_unidades,
+    resumen_productos,
+)
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
 
 
@@ -98,6 +109,76 @@ def usuarios():
     return render_template("admin/usuarios.html", **contexto)
 
 
+@app.get("/inventario/productos")
+@login_requerido
+def productos():
+    productos_registrados = listar_productos()
+    contexto = contexto_base("productos")
+    contexto.update(
+        {
+            "page_title": "Productos",
+            "page_subtitle": "Registra los articulos y cantidades encontradas en el almacen.",
+            "productos": productos_registrados,
+            "resumen": resumen_productos(productos_registrados),
+            "tipos": listar_tipos(),
+            "categorias": listar_categorias(),
+            "unidades": listar_unidades(),
+        }
+    )
+    return render_template("inventario/productos.html", **contexto)
+
+
+@app.post("/inventario/productos/crear")
+@login_requerido
+@csrf_requerido
+def crear_producto():
+    correcto, mensaje = crear_producto_ad(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("productos"))
+
+
+@app.post("/inventario/productos/<int:producto_id>/editar")
+@login_requerido
+@csrf_requerido
+def editar_producto(producto_id):
+    correcto, mensaje = editar_producto_ad(producto_id, request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("productos"))
+
+
+@app.get("/inventario/categorias")
+@login_requerido
+def categorias():
+    contexto = contexto_base("categorias")
+    contexto.update(
+        {
+            "page_title": "Categorias",
+            "page_subtitle": "Organiza los productos por tipo y familia.",
+            "categorias": listar_categorias(),
+            "tipos": listar_tipos(),
+        }
+    )
+    return render_template("inventario/categorias.html", **contexto)
+
+
+@app.post("/inventario/categorias/crear")
+@login_requerido
+@csrf_requerido
+def crear_categoria():
+    correcto, mensaje = crear_categoria_ad(request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("categorias"))
+
+
+@app.post("/inventario/categorias/<int:categoria_id>/editar")
+@login_requerido
+@csrf_requerido
+def editar_categoria(categoria_id):
+    correcto, mensaje = editar_categoria_ad(categoria_id, request.form)
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("categorias"))
+
+
 @app.post("/sistema/usuarios/crear")
 @admin_requerido
 @csrf_requerido
@@ -155,6 +236,18 @@ def api_dashboard_resumen():
 @admin_requerido
 def api_usuarios():
     return jsonify({"usuarios": listar_usuarios(), "resumen": resumen_usuarios()})
+
+
+@app.get("/api/productos")
+@login_requerido
+def api_productos():
+    productos_registrados = listar_productos()
+    return jsonify(
+        {
+            "productos": productos_registrados,
+            "resumen": resumen_productos(productos_registrados),
+        }
+    )
 
 
 @app.errorhandler(404)

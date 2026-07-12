@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario/productos.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="inventory-stats">
+  <article class="inventory-stat neutral"><span class="material-symbols-outlined">inventory_2</span><strong>{{ resumen.total }}</strong><p>Productos</p></article>
+  <article class="inventory-stat primary"><span class="material-symbols-outlined">build</span><strong>{{ resumen.repuestos }}</strong><p>Repuestos</p></article>
+  <article class="inventory-stat green"><span class="material-symbols-outlined">oil_barrel</span><strong>{{ resumen.lubricantes }}</strong><p>Lubricantes</p></article>
+  <article class="inventory-stat warning"><span class="material-symbols-outlined">inventory</span><strong>{{ resumen.bajo_stock }}</strong><p>Bajo minimo</p></article>
+</div>
+
+<section class="inventory-table">
+  <div class="inventory-toolbar">
+    <div><h2>Productos registrados</h2><p><span data-product-count>{{ resumen.total }}</span> resultados</p></div>
+    <div class="inventory-filters">
+      <label class="inventory-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar producto" data-product-search></label>
+      <select data-type-filter aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select>
+      <select data-category-filter aria-label="Filtrar por categoria"><option value="">Todas las categorias</option>{% for categoria in categorias %}<option value="{{ categoria.id }}">{{ categoria.nombre }}</option>{% endfor %}</select>
+      <button class="primary-button" type="button" data-open-product><span class="material-symbols-outlined">add_box</span>Nuevo producto</button>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Unidad base</th><th>Stock</th><th>Presentaciones</th><th class="action-heading">Accion</th></tr></thead>
+      <tbody>
+        {% for producto in productos %}
+        <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.categoria)|lower|e }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}">
+          <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></div></div></td>
+          <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.categoria }}</small></td>
+          <td>{{ producto.unidad }} <small>({{ producto.abreviatura }})</small></td>
+          <td><strong class="stock-value {% if producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}low{% endif %}">{{ producto.stock_actual|float|round(3) }}</strong><small>Min. {{ producto.stock_minimo|float|round(3) }}</small></td>
+          <td>
+            <div class="presentation-tags">
+              {% for presentacion in producto.presentaciones %}<span>{{ presentacion.nombre }} = {{ presentacion.factor|float|round(3) }} {{ producto.abreviatura }}</span>{% else %}<small>Unidad base</small>{% endfor %}
+            </div>
+          </td>
+          <td>
+            <button
+              class="icon-action"
+              type="button"
+              title="Editar producto"
+              data-edit-product
+              data-action="{{ url_for('editar_producto', producto_id=producto.id) }}"
+              data-nombre="{{ producto.nombre|e }}"
+              data-tipo-id="{{ producto.tipo_id }}"
+              data-categoria-id="{{ producto.categoria_id }}"
+              data-marca="{{ (producto.marca or '')|e }}"
+              data-descripcion="{{ (producto.descripcion or '')|e }}"
+              data-unidad-base-id="{{ producto.unidad_base_id }}"
+              data-stock-minimo="{{ producto.stock_minimo }}"
+              data-observaciones="{{ (producto.observaciones or '')|e }}"
+              data-presentaciones="{{ producto.presentaciones|tojson|forceescape }}"
+            ><span class="material-symbols-outlined">edit</span></button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-row" colspan="6">Todavia no hay productos registrados.</td></tr>
+        {% endfor %}
+        <tr data-filter-empty hidden><td class="empty-row" colspan="6">No se encontraron productos.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<dialog class="inventory-dialog" data-product-dialog>
+  <form method="post" data-product-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="dialog-header"><div><h2 data-dialog-title>Nuevo producto</h2></div><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
+    <div class="product-form-grid">
+      <label class="span-two"><span>Nombre</span><input name="nombre" required minlength="3" maxlength="180"></label>
+      <label><span>Tipo de producto</span><select name="tipo_id" required data-form-type>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select></label>
+      <label><span>Categoria</span><select name="categoria_id" required data-form-category>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>{% endfor %}</select></label>
+      <label><span>Marca (opcional)</span><input name="marca" maxlength="100"></label>
+      <label><span>Unidad base</span><select name="unidad_base_id" required>{% for unidad in unidades %}<option value="{{ unidad.id }}">{{ unidad.nombre }} ({{ unidad.abreviatura }})</option>{% endfor %}</select></label>
+      <label class="span-two"><span>Descripcion (opcional)</span><textarea name="descripcion" rows="2"></textarea></label>
+      <label data-initial-stock><span>Stock inicial</span><input name="stock_actual" type="number" min="0" step="0.001" value="0" required></label>
+      <label><span>Stock minimo</span><input name="stock_minimo" type="number" min="0" step="0.001" value="0" required></label>
+      <label class="span-two"><span>Observaciones (opcional)</span><textarea name="observaciones" rows="2"></textarea></label>
+    </div>
+
+    <div class="presentations-section">
+      <div class="section-heading"><h3>Presentaciones</h3><button class="secondary-button" type="button" data-add-presentation><span class="material-symbols-outlined">add</span>Agregar</button></div>
+      <div class="presentation-list" data-presentation-list></div>
+    </div>
+
+    <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar producto</button></div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>window.productCreateUrl = {{ url_for('crear_producto')|tojson }};</script>
+<script src="{{ url_for('static', filename='js/inventario/productos.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,109 @@
+import unittest
+from decimal import Decimal
+from unittest.mock import patch
+
+from werkzeug.datastructures import MultiDict
+
+from app import app
+from inventario_productosAD import crear_producto
+from tests.test_app import USUARIO_ALMACEN
+
+
+TIPOS = [{"id": 1, "nombre": "Repuesto"}, {"id": 2, "nombre": "Lubricante"}]
+CATEGORIAS = [
+    {"id": 1, "nombre": "Sin clasificar", "tipo_id": 1, "tipo": "Repuesto"},
+    {"id": 14, "nombre": "Aceite de motor", "tipo_id": 2, "tipo": "Lubricante"},
+]
+UNIDADES = [
+    {"id": 1, "nombre": "Unidad", "abreviatura": "und", "permite_decimal": 0},
+    {"id": 3, "nombre": "Galon", "abreviatura": "gal", "permite_decimal": 1},
+]
+PRODUCTO_ACEITE = {
+    "id": 1,
+    "nombre": "Aceite 20W50",
+    "marca": None,
+    "descripcion": None,
+    "stock_actual": Decimal("10.000"),
+    "stock_minimo": Decimal("2.000"),
+    "observaciones": None,
+    "tipo_id": 2,
+    "tipo": "Lubricante",
+    "categoria_id": 14,
+    "categoria": "Aceite de motor",
+    "unidad_base_id": 3,
+    "unidad": "Galon",
+    "abreviatura": "gal",
+    "permite_decimal": 1,
+    "presentaciones": [{"id": 1, "producto_id": 1, "nombre": "Balde", "factor": Decimal("5.000")}],
+}
+
+
+class InventarioAppTests(unittest.TestCase):
+    def setUp(self):
+        app.config.update(TESTING=True, SECRET_KEY="test-secret-key")
+        self.client = app.test_client()
+        with self.client.session_transaction() as sesion:
+            sesion["usuario"] = USUARIO_ALMACEN
+            sesion["_csrf_token"] = "csrf-inventario"
+
+    @patch("app.listar_unidades", return_value=UNIDADES)
+    @patch("app.listar_categorias", return_value=CATEGORIAS)
+    @patch("app.listar_tipos", return_value=TIPOS)
+    @patch("app.resumen_productos", return_value={"total": 1, "repuestos": 0, "lubricantes": 1, "bajo_stock": 0})
+    @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
+    def test_almacen_can_open_products(self, _productos, _resumen, _tipos, _categorias, _unidades):
+        response = self.client.get("/inventario/productos")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Aceite 20W50", response.data)
+        self.assertIn(b"Balde", response.data)
+
+    @patch("app.crear_producto_ad", return_value=(True, "Producto registrado correctamente."))
+    def test_almacen_can_submit_product(self, crear_producto_ad):
+        response = self.client.post(
+            "/inventario/productos/crear",
+            data={"csrf_token": "csrf-inventario", "nombre": "Aceite 20W50"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/inventario/productos", response.location)
+        crear_producto_ad.assert_called_once()
+
+    def test_zero_presentation_factor_is_rejected(self):
+        datos = MultiDict(
+            [
+                ("nombre", "Aceite 20W50"),
+                ("tipo_id", "2"),
+                ("categoria_id", "14"),
+                ("unidad_base_id", "3"),
+                ("stock_actual", "10"),
+                ("stock_minimo", "2"),
+                ("presentacion_nombre", "Balde"),
+                ("presentacion_factor", "0"),
+            ]
+        )
+        correcto, mensaje = crear_producto(datos, usuario_id=2)
+        self.assertFalse(correcto)
+        self.assertIn("mayor que cero", mensaje)
+
+    @patch("inventario_productosAD.consultar_uno")
+    def test_unit_products_reject_fractional_stock(self, consultar_uno):
+        consultar_uno.side_effect = [
+            {"id": 1},
+            {"id": 1, "permite_decimal": 0},
+        ]
+        datos = MultiDict(
+            [
+                ("nombre", "Pastilla de freno"),
+                ("tipo_id", "1"),
+                ("categoria_id", "3"),
+                ("unidad_base_id", "1"),
+                ("stock_actual", "2.5"),
+                ("stock_minimo", "1"),
+            ]
+        )
+        correcto, mensaje = crear_producto(datos, usuario_id=2)
+        self.assertFalse(correcto)
+        self.assertIn("enteras", mensaje)
+
+
+if __name__ == "__main__":
+    unittest.main()

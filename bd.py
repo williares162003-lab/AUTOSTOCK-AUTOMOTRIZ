@@ -58,6 +58,11 @@ def inicializar_base_datos(reset=False):
         with conexion.cursor() as cursor:
             if reset:
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+                cursor.execute("DROP TABLE IF EXISTS presentaciones_producto")
+                cursor.execute("DROP TABLE IF EXISTS productos")
+                cursor.execute("DROP TABLE IF EXISTS categorias")
+                cursor.execute("DROP TABLE IF EXISTS unidades_medida")
+                cursor.execute("DROP TABLE IF EXISTS tipos_producto")
                 cursor.execute("DROP TABLE IF EXISTS movimientos")
                 cursor.execute("DROP TABLE IF EXISTS usuarios")
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
@@ -102,6 +107,20 @@ def ejecutar(sql, parametros=()):
             ultimo_id = cursor.lastrowid
         conexion.commit()
         return ultimo_id
+    except Exception:
+        conexion.rollback()
+        raise
+    finally:
+        conexion.close()
+
+
+def ejecutar_transaccion(operacion):
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            resultado = operacion(cursor)
+        conexion.commit()
+        return resultado
     except Exception:
         conexion.rollback()
         raise

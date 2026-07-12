@@ -1,24 +1,37 @@
+from bd import consultar_uno
+
+
 def obtener_resumen_dashboard():
+    inventario = consultar_uno(
+        """
+        SELECT COUNT(*) AS productos,
+               COALESCE(SUM(stock_minimo > 0 AND stock_actual <= stock_minimo), 0) AS alertas_stock
+        FROM productos
+        """
+    )
+    usuarios = consultar_uno(
+        "SELECT COUNT(*) AS usuarios_activos FROM usuarios WHERE estado = 'activo'"
+    )
     return {
-        "productos": 0,
+        "productos": inventario["productos"],
         "entradas_mes": 0,
         "salidas_mes": 0,
-        "alertas_stock": 0,
-        "usuarios_activos": 2,
+        "alertas_stock": int(inventario["alertas_stock"]),
+        "usuarios_activos": usuarios["usuarios_activos"],
     }
 
 
 def obtener_alertas_dashboard():
     return [
         {
-            "titulo": "Catalogo pendiente",
-            "detalle": "Registrar productos, marcas, categorias y ubicaciones.",
+            "titulo": "Catalogo en progreso",
+            "detalle": "Registra los productos encontrados durante el conteo del almacen.",
             "icono": "inventory_2",
             "tipo": "info",
         },
         {
             "titulo": "Stock minimo",
-            "detalle": "Configurar alertas para repuestos con bajo inventario.",
+            "detalle": "Las alertas apareceran cuando un producto alcance su cantidad minima.",
             "icono": "notification_important",
             "tipo": "warning",
         },
@@ -34,10 +47,10 @@ def obtener_movimientos_recientes():
 
 def obtener_serie_movimientos():
     return [
-        {"dia": "Lun", "entradas": 18, "salidas": 8},
-        {"dia": "Mar", "entradas": 12, "salidas": 10},
-        {"dia": "Mie", "entradas": 20, "salidas": 14},
-        {"dia": "Jue", "entradas": 10, "salidas": 15},
-        {"dia": "Vie", "entradas": 16, "salidas": 11},
-        {"dia": "Sab", "entradas": 8, "salidas": 6},
+        {"dia": "Lun", "entradas": 0, "salidas": 0},
+        {"dia": "Mar", "entradas": 0, "salidas": 0},
+        {"dia": "Mie", "entradas": 0, "salidas": 0},
+        {"dia": "Jue", "entradas": 0, "salidas": 0},
+        {"dia": "Vie", "entradas": 0, "salidas": 0},
+        {"dia": "Sab", "entradas": 0, "salidas": 0},
     ]

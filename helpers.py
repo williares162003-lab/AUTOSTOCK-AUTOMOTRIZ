@@ -45,7 +45,10 @@ def csrf_requerido(vista):
         token_formulario = request.form.get("csrf_token", "")
         if not token_sesion or not compare_digest(token_sesion, token_formulario):
             flash("La solicitud vencio. Vuelve a intentarlo.", "error")
-            return redirect(url_for("usuarios"))
+            destino = request.referrer
+            if not destino or not destino.startswith(request.host_url):
+                destino = url_for("dashboard")
+            return redirect(destino)
         return vista(*args, **kwargs)
 
     return wrapper
@@ -57,11 +60,10 @@ def nav_items(usuario):
         {
             "label": "Inventario",
             "icon": "inventory_2",
+            "active_pages": ["productos", "categorias"],
             "children": [
-                {"label": "Productos", "icon": "category", "endpoint": None},
-                {"label": "Categorias", "icon": "sell", "endpoint": None},
-                {"label": "Marcas", "icon": "bookmark", "endpoint": None},
-                {"label": "Ubicaciones", "icon": "shelves", "endpoint": None},
+                {"label": "Productos", "icon": "inventory_2", "endpoint": "productos"},
+                {"label": "Categorias", "icon": "category", "endpoint": "categorias"},
             ],
         },
         {

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario/productos.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="inventory-table categories-panel">
+  <div class="inventory-toolbar">
+    <div><h2>Categorias registradas</h2><p>{{ categorias|length }} categorias</p></div>
+    <div class="inventory-filters">
+      <select data-category-type-filter aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select>
+      <button class="primary-button" type="button" data-open-category><span class="material-symbols-outlined">create_new_folder</span>Nueva categoria</button>
+    </div>
+  </div>
+  <div class="category-grid">
+    {% for categoria in categorias %}
+      <article class="category-item" data-category-item data-type="{{ categoria.tipo_id }}">
+        <span class="material-symbols-outlined">category</span>
+        <div><strong>{{ categoria.nombre }}</strong><small>{{ categoria.tipo }}</small></div>
+        <button class="icon-action" type="button" title="Editar categoria" data-edit-category data-action="{{ url_for('editar_categoria', categoria_id=categoria.id) }}" data-nombre="{{ categoria.nombre|e }}" data-tipo-id="{{ categoria.tipo_id }}"><span class="material-symbols-outlined">edit</span></button>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<dialog class="inventory-dialog category-dialog" data-category-dialog>
+  <form method="post" data-category-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="dialog-header"><h2 data-category-title>Nueva categoria</h2><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
+    <div class="product-form-grid single-column">
+      <label><span>Tipo de producto</span><select name="tipo_id" required>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select></label>
+      <label><span>Nombre de la categoria</span><input name="nombre" required minlength="3" maxlength="100"></label>
+    </div>
+    <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar categoria</button></div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>window.categoryCreateUrl = {{ url_for('crear_categoria')|tojson }};</script>
+<script src="{{ url_for('static', filename='js/inventario/categorias.js') }}"></script>
+{% endblock %}

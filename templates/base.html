@@ -26,7 +26,7 @@
 
       <nav class="sidebar-nav" aria-label="Navegacion principal">
         {% for item in nav_items %}
-          {% set item_active = active_page == item.endpoint or active_page == item.active_prefix %}
+          {% set item_active = active_page == item.endpoint or (item.active_pages and active_page in item.active_pages) or active_page == item.active_prefix %}
           <div class="nav-group {% if item.highlight %}nav-group-highlight{% endif %}">
             {% if item.children %}
               <div class="nav-link nav-parent {% if item_active %}activo{% endif %}">

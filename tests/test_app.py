@@ -38,8 +38,9 @@ class AutomanAppTests(unittest.TestCase):
         self.assertIn(b"AUTOMAN", response.data)
         self.assertNotIn(b"Atlantica", response.data)
 
+    @patch("app.obtener_resumen_dashboard", return_value={"productos": 0, "entradas_mes": 0, "salidas_mes": 0, "alertas_stock": 0, "usuarios_activos": 2})
     @patch("app.autenticar_usuario", return_value=(USUARIO_PRUEBA, None))
-    def test_user_can_login_and_open_dashboard(self, _autenticar):
+    def test_user_can_login_and_open_dashboard(self, _autenticar, _resumen):
         response = self.client.post(
             "/login",
             data={"usuario": "admin", "contrasena": "admin123"},
@@ -53,7 +54,8 @@ class AutomanAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login", response.location)
 
-    def test_dashboard_api_returns_summary_after_login(self):
+    @patch("app.obtener_resumen_dashboard", return_value={"productos": 0, "entradas_mes": 0, "salidas_mes": 0, "alertas_stock": 0, "usuarios_activos": 2})
+    def test_dashboard_api_returns_summary_after_login(self, _resumen):
         with self.client.session_transaction() as sesion:
             sesion["usuario"] = USUARIO_PRUEBA
         response = self.client.get("/api/dashboard/resumen")
