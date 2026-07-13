@@ -115,6 +115,78 @@ def resumen_salidas():
     }
 
 
+def renombrar_destino(origen, nuevo):
+    origen = (origen or "").strip().upper()
+    nuevo = (nuevo or "").strip().upper()
+    if not origen or not nuevo:
+        return False, "Ingresa el destino anterior y el nuevo destino.", {}
+    if len(origen) > 80 or len(nuevo) > 80:
+        return False, "El destino no puede superar 80 caracteres.", {}
+    if origen == nuevo:
+        return True, "El destino ya tiene ese nombre.", {"salidas": 0, "destinos": 0}
+
+    def operacion(cursor):
+        cursor.execute("SELECT id, modelo FROM vehiculos_atendidos WHERE placa = %s", (origen,))
+        origen_fila = cursor.fetchone()
+        cursor.execute("SELECT id, modelo FROM vehiculos_atendidos WHERE placa = %s", (nuevo,))
+        nuevo_fila = cursor.fetchone()
+        origen_id = origen_fila["id"] if origen_fila else None
+        destino_id = nuevo_fila["id"] if nuevo_fila else None
+        destinos_modificados = 0
+        cursor.execute("SELECT COUNT(*) AS total FROM salidas_stock WHERE placa = %s", (origen,))
+        salidas_origen = cursor.fetchone()["total"]
+        if not origen_id and salidas_origen == 0:
+            return {"salidas": 0, "destinos": 0}
+
+        if destino_id and origen_id and destino_id != origen_id:
+            cursor.execute(
+                """
+                UPDATE salidas_stock
+                SET vehiculo_id = %s, placa = %s
+                WHERE placa = %s OR vehiculo_id = %s
+                """,
+                (destino_id, nuevo, origen, origen_id),
+            )
+            salidas_modificadas = cursor.rowcount
+            if not nuevo_fila.get("modelo") and origen_fila.get("modelo"):
+                cursor.execute(
+                    "UPDATE vehiculos_atendidos SET modelo = %s WHERE id = %s",
+                    (origen_fila["modelo"], destino_id),
+                )
+            cursor.execute("DELETE FROM vehiculos_atendidos WHERE id = %s", (origen_id,))
+            destinos_modificados = 1
+            return {"salidas": salidas_modificadas, "destinos": destinos_modificados}
+
+        if not destino_id:
+            if origen_id:
+                cursor.execute("UPDATE vehiculos_atendidos SET placa = %s WHERE id = %s", (nuevo, origen_id))
+                destino_id = origen_id
+                destinos_modificados = cursor.rowcount
+            else:
+                cursor.execute("INSERT INTO vehiculos_atendidos (placa, modelo) VALUES (%s, NULL)", (nuevo,))
+                destino_id = cursor.lastrowid
+                destinos_modificados = 1
+
+        if origen_id:
+            cursor.execute(
+                """
+                UPDATE salidas_stock
+                SET vehiculo_id = %s, placa = %s
+                WHERE placa = %s OR vehiculo_id = %s
+                """,
+                (destino_id, nuevo, origen, origen_id),
+            )
+        else:
+            cursor.execute(
+                "UPDATE salidas_stock SET vehiculo_id = %s, placa = %s WHERE placa = %s",
+                (destino_id, nuevo, origen),
+            )
+        return {"salidas": cursor.rowcount, "destinos": destinos_modificados}
+
+    resultado = ejecutar_transaccion(operacion)
+    return True, "Destino actualizado correctamente.", resultado
+
+
 def _lineas_desde_formulario(datos):
     productos = _lista(datos, "producto_id")
     cantidades = _lista(datos, "cantidad")
@@ -151,8 +223,8 @@ def registrar_salida(datos, usuario_id):
 
     if not placa:
         return False, "Ingresa el destino de la salida."
-    if len(placa) > 20:
-        return False, "El destino no puede superar 20 caracteres."
+    if len(placa) > 80:
+        return False, "El destino no puede superar 80 caracteres."
     if len(trabajador) < 3:
         return False, "Ingresa el trabajador que recibe los productos."
     if error:

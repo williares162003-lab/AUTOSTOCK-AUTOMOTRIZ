@@ -59,6 +59,7 @@ from movimientos_salidasAD import (
     listar_salidas,
     listar_vehiculos,
     registrar_salida,
+    renombrar_destino,
     resumen_salidas,
 )
 from reportesAD import generar_reporte_csv, obtener_reporte_general
@@ -608,6 +609,17 @@ def ejecutar_comando():
         limpiar_almacen()
         preparar_usuarios_iniciales()
         print("Almacen limpio. Usuarios y unidades de medida conservados.")
+        return True
+    if len(sys.argv) > 1 and sys.argv[1] == "renombrar-destino":
+        if len(sys.argv) != 4:
+            print('Uso: python app.py renombrar-destino "DESTINO ANTERIOR" "DESTINO NUEVO"')
+            return True
+        inicializar_base_datos(reset=False)
+        correcto, mensaje, resultado = renombrar_destino(sys.argv[2], sys.argv[3])
+        print(mensaje)
+        if correcto:
+            print(f"Salidas actualizadas: {resultado.get('salidas', 0)}")
+            print(f"Destinos actualizados: {resultado.get('destinos', 0)}")
         return True
     return False
 

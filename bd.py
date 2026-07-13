@@ -116,6 +116,8 @@ def _aplicar_migraciones(cursor):
         WHERE area_id IS NULL
         """
     )
+    cursor.execute("ALTER TABLE vehiculos_atendidos MODIFY placa VARCHAR(80) NOT NULL")
+    cursor.execute("ALTER TABLE salidas_stock MODIFY placa VARCHAR(80) NOT NULL")
     if _indice_existe(cursor, "tipos_producto", "uk_tipos_producto_nombre"):
         cursor.execute("ALTER TABLE tipos_producto DROP INDEX uk_tipos_producto_nombre")
     if not _indice_existe(cursor, "tipos_producto", "uk_tipos_producto_area_nombre"):

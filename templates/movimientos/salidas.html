@@ -24,7 +24,7 @@
       <div class="product-form-grid">
         <label>
           <span>Destino</span>
-          <input name="placa" list="vehiculos-atendidos" maxlength="20" required data-vehicle-plate placeholder="CCO-800 o PARA TRABAJADORES">
+          <input name="placa" list="vehiculos-atendidos" maxlength="80" required data-vehicle-plate placeholder="CCO-800 o PARA TRABAJADORES">
           <datalist id="vehiculos-atendidos">
             {% for vehiculo in vehiculos %}
               <option value="{{ vehiculo.placa }}" data-modelo="{{ (vehiculo.modelo or '')|e }}">{{ vehiculo.modelo or "Sin modelo" }}</option>
