@@ -77,6 +77,21 @@ def tipos_desde_productos(productos):
     return sorted(tipos.values(), key=lambda item: item["nombre"])
 
 
+def categorias_desde_productos(productos):
+    categorias = {}
+    for producto in productos:
+        categoria_id = producto.get("categoria_id")
+        categoria = producto.get("categoria")
+        tipo_id = producto.get("tipo_id")
+        if categoria_id and categoria and tipo_id and categoria_id not in categorias:
+            categorias[categoria_id] = {
+                "id": categoria_id,
+                "nombre": categoria,
+                "tipo_id": tipo_id,
+            }
+    return sorted(categorias.values(), key=lambda item: (item["tipo_id"], item["nombre"]))
+
+
 def inicializar_sistema(reset=False):
     inicializar_base_datos(reset=reset)
     preparar_categorias_generales()
@@ -215,6 +230,7 @@ def entradas():
             "page_title": "Entradas",
             "page_subtitle": "Registra compras y reposiciones para aumentar el stock del almacen.",
             "tipos": tipos_desde_productos(productos_registrados),
+            "categorias": categorias_desde_productos(productos_registrados),
             "productos": productos_registrados,
             "entradas": listar_entradas(),
             "aperturas": listar_aperturas_balde(),
@@ -279,6 +295,7 @@ def salidas():
             "page_title": "Salidas",
             "page_subtitle": "Registra entregas internas por placa y trabajador.",
             "tipos": tipos_desde_productos(productos_registrados),
+            "categorias": categorias_desde_productos(productos_registrados),
             "productos": productos_registrados,
             "vehiculos": listar_vehiculos(),
             "salidas": listar_salidas(),

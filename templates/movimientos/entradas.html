@@ -39,13 +39,23 @@
           </select>
         </label>
         <label>
+          <span>Categoria</span>
+          <select required data-entry-product-category disabled>
+            <option value="">Primero selecciona un tipo</option>
+            {% for categoria in categorias %}
+              <option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
           <span>Producto</span>
           <select name="producto_id" required data-product-select disabled>
-            <option value="">Primero selecciona un tipo</option>
+            <option value="">Primero selecciona una categoria</option>
             {% for producto in productos %}
               <option
                 value="{{ producto.id }}"
                 data-type="{{ producto.tipo_id }}"
+                data-category="{{ producto.categoria_id }}"
                 data-stock="{{ producto.stock_actual }}"
                 data-stock-suelto="{{ producto.stock_suelto }}"
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
@@ -122,13 +132,23 @@
         </select>
       </label>
       <label>
+        <span>Categoria</span>
+        <select required data-bucket-product-category disabled>
+          <option value="">Primero selecciona un tipo</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="span-two">
         <span>Producto</span>
         <select name="producto_id" required data-bucket-product disabled>
-          <option value="">Primero selecciona un tipo</option>
+          <option value="">Primero selecciona una categoria</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
               data-type="{{ producto.tipo_id }}"
+              data-category="{{ producto.categoria_id }}"
               data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
               data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
               data-baldes-abiertos="{{ producto.baldes_abiertos }}"
@@ -160,13 +180,23 @@
         </select>
       </label>
       <label>
+        <span>Categoria</span>
+        <select required data-bucket-close-product-category disabled>
+          <option value="">Primero selecciona un tipo</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="span-two">
         <span>Producto con balde abierto</span>
         <select name="producto_id" required data-bucket-close-product disabled>
-          <option value="">Primero selecciona un tipo</option>
+          <option value="">Primero selecciona una categoria</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
               data-type="{{ producto.tipo_id }}"
+              data-category="{{ producto.categoria_id }}"
               data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
               data-baldes-abiertos="{{ producto.baldes_abiertos }}"
               data-abreviatura="{{ producto.abreviatura|e }}"
@@ -197,13 +227,23 @@
         </select>
       </label>
       <label>
+        <span>Categoria</span>
+        <select required data-cylinder-product-category disabled>
+          <option value="">Primero selecciona un tipo</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="span-two">
         <span>Producto con cilindro cerrado</span>
         <select name="producto_id" required data-cylinder-product disabled>
-          <option value="">Primero selecciona un tipo</option>
+          <option value="">Primero selecciona una categoria</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
               data-type="{{ producto.tipo_id }}"
+              data-category="{{ producto.categoria_id }}"
               data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
               data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
               data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
@@ -237,13 +277,23 @@
         </select>
       </label>
       <label>
+        <span>Categoria</span>
+        <select required data-cylinder-close-product-category disabled>
+          <option value="">Primero selecciona un tipo</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="span-two">
         <span>Producto con cilindro abierto</span>
         <select name="producto_id" required data-cylinder-close-product disabled>
-          <option value="">Primero selecciona un tipo</option>
+          <option value="">Primero selecciona una categoria</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
               data-type="{{ producto.tipo_id }}"
+              data-category="{{ producto.categoria_id }}"
               data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
               data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
               data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"

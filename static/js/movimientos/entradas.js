@@ -1,5 +1,6 @@
 const entryType = document.querySelector("[data-entry-type]");
 const entryProductType = document.querySelector("[data-entry-product-type]");
+const entryProductCategory = document.querySelector("[data-entry-product-category]");
 const productSelect = document.querySelector("[data-product-select]");
 const presentationField = document.querySelector("[data-presentation-field]");
 const presentationSelect = document.querySelector("[data-presentation-select]");
@@ -15,8 +16,10 @@ const baseQuantity = document.querySelector("[data-base-quantity]");
 const estimatedStock = document.querySelector("[data-estimated-stock]");
 
 const bucketProductType = document.querySelector("[data-bucket-product-type]");
+const bucketProductCategory = document.querySelector("[data-bucket-product-category]");
 const bucketProduct = document.querySelector("[data-bucket-product]");
 const bucketCloseProductType = document.querySelector("[data-bucket-close-product-type]");
+const bucketCloseProductCategory = document.querySelector("[data-bucket-close-product-category]");
 const bucketCloseProduct = document.querySelector("[data-bucket-close-product]");
 const bucketClosed = document.querySelector("[data-bucket-closed]");
 const bucketOpen = document.querySelector("[data-bucket-open]");
@@ -24,8 +27,10 @@ const bucketUsed = document.querySelector("[data-bucket-used]");
 const closeOpen = document.querySelector("[data-close-open]");
 const closeUsed = document.querySelector("[data-close-used]");
 const cylinderProductType = document.querySelector("[data-cylinder-product-type]");
+const cylinderProductCategory = document.querySelector("[data-cylinder-product-category]");
 const cylinderProduct = document.querySelector("[data-cylinder-product]");
 const cylinderCloseProductType = document.querySelector("[data-cylinder-close-product-type]");
+const cylinderCloseProductCategory = document.querySelector("[data-cylinder-close-product-category]");
 const cylinderCloseProduct = document.querySelector("[data-cylinder-close-product]");
 const cylinderClosed = document.querySelector("[data-cylinder-closed]");
 const cylinderOpen = document.querySelector("[data-cylinder-open]");
@@ -47,12 +52,13 @@ function formatQuantity(value) {
   });
 }
 
-function filterProductsByType(typeSelect, select) {
-  if (!typeSelect || !select) return;
+function filterCategoriesByType(typeSelect, categorySelect) {
+  if (!typeSelect || !categorySelect) return;
 
   const selectedType = typeSelect.value;
-  let firstVisible = null;
-  Array.from(select.options).forEach((option) => {
+  const currentValue = categorySelect.value;
+  let currentVisible = false;
+  Array.from(categorySelect.options).forEach((option) => {
     if (!option.value) {
       option.hidden = false;
       option.disabled = true;
@@ -62,11 +68,39 @@ function filterProductsByType(typeSelect, select) {
     const visible = selectedType && option.dataset.type === selectedType;
     option.hidden = !visible;
     option.disabled = !visible;
+    if (visible && option.value === currentValue) currentVisible = true;
+  });
+
+  if (!selectedType || !currentVisible) {
+    categorySelect.value = "";
+  }
+  categorySelect.disabled = !selectedType;
+}
+
+function filterProductsBySelection(typeSelect, categorySelect, select) {
+  if (!typeSelect || !categorySelect || !select) return;
+
+  const selectedType = typeSelect.value;
+  const selectedCategory = categorySelect.value;
+  let firstVisible = null;
+  Array.from(select.options).forEach((option) => {
+    if (!option.value) {
+      option.hidden = false;
+      option.disabled = true;
+      return;
+    }
+
+    const visible = selectedType
+      && selectedCategory
+      && option.dataset.type === selectedType
+      && option.dataset.category === selectedCategory;
+    option.hidden = !visible;
+    option.disabled = !visible;
     if (visible && !firstVisible) firstVisible = option;
   });
 
   const current = select.options[select.selectedIndex] || null;
-  if (!selectedType || !firstVisible) {
+  if (!selectedType || !selectedCategory || !firstVisible) {
     select.value = "";
     select.disabled = true;
     return;
@@ -76,6 +110,11 @@ function filterProductsByType(typeSelect, select) {
   if (!current?.value || current.hidden || current.disabled) {
     select.value = firstVisible.value;
   }
+}
+
+function syncProductPicker(typeSelect, categorySelect, select) {
+  filterCategoriesByType(typeSelect, categorySelect);
+  filterProductsBySelection(typeSelect, categorySelect, select);
 }
 
 function selectedProduct() {
@@ -250,7 +289,7 @@ function updateCylinderClosePreview() {
 }
 
 function refreshEntry() {
-  filterProductsByType(entryProductType, productSelect);
+  syncProductPicker(entryProductType, entryProductCategory, productSelect);
   rebuildPresentations();
   syncEntryMode();
   updatePreview();
@@ -258,6 +297,7 @@ function refreshEntry() {
 
 entryType.addEventListener("change", refreshEntry);
 entryProductType.addEventListener("change", refreshEntry);
+entryProductCategory.addEventListener("change", refreshEntry);
 productSelect.addEventListener("change", () => {
   rebuildPresentations();
   updatePreview();
@@ -268,40 +308,56 @@ cylinderLitersInput.addEventListener("input", updatePreview);
 
 if (bucketProduct) {
   bucketProductType.addEventListener("change", () => {
-    filterProductsByType(bucketProductType, bucketProduct);
+    syncProductPicker(bucketProductType, bucketProductCategory, bucketProduct);
     updateBucketPreview();
   });
-  filterProductsByType(bucketProductType, bucketProduct);
+  bucketProductCategory.addEventListener("change", () => {
+    syncProductPicker(bucketProductType, bucketProductCategory, bucketProduct);
+    updateBucketPreview();
+  });
+  syncProductPicker(bucketProductType, bucketProductCategory, bucketProduct);
   bucketProduct.addEventListener("change", updateBucketPreview);
   updateBucketPreview();
 }
 
 if (bucketCloseProduct) {
   bucketCloseProductType.addEventListener("change", () => {
-    filterProductsByType(bucketCloseProductType, bucketCloseProduct);
+    syncProductPicker(bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
     updateClosePreview();
   });
-  filterProductsByType(bucketCloseProductType, bucketCloseProduct);
+  bucketCloseProductCategory.addEventListener("change", () => {
+    syncProductPicker(bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
+    updateClosePreview();
+  });
+  syncProductPicker(bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
   bucketCloseProduct.addEventListener("change", updateClosePreview);
   updateClosePreview();
 }
 
 if (cylinderProduct) {
   cylinderProductType.addEventListener("change", () => {
-    filterProductsByType(cylinderProductType, cylinderProduct);
+    syncProductPicker(cylinderProductType, cylinderProductCategory, cylinderProduct);
     updateCylinderPreview();
   });
-  filterProductsByType(cylinderProductType, cylinderProduct);
+  cylinderProductCategory.addEventListener("change", () => {
+    syncProductPicker(cylinderProductType, cylinderProductCategory, cylinderProduct);
+    updateCylinderPreview();
+  });
+  syncProductPicker(cylinderProductType, cylinderProductCategory, cylinderProduct);
   cylinderProduct.addEventListener("change", updateCylinderPreview);
   updateCylinderPreview();
 }
 
 if (cylinderCloseProduct) {
   cylinderCloseProductType.addEventListener("change", () => {
-    filterProductsByType(cylinderCloseProductType, cylinderCloseProduct);
+    syncProductPicker(cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
     updateCylinderClosePreview();
   });
-  filterProductsByType(cylinderCloseProductType, cylinderCloseProduct);
+  cylinderCloseProductCategory.addEventListener("change", () => {
+    syncProductPicker(cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
+    updateCylinderClosePreview();
+  });
+  syncProductPicker(cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
   cylinderCloseProduct.addEventListener("change", updateCylinderClosePreview);
   updateCylinderClosePreview();
 }

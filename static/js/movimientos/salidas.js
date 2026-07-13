@@ -17,12 +17,13 @@ function formatQuantity(value) {
   });
 }
 
-function filterProductsByType(typeSelect, productSelect) {
-  if (!typeSelect || !productSelect) return;
+function filterCategoriesByType(typeSelect, categorySelect) {
+  if (!typeSelect || !categorySelect) return;
 
   const selectedType = typeSelect.value;
-  let firstVisible = null;
-  Array.from(productSelect.options).forEach((option) => {
+  const currentValue = categorySelect.value;
+  let currentVisible = false;
+  Array.from(categorySelect.options).forEach((option) => {
     if (!option.value) {
       option.hidden = false;
       option.disabled = true;
@@ -32,11 +33,39 @@ function filterProductsByType(typeSelect, productSelect) {
     const visible = selectedType && option.dataset.type === selectedType;
     option.hidden = !visible;
     option.disabled = !visible;
+    if (visible && option.value === currentValue) currentVisible = true;
+  });
+
+  if (!selectedType || !currentVisible) {
+    categorySelect.value = "";
+  }
+  categorySelect.disabled = !selectedType;
+}
+
+function filterProductsBySelection(typeSelect, categorySelect, productSelect) {
+  if (!typeSelect || !categorySelect || !productSelect) return;
+
+  const selectedType = typeSelect.value;
+  const selectedCategory = categorySelect.value;
+  let firstVisible = null;
+  Array.from(productSelect.options).forEach((option) => {
+    if (!option.value) {
+      option.hidden = false;
+      option.disabled = true;
+      return;
+    }
+
+    const visible = selectedType
+      && selectedCategory
+      && option.dataset.type === selectedType
+      && option.dataset.category === selectedCategory;
+    option.hidden = !visible;
+    option.disabled = !visible;
     if (visible && !firstVisible) firstVisible = option;
   });
 
   const current = productSelect.options[productSelect.selectedIndex] || null;
-  if (!selectedType || !firstVisible) {
+  if (!selectedType || !selectedCategory || !firstVisible) {
     productSelect.value = "";
     productSelect.disabled = true;
     return;
@@ -46,6 +75,11 @@ function filterProductsByType(typeSelect, productSelect) {
   if (!current?.value || current.hidden || current.disabled) {
     productSelect.value = firstVisible.value;
   }
+}
+
+function syncProductPicker(typeSelect, categorySelect, productSelect) {
+  filterCategoriesByType(typeSelect, categorySelect);
+  filterProductsBySelection(typeSelect, categorySelect, productSelect);
 }
 
 function syncVehicleModel() {
@@ -107,9 +141,14 @@ function addLine() {
   const fragment = lineTemplate.content.cloneNode(true);
   const row = fragment.querySelector("[data-output-line]");
   const typeSelect = row.querySelector("[data-line-type]");
+  const categorySelect = row.querySelector("[data-line-category]");
   const productSelect = row.querySelector("[data-line-product]");
   typeSelect.addEventListener("change", () => {
-    filterProductsByType(typeSelect, productSelect);
+    syncProductPicker(typeSelect, categorySelect, productSelect);
+    updateLine(row);
+  });
+  categorySelect.addEventListener("change", () => {
+    syncProductPicker(typeSelect, categorySelect, productSelect);
     updateLine(row);
   });
   productSelect.addEventListener("change", () => updateLine(row));
@@ -118,7 +157,7 @@ function addLine() {
     if (linesContainer.children.length > 1) row.remove();
   });
   linesContainer.appendChild(row);
-  filterProductsByType(typeSelect, productSelect);
+  syncProductPicker(typeSelect, categorySelect, productSelect);
   updateLine(row);
 }
 

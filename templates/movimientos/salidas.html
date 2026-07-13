@@ -107,13 +107,23 @@
       </select>
     </label>
     <label>
+      <span>Categoria</span>
+      <select required data-line-category disabled>
+        <option value="">Primero el tipo</option>
+        {% for categoria in categorias %}
+          <option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
       <span>Producto</span>
       <select name="producto_id" required data-line-product disabled>
-        <option value="">Primero el tipo</option>
+        <option value="">Primero categoria</option>
         {% for producto in productos %}
           <option
             value="{{ producto.id }}"
             data-type="{{ producto.tipo_id }}"
+            data-category="{{ producto.categoria_id }}"
             data-stock="{{ producto.stock_actual }}"
             data-stock-suelto="{{ producto.stock_suelto }}"
             data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
