@@ -586,11 +586,11 @@ def _movimientos_por_dia(filtros):
     placa_sql, placa_params = _filtro_placa(filtros)
     salidas = consultar_todos(
         f"""
-        SELECT DATE(creado_en) AS fecha, COUNT(*) AS salidas
-        FROM salidas_stock
-        WHERE DATE(creado_en) BETWEEN %s AND %s
+        SELECT DATE(s.creado_en) AS fecha, COUNT(*) AS salidas
+        FROM salidas_stock s
+        WHERE DATE(s.creado_en) BETWEEN %s AND %s
         {placa_sql}
-        GROUP BY DATE(creado_en)
+        GROUP BY DATE(s.creado_en)
         """,
         _parametros_fecha(filtros) + placa_params,
     )
