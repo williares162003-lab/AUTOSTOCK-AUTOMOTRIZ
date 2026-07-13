@@ -240,6 +240,128 @@
   font-weight: 700;
 }
 
+.report-exit-groups {
+  display: grid;
+  gap: 16px;
+  padding: 0 22px 22px;
+}
+
+.report-day-group {
+  display: grid;
+  gap: 12px;
+}
+
+.report-day-header,
+.report-plate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.report-day-header {
+  padding-top: 6px;
+  color: #172033;
+}
+
+.report-day-header h3,
+.report-plate-header h4,
+.report-plate-header p {
+  margin: 0;
+}
+
+.report-day-header h3 {
+  font-size: 15px;
+}
+
+.report-day-header span,
+.report-plate-header span {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.report-plate-group {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.report-plate-header h4 {
+  color: var(--primario-oscuro);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.report-plate-header p {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-exit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.report-exit-record {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+}
+
+.report-exit-time {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+}
+
+.report-exit-time strong {
+  color: #172033;
+  font-size: 18px;
+}
+
+.report-exit-time small,
+.report-exit-item small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.report-exit-items {
+  display: grid;
+  gap: 8px;
+}
+
+.report-exit-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.report-exit-item strong {
+  display: block;
+  color: #172033;
+  font-size: 12px;
+}
+
+.report-exit-item span {
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 @media (max-width: 1100px) {
   .report-summary-grid,
   .report-grid.two-columns {
@@ -274,5 +396,14 @@
   .report-bar-row {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .report-exit-record,
+  .report-exit-item {
+    grid-template-columns: 1fr;
+  }
+
+  .report-exit-item span {
+    white-space: normal;
   }
 }

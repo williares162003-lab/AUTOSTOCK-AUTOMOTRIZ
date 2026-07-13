@@ -57,6 +57,7 @@ def obtener_reporte_general(filtros):
         "movimientos_dia": _movimientos_por_dia(filtros),
         "top_salidas": _productos_mas_retirados(filtros),
         "salidas_vehiculos": _salidas_por_vehiculo(filtros),
+        "salidas_agrupadas": _salidas_agrupadas_por_dia(filtros),
         "detalle_placa": _detalle_por_placa(filtros),
         "entradas_recientes": _entradas_recientes(filtros),
         "stock_tipos": _stock_por_tipo(),
@@ -136,6 +137,29 @@ def generar_reporte_csv(filtros):
                 producto["movimientos"],
             ]
         )
+    escritor.writerow([])
+
+    escritor.writerow(["Salidas ordenadas por dia y placa"])
+    escritor.writerow(["Fecha", "Placa", "Modelo", "Hora", "Trabajador", "Producto", "Marca", "Cantidad", "Unidad", "Origen", "Usuario"])
+    for dia in reporte["salidas_agrupadas"]:
+        for grupo in dia["grupos"]:
+            for salida in grupo["salidas"]:
+                for item in salida["items"]:
+                    escritor.writerow(
+                        [
+                            dia["fecha"],
+                            grupo["placa"],
+                            grupo["modelo"] or "",
+                            salida["hora"],
+                            salida["trabajador"],
+                            item["producto"],
+                            item["marca"] or "Sin marca",
+                            item["cantidad"],
+                            item["abreviatura"],
+                            item["origen_texto"],
+                            salida["usuario"],
+                        ]
+                    )
     escritor.writerow([])
 
     escritor.writerow(["Salidas por vehiculo"])
@@ -355,6 +379,92 @@ def _salidas_por_vehiculo(filtros):
     ]
 
 
+def _origen_salida_texto(origen):
+    origenes = {
+        "suelto": "Stock suelto",
+        "balde_abierto": "Balde abierto",
+        "cilindro_abierto": "Cilindro abierto",
+    }
+    return origenes.get(origen, "Stock suelto")
+
+
+def _salidas_agrupadas_por_dia(filtros):
+    placa_sql, placa_params = _filtro_placa(filtros)
+    filas = consultar_todos(
+        f"""
+        SELECT s.id AS salida_id, s.creado_en, s.placa, s.modelo, s.trabajador,
+               p.nombre AS producto, p.marca, d.cantidad_base AS cantidad,
+               d.origen_stock, u.abreviatura,
+               COALESCE(us.nombre, 'Usuario eliminado') AS usuario
+        FROM salidas_stock s
+        INNER JOIN salidas_stock_detalle d ON d.salida_id = s.id
+        INNER JOIN productos p ON p.id = d.producto_id
+        INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+        LEFT JOIN usuarios us ON us.id = s.usuario_id
+        WHERE DATE(s.creado_en) BETWEEN %s AND %s
+        {placa_sql}
+        ORDER BY DATE(s.creado_en) DESC, s.placa ASC, s.creado_en DESC, d.id ASC
+        LIMIT 300
+        """,
+        _parametros_fecha(filtros) + placa_params,
+    )
+    dias = []
+    dias_por_fecha = {}
+    for fila in filas:
+        creado_en = fila["creado_en"]
+        fecha = creado_en.date().isoformat() if hasattr(creado_en, "date") else str(creado_en)[:10]
+        hora = creado_en.strftime("%H:%M") if hasattr(creado_en, "strftime") else str(creado_en)[11:16]
+        placa = (fila["placa"] or "SIN PLACA").strip().upper()
+
+        dia = dias_por_fecha.get(fecha)
+        if not dia:
+            dia = {"fecha": fecha, "grupos": [], "_grupos": {}, "total_items": 0}
+            dias_por_fecha[fecha] = dia
+            dias.append(dia)
+
+        grupo = dia["_grupos"].get(placa)
+        if not grupo:
+            grupo = {
+                "placa": placa,
+                "modelo": fila["modelo"] or "",
+                "salidas": [],
+                "_salidas": {},
+                "total_items": 0,
+            }
+            dia["_grupos"][placa] = grupo
+            dia["grupos"].append(grupo)
+
+        salida = grupo["_salidas"].get(fila["salida_id"])
+        if not salida:
+            salida = {
+                "id": fila["salida_id"],
+                "hora": hora,
+                "trabajador": fila["trabajador"],
+                "usuario": fila["usuario"],
+                "items": [],
+            }
+            grupo["_salidas"][fila["salida_id"]] = salida
+            grupo["salidas"].append(salida)
+
+        salida["items"].append(
+            {
+                "producto": fila["producto"],
+                "marca": fila["marca"],
+                "cantidad": fila["cantidad"],
+                "abreviatura": fila["abreviatura"],
+                "origen_texto": _origen_salida_texto(fila["origen_stock"]),
+            }
+        )
+        grupo["total_items"] += 1
+        dia["total_items"] += 1
+
+    for dia in dias:
+        dia.pop("_grupos", None)
+        for grupo in dia["grupos"]:
+            grupo.pop("_salidas", None)
+    return dias
+
+
 def _detalle_por_placa(filtros):
     if not filtros.get("placa"):
         return []
@@ -377,15 +487,10 @@ def _detalle_por_placa(filtros):
         """,
         _parametros_fecha(filtros) + placa_params,
     )
-    origenes = {
-        "suelto": "Stock suelto",
-        "balde_abierto": "Balde abierto",
-        "cilindro_abierto": "Cilindro abierto",
-    }
     detalles = []
     for fila in filas:
         detalle = dict(fila)
-        detalle["origen_texto"] = origenes.get(detalle["origen_stock"], "Stock suelto")
+        detalle["origen_texto"] = _origen_salida_texto(detalle["origen_stock"])
         detalles.append(detalle)
     return detalles
 

@@ -401,6 +401,36 @@ class InventarioAppTests(unittest.TestCase):
             "movimientos_dia": [{"fecha": "2026-07-12", "entradas": 2, "salidas": 1, "entradas_pct": 100, "salidas_pct": 50}],
             "top_salidas": [{"nombre": "Aceite 20W50", "marca": None, "categoria": "Aceite de motor", "cantidad": Decimal("1.000"), "abreviatura": "gal", "movimientos": 1}],
             "salidas_vehiculos": [],
+            "salidas_agrupadas": [
+                {
+                    "fecha": "2026-07-12",
+                    "total_items": 1,
+                    "grupos": [
+                        {
+                            "placa": "ABC-123",
+                            "modelo": "Toyota Yaris",
+                            "total_items": 1,
+                            "salidas": [
+                                {
+                                    "id": 1,
+                                    "hora": "10:00",
+                                    "trabajador": "Juan Perez",
+                                    "usuario": "William",
+                                    "items": [
+                                        {
+                                            "producto": "Aceite 20W50",
+                                            "marca": None,
+                                            "cantidad": Decimal("1.000"),
+                                            "abreviatura": "gal",
+                                            "origen_texto": "Stock suelto",
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
             "entradas_recientes": [],
             "stock_tipos": [{"tipo": "Lubricante", "productos": 1, "con_stock": 1, "bajo_stock": 0, "sin_stock": 0}],
             "ajustes_recientes": [],
@@ -414,6 +444,9 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Hoy", response.data)
         self.assertIn(b"Semana", response.data)
         self.assertIn(b"Exportar CSV", response.data)
+        self.assertIn(b"Salidas por dia y placa", response.data)
+        self.assertIn(b"ABC-123", response.data)
+        self.assertIn(b"10:00", response.data)
         self.assertIn(b"Productos mas retirados", response.data)
         self.assertIn(b"Entradas recientes", response.data)
         self.assertIn(b"Aceite 20W50", response.data)

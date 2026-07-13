@@ -97,6 +97,60 @@
   </div>
 </section>
 
+<section class="inventory-table report-section">
+  <div class="inventory-toolbar">
+    <div>
+      <h2>Salidas por dia y placa</h2>
+      <p>{{ resumen.lineas_salida }} productos entregados en el periodo</p>
+    </div>
+  </div>
+  <div class="report-exit-groups">
+    {% for dia in salidas_agrupadas %}
+    <article class="report-day-group">
+      <header class="report-day-header">
+        <h3>{{ dia.fecha }}</h3>
+        <span>{{ dia.total_items }} item(s)</span>
+      </header>
+      {% for grupo in dia.grupos %}
+      <section class="report-plate-group">
+        <header class="report-plate-header">
+          <div>
+            <h4>{{ grupo.placa }}</h4>
+            <p>{{ grupo.modelo or "Sin modelo" }}</p>
+          </div>
+          <span>{{ grupo.total_items }} item(s)</span>
+        </header>
+        <div class="report-exit-list">
+          {% for salida in grupo.salidas %}
+          <div class="report-exit-record">
+            <div class="report-exit-time">
+              <strong>{{ salida.hora }}</strong>
+              <small>{{ salida.trabajador }}</small>
+              <small>{{ salida.usuario }}</small>
+            </div>
+            <div class="report-exit-items">
+              {% for item in salida["items"] %}
+              <div class="report-exit-item">
+                <div>
+                  <strong>{{ item.producto }}</strong>
+                  <small>{{ item.marca or "Sin marca" }} · {{ item.origen_texto }}</small>
+                </div>
+                <span>-{{ item.cantidad|float|round(3) }} {{ item.abreviatura }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+    </article>
+    {% else %}
+    <div class="empty-report">No hay salidas registradas en el periodo seleccionado.</div>
+    {% endfor %}
+  </div>
+</section>
+
 {% if filtros.get('placa') %}
 <section class="inventory-table report-section">
   <div class="inventory-toolbar">
