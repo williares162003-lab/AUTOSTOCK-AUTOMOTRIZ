@@ -11,20 +11,20 @@
   <article class="inventory-stat neutral"><span class="material-symbols-outlined">outbox</span><strong>{{ resumen.total }}</strong><p>Salidas</p></article>
   <article class="inventory-stat green"><span class="material-symbols-outlined">today</span><strong>{{ resumen.hoy }}</strong><p>Hoy</p></article>
   <article class="inventory-stat primary"><span class="material-symbols-outlined">calendar_month</span><strong>{{ resumen.mes }}</strong><p>Este mes</p></article>
-  <article class="inventory-stat warning"><span class="material-symbols-outlined">directions_car</span><strong>{{ resumen.vehiculos }}</strong><p>Vehiculos</p></article>
+  <article class="inventory-stat warning"><span class="material-symbols-outlined">fact_check</span><strong>{{ resumen.vehiculos }}</strong><p>Destinos</p></article>
 </div>
 
 <section class="entry-layout">
   <article class="inventory-table entry-form-panel">
     <div class="inventory-toolbar">
-      <div><h2>Nueva salida</h2><p>Entrega productos para un vehiculo y trabajador.</p></div>
+      <div><h2>Nueva salida</h2><p>Entrega productos para un destino y trabajador.</p></div>
     </div>
     <form method="post" action="{{ url_for('crear_salida') }}" class="entry-form output-form" data-output-form>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="product-form-grid">
         <label>
-          <span>Placa</span>
-          <input name="placa" list="vehiculos-atendidos" maxlength="20" required data-vehicle-plate placeholder="ABC-123">
+          <span>Destino</span>
+          <input name="placa" list="vehiculos-atendidos" maxlength="20" required data-vehicle-plate placeholder="CCO-800 o PARA TRABAJADORES">
           <datalist id="vehiculos-atendidos">
             {% for vehiculo in vehiculos %}
               <option value="{{ vehiculo.placa }}" data-modelo="{{ (vehiculo.modelo or '')|e }}">{{ vehiculo.modelo or "Sin modelo" }}</option>
@@ -32,8 +32,8 @@
           </datalist>
         </label>
         <label>
-          <span>Vehiculo/modelo (opcional)</span>
-          <input name="modelo" maxlength="120" data-vehicle-model placeholder="Toyota Yaris">
+          <span>Detalle/modelo (opcional)</span>
+          <input name="modelo" maxlength="120" data-vehicle-model placeholder="Toyota Hilux, pintura, mecanica">
         </label>
         <label class="span-two">
           <span>Trabajador que recibe</span>
@@ -57,8 +57,8 @@
 
   <aside class="entry-help">
     <span class="material-symbols-outlined">fact_check</span>
-    <h2>Salida por placa</h2>
-    <p>Si la placa ya fue usada, seleccionala y se completa el modelo. Cada pedido nuevo se guarda como otra salida.</p>
+    <h2>Salida por destino</h2>
+    <p>Usa una placa, area interna o motivo corto. Si ya fue usado, seleccionalo y se completa el detalle.</p>
     <div><strong>Aceites</strong><span>Si sale del balde o cilindro abierto, registra solo lo real: 2 galones, 1 litro, etc.</span></div>
   </aside>
 </section>
@@ -69,7 +69,7 @@
   </div>
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Fecha</th><th>Vehiculo</th><th>Trabajador</th><th>Productos</th><th>Usuario</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Destino</th><th>Trabajador</th><th>Productos</th><th>Usuario</th></tr></thead>
       <tbody>
         {% for salida in salidas %}
         <tr>

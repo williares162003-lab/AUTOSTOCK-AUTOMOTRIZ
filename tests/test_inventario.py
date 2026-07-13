@@ -317,6 +317,8 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Nueva salida", response.data)
         self.assertIn(b"ABC-123", response.data)
         self.assertIn(b"Mecanica", response.data)
+        self.assertIn(b"Destino", response.data)
+        self.assertIn(b"Salida por destino", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Sale de", response.data)
 
@@ -397,10 +399,20 @@ class InventarioAppTests(unittest.TestCase):
                 }
             ],
             "errores_actividad": [],
+            "errores_reporte": [],
             "stock_critico": [],
             "movimientos_dia": [{"fecha": "2026-07-12", "entradas": 2, "salidas": 1, "entradas_pct": 100, "salidas_pct": 50}],
             "top_salidas": [{"nombre": "Aceite 20W50", "marca": None, "categoria": "Aceite de motor", "cantidad": Decimal("1.000"), "abreviatura": "gal", "movimientos": 1}],
             "salidas_vehiculos": [],
+            "destinos_periodo": [
+                {
+                    "placa": "ABC-123",
+                    "modelo": "Toyota Yaris",
+                    "salidas": 1,
+                    "productos": 1,
+                    "ultimo_movimiento": "2026-07-12 10:00:00",
+                }
+            ],
             "salidas_agrupadas": [
                 {
                     "fecha": "2026-07-12",
@@ -444,7 +456,8 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Hoy", response.data)
         self.assertIn(b"Semana", response.data)
         self.assertIn(b"Exportar CSV", response.data)
-        self.assertIn(b"Salidas por dia y placa", response.data)
+        self.assertIn(b"Destinos del periodo", response.data)
+        self.assertIn(b"Salidas por dia y destino", response.data)
         self.assertIn(b"ABC-123", response.data)
         self.assertIn(b"10:00", response.data)
         self.assertIn(b"Productos mas retirados", response.data)

@@ -16,7 +16,7 @@ def _fecha_valida(valor):
 
 
 def _placa_valida(valor):
-    return (valor or "").strip().upper()[:20]
+    return (valor or "").strip().upper()[:80]
 
 
 def normalizar_filtros_reportes(filtros):
@@ -40,7 +40,16 @@ def _filtro_placa(filtros, alias="s"):
     placa = filtros.get("placa", "")
     if not placa:
         return "", ()
-    return f" AND UPPER({alias}.placa) LIKE %s", (f"%{placa}%",)
+    busqueda = f"%{placa}%"
+    return (
+        f"""
+        AND (
+            UPPER({alias}.placa) LIKE %s
+            OR UPPER(COALESCE({alias}.modelo, '')) LIKE %s
+        )
+        """,
+        (busqueda, busqueda),
+    )
 
 
 def obtener_reporte_general(filtros):
@@ -60,12 +69,13 @@ def obtener_reporte_general(filtros):
         "actividad": actividad,
         "errores_actividad": errores_actividad,
         "errores_reporte": errores_reporte,
+        "destinos_periodo": _seguro("destinos del periodo", lambda: _destinos_por_periodo(filtros), [], errores_reporte),
         "stock_critico": _seguro("productos criticos", _stock_critico, [], errores_reporte),
         "movimientos_dia": _seguro("movimientos por dia", lambda: _movimientos_por_dia(filtros), [], errores_reporte),
         "top_salidas": _seguro("productos mas retirados", lambda: _productos_mas_retirados(filtros), [], errores_reporte),
-        "salidas_vehiculos": _seguro("salidas por vehiculo", lambda: _salidas_por_vehiculo(filtros), [], errores_reporte),
-        "salidas_agrupadas": _seguro("salidas por dia y placa", lambda: _salidas_agrupadas_por_dia(filtros), [], errores_reporte),
-        "detalle_placa": _seguro("detalle por placa", lambda: _detalle_por_placa(filtros), [], errores_reporte),
+        "salidas_vehiculos": _seguro("salidas por destino", lambda: _salidas_por_vehiculo(filtros), [], errores_reporte),
+        "salidas_agrupadas": _seguro("salidas por dia y destino", lambda: _salidas_agrupadas_por_dia(filtros), [], errores_reporte),
+        "detalle_placa": _seguro("detalle por destino", lambda: _detalle_por_placa(filtros), [], errores_reporte),
         "entradas_recientes": _seguro("entradas recientes", lambda: _entradas_recientes(filtros), [], errores_reporte),
         "stock_tipos": _seguro("stock por tipo", _stock_por_tipo, [], errores_reporte),
         "ajustes_recientes": _seguro("ajustes recientes", lambda: _ajustes_recientes(filtros), [], errores_reporte),
@@ -103,6 +113,29 @@ def _resumen_vacio():
     }
 
 
+def _destinos_por_periodo(filtros):
+    destino_sql, destino_params = _filtro_placa(filtros)
+    return [
+        dict(fila)
+        for fila in consultar_todos(
+            f"""
+            SELECT s.placa, COALESCE(MAX(NULLIF(s.modelo, '')), '') AS modelo,
+                   COUNT(DISTINCT s.id) AS salidas,
+                   COUNT(d.id) AS productos,
+                   MAX(s.creado_en) AS ultimo_movimiento
+            FROM salidas_stock s
+            LEFT JOIN salidas_stock_detalle d ON d.salida_id = s.id
+            WHERE DATE(s.creado_en) BETWEEN %s AND %s
+            {destino_sql}
+            GROUP BY s.placa
+            ORDER BY ultimo_movimiento DESC, productos DESC, s.placa
+            LIMIT 24
+            """,
+            _parametros_fecha(filtros) + destino_params,
+        )
+    ]
+
+
 def _atajos_fecha():
     hoy = date.today()
     ayer = hoy - timedelta(days=1)
@@ -125,7 +158,7 @@ def generar_reporte_csv(filtros):
     escritor.writerow(["Reporte de almacen"])
     escritor.writerow(["Desde", filtros["fecha_inicio"], "Hasta", filtros["fecha_fin"]])
     if filtros["placa"]:
-        escritor.writerow(["Placa", filtros["placa"]])
+        escritor.writerow(["Destino", filtros["placa"]])
     escritor.writerow([])
 
     escritor.writerow(["Resumen"])
@@ -177,8 +210,8 @@ def generar_reporte_csv(filtros):
         )
     escritor.writerow([])
 
-    escritor.writerow(["Salidas ordenadas por dia y placa"])
-    escritor.writerow(["Fecha", "Placa", "Modelo", "Hora", "Trabajador", "Producto", "Marca", "Cantidad", "Unidad", "Origen", "Usuario"])
+    escritor.writerow(["Salidas ordenadas por dia y destino"])
+    escritor.writerow(["Fecha", "Destino", "Detalle", "Hora", "Trabajador", "Producto", "Marca", "Cantidad", "Unidad", "Origen", "Usuario"])
     for dia in reporte["salidas_agrupadas"]:
         for grupo in dia["grupos"]:
             for salida in grupo["salidas"]:
@@ -200,8 +233,8 @@ def generar_reporte_csv(filtros):
                     )
     escritor.writerow([])
 
-    escritor.writerow(["Salidas por vehiculo"])
-    escritor.writerow(["Placa", "Modelo", "Trabajador", "Salidas", "Items", "Ultimo movimiento"])
+    escritor.writerow(["Salidas por destino"])
+    escritor.writerow(["Destino", "Detalle", "Trabajador", "Salidas", "Items", "Ultimo movimiento"])
     for salida in reporte["salidas_vehiculos"]:
         escritor.writerow(
             [
@@ -216,8 +249,8 @@ def generar_reporte_csv(filtros):
     escritor.writerow([])
 
     if filtros["placa"]:
-        escritor.writerow([f"Detalle de placa {filtros['placa']}"])
-        escritor.writerow(["Fecha", "Placa", "Modelo", "Trabajador", "Producto", "Marca", "Cantidad", "Unidad", "Origen", "Usuario"])
+        escritor.writerow([f"Detalle de destino {filtros['placa']}"])
+        escritor.writerow(["Fecha", "Destino", "Detalle", "Trabajador", "Producto", "Marca", "Cantidad", "Unidad", "Origen", "Usuario"])
         for detalle in reporte["detalle_placa"]:
             escritor.writerow(
                 [

@@ -23,8 +23,13 @@
       <input type="date" name="fecha_fin" value="{{ filtros.fecha_fin }}">
     </label>
     <label>
-      <span>Placa</span>
-      <input type="text" name="placa" maxlength="20" value="{{ filtros.get('placa', '') }}" placeholder="ABC-123">
+      <span>Destino</span>
+      <input type="text" name="placa" list="destinos-periodo" maxlength="80" value="{{ filtros.get('placa', '') }}" placeholder="CCO-800 o PARA TRABAJADORES">
+      <datalist id="destinos-periodo">
+        {% for destino in destinos_periodo %}
+          <option value="{{ destino.placa }}">{{ destino.modelo or "" }}</option>
+        {% endfor %}
+      </datalist>
     </label>
     <button class="primary-button" type="submit"><span class="material-symbols-outlined">filter_alt</span>Filtrar</button>
     <a class="secondary-button" href="{{ url_for('reportes') }}"><span class="material-symbols-outlined">restart_alt</span>Limpiar</a>
@@ -36,6 +41,29 @@
     </div>
     <a class="report-export-button" href="{{ url_for('exportar_reportes', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin, placa=filtros.get('placa', '')) }}"><span class="material-symbols-outlined">download</span>Exportar CSV</a>
   </form>
+</section>
+
+<section class="inventory-table report-section">
+  <div class="inventory-toolbar">
+    <div>
+      <h2>{{ "Destinos del dia" if periodo_es_dia else "Destinos del periodo" }}</h2>
+      <p>{{ destinos_periodo|length }} destinos encontrados</p>
+    </div>
+    {% if filtros.get('placa') %}
+    <a class="secondary-button" href="{{ url_for('reportes', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin) }}"><span class="material-symbols-outlined">restart_alt</span>Ver todos</a>
+    {% endif %}
+  </div>
+  <div class="report-destinations">
+    {% for destino in destinos_periodo %}
+    <a class="report-destination-chip{% if filtros.get('placa') == destino.placa %} selected{% endif %}" href="{{ url_for('reportes', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin, placa=destino.placa) }}">
+      <strong>{{ destino.placa }}</strong>
+      <span>{{ destino.productos }} item(s) / {{ destino.salidas }} salida(s)</span>
+      {% if destino.modelo %}<small>{{ destino.modelo }}</small>{% endif %}
+    </a>
+    {% else %}
+    <div class="empty-report">No hay destinos registrados en el dia o periodo seleccionado.</div>
+    {% endfor %}
+  </div>
 </section>
 
 {% if errores_reporte %}
@@ -110,7 +138,7 @@
 <section class="inventory-table report-section">
   <div class="inventory-toolbar">
     <div>
-      <h2>Salidas por dia y placa</h2>
+      <h2>Salidas por dia y destino</h2>
       <p>{{ resumen.lineas_salida }} productos entregados en el periodo</p>
     </div>
   </div>
@@ -165,14 +193,14 @@
 <section class="inventory-table report-section">
   <div class="inventory-toolbar">
     <div>
-      <h2>Detalle de placa {{ filtros.placa }}</h2>
+      <h2>Detalle de destino {{ filtros.placa }}</h2>
       <p>{{ detalle_placa|length }} productos entregados en el periodo</p>
     </div>
     <a class="secondary-button" href="{{ url_for('kardex', placa=filtros.placa, tipo='salida', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin) }}"><span class="material-symbols-outlined">fact_check</span>Ver en Kardex</a>
   </div>
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Fecha</th><th>Placa</th><th>Modelo</th><th>Trabajador</th><th>Producto</th><th>Cantidad</th><th>Origen</th><th>Usuario</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Destino</th><th>Detalle</th><th>Trabajador</th><th>Producto</th><th>Cantidad</th><th>Origen</th><th>Usuario</th></tr></thead>
       <tbody>
         {% for detalle in detalle_placa %}
         <tr>
@@ -186,7 +214,7 @@
           <td>{{ detalle.usuario }}</td>
         </tr>
         {% else %}
-        <tr><td class="empty-row" colspan="8">No hay salidas para esta placa en el periodo seleccionado.</td></tr>
+        <tr><td class="empty-row" colspan="8">No hay salidas para este destino en el periodo seleccionado.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -279,10 +307,10 @@
   </article>
 
   <article class="inventory-table">
-    <div class="inventory-toolbar"><div><h2>Salidas por vehiculo</h2><p>Placa y trabajador</p></div></div>
+    <div class="inventory-toolbar"><div><h2>Salidas por destino</h2><p>Destino y trabajador</p></div></div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Placa</th><th>Modelo</th><th>Trabajador</th><th>Items</th></tr></thead>
+        <thead><tr><th>Destino</th><th>Detalle</th><th>Trabajador</th><th>Items</th></tr></thead>
         <tbody>
           {% for salida in salidas_vehiculos %}
           <tr>

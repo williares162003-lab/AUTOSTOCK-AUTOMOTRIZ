@@ -24,7 +24,7 @@ def _entero(valor):
 
 
 def _placa_valida(valor):
-    return (valor or "").strip().upper()[:20]
+    return (valor or "").strip().upper()[:80]
 
 
 def _origen_texto(origen):
@@ -147,8 +147,16 @@ def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa):
         sql, parametros, "s.creado_en", producto_id, fecha_inicio, fecha_fin, "d.producto_id"
     )
     if placa:
-        sql += (" AND " if " WHERE " in sql else " WHERE ") + "UPPER(s.placa) LIKE %s"
-        parametros.append(f"%{placa}%")
+        sql += (
+            " AND " if " WHERE " in sql else " WHERE "
+        ) + """
+        (
+            UPPER(s.placa) LIKE %s
+            OR UPPER(COALESCE(s.modelo, '')) LIKE %s
+        )
+        """
+        busqueda = f"%{placa}%"
+        parametros.extend([busqueda, busqueda])
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
     for fila in filas:

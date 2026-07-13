@@ -150,9 +150,9 @@ def registrar_salida(datos, usuario_id):
     lineas, error = _lineas_desde_formulario(datos)
 
     if not placa:
-        return False, "Ingresa la placa del vehiculo."
+        return False, "Ingresa el destino de la salida."
     if len(placa) > 20:
-        return False, "La placa no puede superar 20 caracteres."
+        return False, "El destino no puede superar 20 caracteres."
     if len(trabajador) < 3:
         return False, "Ingresa el trabajador que recibe los productos."
     if error:
