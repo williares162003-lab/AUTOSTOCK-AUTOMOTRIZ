@@ -15,6 +15,7 @@ from inventario_productosAD import (
     resumen_productos,
 )
 from movimientos_entradasAD import abrir_balde, registrar_entrada
+from movimientos_kardexAD import listar_movimientos_kardex_con_errores
 from movimientos_salidasAD import registrar_salida
 from tests.test_app import USUARIO_ALMACEN
 
@@ -321,6 +322,16 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Compra", response.data)
         self.assertIn(b"/movimientos/kardex", response.data)
+
+    @patch("movimientos_kardexAD.consultar_todos", return_value=[])
+    def test_kardex_adjustment_query_escapes_literal_percent(self, consultar):
+        movimientos, errores = listar_movimientos_kardex_con_errores({"tipo": "ajuste"})
+        self.assertEqual(movimientos, [])
+        self.assertEqual(errores, [])
+        sql = consultar.call_args.args[0]
+        self.assertIn("Salida %%", sql)
+        self.assertIn("Balde abierto%%", sql)
+        self.assertIn("Balde terminado%%", sql)
 
     @patch("app.registrar_salida", return_value=(True, "Salida registrada correctamente."))
     def test_almacen_can_submit_output(self, registrar):

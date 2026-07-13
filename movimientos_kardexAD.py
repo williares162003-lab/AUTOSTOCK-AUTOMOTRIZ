@@ -182,16 +182,16 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin):
     if " WHERE " in sql:
         sql += """
           AND a.motivo NOT LIKE 'Entrada:%'
-          AND a.motivo NOT LIKE 'Salida %'
-          AND a.motivo NOT LIKE 'Balde abierto%'
-          AND a.motivo NOT LIKE 'Balde terminado%'
+          AND a.motivo NOT LIKE 'Salida %%'
+          AND a.motivo NOT LIKE 'Balde abierto%%'
+          AND a.motivo NOT LIKE 'Balde terminado%%'
         """
     else:
         sql += """
         WHERE a.motivo NOT LIKE 'Entrada:%'
-          AND a.motivo NOT LIKE 'Salida %'
-          AND a.motivo NOT LIKE 'Balde abierto%'
-          AND a.motivo NOT LIKE 'Balde terminado%'
+          AND a.motivo NOT LIKE 'Salida %%'
+          AND a.motivo NOT LIKE 'Balde abierto%%'
+          AND a.motivo NOT LIKE 'Balde terminado%%'
         """
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
