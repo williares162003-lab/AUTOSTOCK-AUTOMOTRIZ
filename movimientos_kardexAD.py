@@ -28,6 +28,8 @@ def _origen_texto(origen):
         "suelto": "Stock suelto",
         "balde_abierto": "Balde abierto",
         "balde_cerrado": "Balde cerrado",
+        "cilindro_abierto": "Cilindro abierto",
+        "cilindro_cerrado": "Cilindro cerrado",
     }.get(origen, "Stock suelto")
 
 
@@ -62,6 +64,8 @@ def obtener_producto_kardex(producto_id):
         """
         SELECT p.id, p.nombre, p.marca, p.stock_actual, p.stock_suelto,
                p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
+               p.stock_cilindro_abierto, p.cilindros_abiertos, p.stock_cilindros_cerrados,
+               p.litros_por_cilindro,
                p.stock_minimo, t.nombre AS tipo, c.nombre AS categoria,
                u.nombre AS unidad, u.abreviatura
         FROM productos p
@@ -94,6 +98,7 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
     movimientos = []
     for fila in filas:
         es_balde = fila["origen_stock"] == "balde_cerrado"
+        es_cilindro = fila["origen_stock"] == "cilindro_cerrado"
         movimientos.append(
             {
                 "fecha": fila["fecha"],
@@ -105,9 +110,9 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
                 "origen": _origen_texto(fila["origen_stock"]),
                 "detalle": fila["motivo"] or "Entrada de almacen",
                 "referencia": fila["documento"] or "-",
-                "entrada": fila["cantidad"] if es_balde else fila["cantidad_base"],
+                "entrada": fila["cantidad"] if es_balde or es_cilindro else fila["cantidad_base"],
                 "salida": None,
-                "unidad": "balde(s)" if es_balde else fila["abreviatura"],
+                "unidad": "balde(s)" if es_balde else ("cilindro(s)" if es_cilindro else fila["abreviatura"]),
                 "stock_anterior": fila["stock_anterior"],
                 "stock_nuevo": fila["stock_nuevo"],
                 "usuario": fila["usuario"],
@@ -182,6 +187,8 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin):
           AND a.motivo NOT LIKE 'Salida %%'
           AND a.motivo NOT LIKE 'Balde abierto%%'
           AND a.motivo NOT LIKE 'Balde terminado%%'
+          AND a.motivo NOT LIKE 'Cilindro abierto%%'
+          AND a.motivo NOT LIKE 'Cilindro terminado%%'
         """
     else:
         sql += """
@@ -189,6 +196,8 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin):
           AND a.motivo NOT LIKE 'Salida %%'
           AND a.motivo NOT LIKE 'Balde abierto%%'
           AND a.motivo NOT LIKE 'Balde terminado%%'
+          AND a.motivo NOT LIKE 'Cilindro abierto%%'
+          AND a.motivo NOT LIKE 'Cilindro terminado%%'
         """
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
@@ -219,10 +228,10 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin):
 def _baldes(producto_id, fecha_inicio, fecha_fin):
     parametros = []
     sql = """
-        SELECT a.id, a.producto_id, a.tipo, a.baldes_abiertos, a.cantidad_base,
+        SELECT a.id, a.producto_id, a.envase, a.tipo, a.baldes_abiertos, a.cantidad_base,
                a.stock_baldes_anterior, a.stock_baldes_nuevo,
                a.baldes_en_uso_anterior, a.baldes_en_uso_nuevo,
-               a.stock_abierto_anterior, a.stock_abierto_nuevo,
+               a.stock_abierto_anterior, a.stock_abierto_nuevo, a.contenido_por_balde,
                a.stock_anterior, a.stock_nuevo, a.creado_en AS fecha,
                p.nombre AS producto, p.marca, u.abreviatura,
                COALESCE(us.nombre, 'Usuario eliminado') AS usuario
@@ -238,24 +247,30 @@ def _baldes(producto_id, fecha_inicio, fecha_fin):
     movimientos = []
     for fila in filas:
         es_cierre = fila["tipo"] == "cierre"
+        es_cilindro = fila["envase"] == "cilindro"
+        envase = "Cilindro" if es_cilindro else "Balde"
+        unidad_envase = "cilindro(s)" if es_cilindro else "balde(s)"
         movimientos.append(
             {
                 "fecha": fila["fecha"],
                 "producto_id": fila["producto_id"],
                 "producto": fila["producto"],
                 "marca": fila["marca"],
-                "tipo": "Balde terminado" if es_cierre else "Balde abierto",
+                "tipo": f"{envase} terminado" if es_cierre else f"{envase} abierto",
                 "tipo_clase": "balde",
-                "origen": "Control de baldes",
+                "origen": "Control de envases",
                 "detalle": (
                     f"Consumo registrado: {fila['stock_abierto_anterior']} {fila['abreviatura']}"
                     if es_cierre
-                    else "Se abre 1 balde para registrar salidas reales"
+                    else f"Se abre 1 {envase.lower()} para registrar salidas reales"
                 ),
-                "referencia": f"Cerrados {fila['stock_baldes_anterior']} -> {fila['stock_baldes_nuevo']}",
+                "referencia": (
+                    f"Cerrados {fila['stock_baldes_anterior']} -> {fila['stock_baldes_nuevo']}"
+                    + (f" / Capacidad {fila['contenido_por_balde']} {fila['abreviatura']}" if es_cilindro else "")
+                ),
                 "entrada": None,
                 "salida": fila["baldes_abiertos"] if not es_cierre else None,
-                "unidad": "balde(s)",
+                "unidad": unidad_envase,
                 "stock_anterior": fila["stock_anterior"],
                 "stock_nuevo": fila["stock_nuevo"],
                 "usuario": fila["usuario"],

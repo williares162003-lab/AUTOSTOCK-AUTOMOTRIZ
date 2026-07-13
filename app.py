@@ -41,7 +41,9 @@ from inventario_productosAD import (
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
 from movimientos_entradasAD import (
     abrir_balde,
+    abrir_cilindro,
     cerrar_balde,
+    cerrar_cilindro,
     listar_aperturas_balde,
     listar_entradas,
     registrar_entrada,
@@ -233,6 +235,24 @@ def abrir_balde_entrada():
 @csrf_requerido
 def cerrar_balde_entrada():
     correcto, mensaje = cerrar_balde(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("entradas"))
+
+
+@app.post("/movimientos/entradas/abrir-cilindro")
+@login_requerido
+@csrf_requerido
+def abrir_cilindro_entrada():
+    correcto, mensaje = abrir_cilindro(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("entradas"))
+
+
+@app.post("/movimientos/entradas/cerrar-cilindro")
+@login_requerido
+@csrf_requerido
+def cerrar_cilindro_entrada():
+    correcto, mensaje = cerrar_cilindro(request.form, session["usuario"]["id"])
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("entradas"))
 

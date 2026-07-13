@@ -55,6 +55,18 @@ function updateLine(row) {
     return;
   }
 
+  if (originValue === "cilindro_abierto") {
+    const openCylinders = toNumber(product.dataset.cilindrosAbiertos);
+    const used = toNumber(product.dataset.stockCilindroAbierto);
+    const capacity = toNumber(product.dataset.litrosPorCilindro);
+    const available = Math.max(capacity - used, 0);
+    quantity.max = String(available);
+    stock.textContent = openCylinders > 0
+      ? `${formatQuantity(openCylinders)} cilindro(s) / queda ${formatQuantity(available)} ${abbreviation}`
+      : "Sin cilindro abierto";
+    return;
+  }
+
   const available = toNumber(product.dataset.stockSuelto);
   quantity.max = String(available);
   stock.textContent = `${formatQuantity(available)} ${abbreviation}`;

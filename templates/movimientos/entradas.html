@@ -26,6 +26,7 @@
           <select name="tipo_entrada" required data-entry-type>
             <option value="suelto">Stock suelto</option>
             <option value="balde_cerrado">Baldes cerrados</option>
+            <option value="cilindro_cerrado">Cilindros cerrados</option>
           </select>
         </label>
         <label class="span-two">
@@ -39,6 +40,10 @@
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
                 data-baldes-abiertos="{{ producto.baldes_abiertos }}"
                 data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
+                data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
+                data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
+                data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
+                data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
                 data-unidad="{{ producto.unidad|e }}"
                 data-abreviatura="{{ producto.abreviatura|e }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
@@ -54,6 +59,10 @@
         <label>
           <span data-quantity-label>Cantidad que ingresa</span>
           <input name="cantidad" type="number" min="0.001" step="0.001" required data-entry-quantity>
+        </label>
+        <label data-cylinder-liters-field hidden>
+          <span>Litros por cilindro</span>
+          <input name="litros_cilindro" type="number" min="0.001" step="0.001" data-cylinder-liters>
         </label>
         <label>
           <span>Documento (opcional)</span>
@@ -78,14 +87,15 @@
   <aside class="entry-help">
     <span class="material-symbols-outlined">info</span>
     <h2>Como suma el stock</h2>
-    <p>El stock suelto queda disponible para entregar. Los baldes cerrados se guardan aparte hasta que abras uno.</p>
+    <p>El stock suelto queda disponible para entregar. Baldes y cilindros cerrados se guardan aparte hasta que abras uno.</p>
     <div><strong>Cajas</strong><span>Para cajas con piezas, usa Presentaciones: Caja = 24 und, por ejemplo.</span></div>
+    <div><strong>Cilindros</strong><span>Registra cuantos cilindros entran y cuantos litros trae cada uno.</span></div>
   </aside>
 </section>
 
 <section class="inventory-table bucket-panel">
   <div class="inventory-toolbar">
-    <div><h2>Control de balde</h2><p>Abre un balde, registra las salidas reales y marcalo terminado cuando se acabe.</p></div>
+    <div><h2>Control de envases</h2><p>Abre un balde o cilindro, registra las salidas reales y marcalo terminado cuando cuadre.</p></div>
   </div>
   <form method="post" action="{{ url_for('abrir_balde_entrada') }}" class="entry-form bucket-form" data-bucket-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -141,18 +151,75 @@
       <button class="secondary-button" type="submit"><span class="material-symbols-outlined">done_all</span>Marcar terminado</button>
     </div>
   </form>
+  <form method="post" action="{{ url_for('abrir_cilindro_entrada') }}" class="entry-form bucket-form" data-cylinder-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="product-form-grid">
+      <label class="span-two">
+        <span>Producto con cilindro cerrado</span>
+        <select name="producto_id" required data-cylinder-product>
+          {% for producto in productos %}
+            <option
+              value="{{ producto.id }}"
+              data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
+              data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
+              data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
+              data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+              data-abreviatura="{{ producto.abreviatura|e }}"
+            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="entry-preview">
+      <div><span>Cilindros cerrados</span><strong data-cylinder-closed>-</strong></div>
+      <div><span>Cilindro en uso</span><strong data-cylinder-open>-</strong></div>
+      <div><span>Capacidad</span><strong data-cylinder-capacity>-</strong></div>
+      <div><span>Consumido</span><strong data-cylinder-used>-</strong></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="primary-button" type="submit"><span class="material-symbols-outlined">oil_barrel</span>Abrir cilindro</button>
+    </div>
+  </form>
+  <form method="post" action="{{ url_for('cerrar_cilindro_entrada') }}" class="entry-form bucket-close-form" data-cylinder-close-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="product-form-grid">
+      <label class="span-two">
+        <span>Producto con cilindro abierto</span>
+        <select name="producto_id" required data-cylinder-close-product>
+          {% for producto in productos %}
+            <option
+              value="{{ producto.id }}"
+              data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
+              data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
+              data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+              data-abreviatura="{{ producto.abreviatura|e }}"
+            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="entry-preview">
+      <div><span>Cilindro en uso</span><strong data-cylinder-close-open>-</strong></div>
+      <div><span>Consumo registrado</span><strong data-cylinder-close-used>-</strong></div>
+      <div><span>Falta para cuadrar</span><strong data-cylinder-close-left>-</strong></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="secondary-button" type="submit"><span class="material-symbols-outlined">done_all</span>Marcar cilindro terminado</button>
+    </div>
+  </form>
   {% if aperturas %}
   <div class="table-scroll bucket-history">
     <table>
-      <thead><tr><th>Fecha</th><th>Producto</th><th>Accion</th><th>Cerrados</th><th>En uso</th><th>Consumo</th><th>Usuario</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Producto</th><th>Accion</th><th>Cerrados</th><th>En uso</th><th>Capacidad</th><th>Consumo</th><th>Usuario</th></tr></thead>
       <tbody>
         {% for apertura in aperturas %}
         <tr>
           <td>{{ apertura.creado_en }}</td>
           <td><strong>{{ apertura.producto }}</strong><small>{{ apertura.marca or "Sin marca" }}</small></td>
           <td>{{ apertura.tipo_texto }}</td>
-          <td>{{ apertura.stock_baldes_anterior|float|round(3) }} -> <strong>{{ apertura.stock_baldes_nuevo|float|round(3) }}</strong></td>
-          <td>{{ apertura.baldes_en_uso_anterior|float|round(3) }} -> <strong>{{ apertura.baldes_en_uso_nuevo|float|round(3) }}</strong></td>
+          <td>{{ apertura.stock_baldes_anterior|float|round(3) }} -> <strong>{{ apertura.stock_baldes_nuevo|float|round(3) }}</strong> {{ apertura.unidad_envase }}</td>
+          <td>{{ apertura.baldes_en_uso_anterior|float|round(3) }} -> <strong>{{ apertura.baldes_en_uso_nuevo|float|round(3) }}</strong> {{ apertura.unidad_envase }}</td>
+          <td>{{ apertura.contenido_por_balde|float|round(3) }} {{ apertura.abreviatura }}</td>
           <td>{{ apertura.stock_abierto_anterior|float|round(3) }} -> <strong>{{ apertura.stock_abierto_nuevo|float|round(3) }} {{ apertura.abreviatura }}</strong></td>
           <td>{{ apertura.usuario }}</td>
         </tr>
@@ -179,6 +246,8 @@
           <td>
             {% if entrada.origen_stock == "balde_cerrado" %}
               <strong class="adjustment-value positive">+{{ entrada.cantidad|float|round(3) }} balde(s)</strong><small>{{ entrada.presentacion_nombre }}</small>
+            {% elif entrada.origen_stock == "cilindro_cerrado" %}
+              <strong class="adjustment-value positive">+{{ entrada.cantidad|float|round(3) }} cilindro(s)</strong><small>{{ entrada.factor|float|round(3) }} {{ entrada.abreviatura }} c/u</small>
             {% else %}
               <strong class="adjustment-value positive">+{{ entrada.cantidad_base|float|round(3) }} {{ entrada.abreviatura }}</strong><small>{{ entrada.cantidad|float|round(3) }} {{ entrada.presentacion_nombre }}</small>
             {% endif %}

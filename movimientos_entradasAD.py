@@ -5,6 +5,7 @@ from bd import consultar_todos, consultar_uno, ejecutar_transaccion
 
 ORIGEN_SUELTO = "suelto"
 ORIGEN_BALDE_CERRADO = "balde_cerrado"
+ORIGEN_CILINDRO_CERRADO = "cilindro_cerrado"
 
 
 def _entero(valor):
@@ -28,13 +29,14 @@ def _origen_texto(origen):
     return {
         ORIGEN_SUELTO: "Stock suelto",
         ORIGEN_BALDE_CERRADO: "Balde cerrado",
+        ORIGEN_CILINDRO_CERRADO: "Cilindro cerrado",
     }.get(origen, "Stock suelto")
 
 
 def listar_entradas(limite=30):
     filas = consultar_todos(
         """
-        SELECT e.id, e.cantidad, e.cantidad_base, e.origen_stock, e.presentacion_nombre,
+        SELECT e.id, e.cantidad, e.cantidad_base, e.origen_stock, e.presentacion_nombre, e.factor,
                e.stock_anterior, e.stock_nuevo, e.documento,
                e.motivo, e.creado_en, p.nombre AS producto, p.marca,
                u.abreviatura, COALESCE(us.nombre, 'Usuario eliminado') AS usuario
@@ -58,7 +60,7 @@ def listar_entradas(limite=30):
 def listar_aperturas_balde(limite=12):
     filas = consultar_todos(
         """
-        SELECT a.id, a.tipo, a.baldes_abiertos, a.contenido_por_balde, a.cantidad_base,
+        SELECT a.id, a.envase, a.tipo, a.baldes_abiertos, a.contenido_por_balde, a.cantidad_base,
                a.stock_baldes_anterior, a.stock_baldes_nuevo,
                a.baldes_en_uso_anterior, a.baldes_en_uso_nuevo,
                a.stock_abierto_anterior, a.stock_abierto_nuevo,
@@ -76,7 +78,10 @@ def listar_aperturas_balde(limite=12):
     aperturas = []
     for fila in filas:
         apertura = dict(fila)
-        apertura["tipo_texto"] = "Terminado" if apertura["tipo"] == "cierre" else "Abierto"
+        envase = "Cilindro" if apertura["envase"] == "cilindro" else "Balde"
+        apertura["envase_texto"] = envase
+        apertura["unidad_envase"] = "cilindro(s)" if apertura["envase"] == "cilindro" else "balde(s)"
+        apertura["tipo_texto"] = f"{envase} terminado" if apertura["tipo"] == "cierre" else f"{envase} abierto"
         aperturas.append(apertura)
     return aperturas
 
@@ -105,25 +110,33 @@ def registrar_entrada(datos, usuario_id):
     tipo_entrada = datos.get("tipo_entrada", ORIGEN_SUELTO)
     presentacion_id = datos.get("presentacion_id", "base")
     cantidad, error = _decimal(datos.get("cantidad"), "La cantidad")
+    litros_cilindro, error_litros_cilindro = _decimal(
+        datos.get("litros_cilindro"),
+        "Los litros por cilindro",
+    ) if tipo_entrada == ORIGEN_CILINDRO_CERRADO else (Decimal("0.000"), None)
     documento = datos.get("documento", "").strip() or None
     motivo = datos.get("motivo", "").strip() or "Entrada de almacen"
 
-    if tipo_entrada not in (ORIGEN_SUELTO, ORIGEN_BALDE_CERRADO):
+    if tipo_entrada not in (ORIGEN_SUELTO, ORIGEN_BALDE_CERRADO, ORIGEN_CILINDRO_CERRADO):
         return False, "Selecciona un tipo de entrada valido."
-    if error:
-        return False, error
+    if error or error_litros_cilindro:
+        return False, error or error_litros_cilindro
     if not producto_id:
         return False, "Selecciona un producto."
     if len(motivo) < 3:
         return False, "Ingresa un motivo valido."
     if tipo_entrada == ORIGEN_BALDE_CERRADO and cantidad != cantidad.to_integral_value():
         return False, "La cantidad de baldes debe ser entera."
+    if tipo_entrada == ORIGEN_CILINDRO_CERRADO and cantidad != cantidad.to_integral_value():
+        return False, "La cantidad de cilindros debe ser entera."
 
     def operacion(cursor):
         cursor.execute(
             """
             SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
                    p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
+                   p.stock_cilindro_abierto, p.cilindros_abiertos,
+                   p.stock_cilindros_cerrados, p.litros_por_cilindro,
                    u.abreviatura, u.permite_decimal
             FROM productos p
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
@@ -177,7 +190,7 @@ def registrar_entrada(datos, usuario_id):
             )
             diferencia_ajuste = cantidad_base
             descripcion_movimiento = f"{producto['nombre']}: +{cantidad_base} {producto['abreviatura']}"
-        else:
+        elif tipo_entrada == ORIGEN_BALDE_CERRADO:
             cantidad_base = Decimal("0.000")
             presentacion_nombre = "Balde cerrado"
             stock_anterior = producto["stock_actual"]
@@ -193,6 +206,32 @@ def registrar_entrada(datos, usuario_id):
             )
             diferencia_ajuste = Decimal("0.000")
             descripcion_movimiento = f"{producto['nombre']}: +{cantidad} balde(s) cerrados"
+        else:
+            if producto["litros_por_cilindro"] > 0 and producto["litros_por_cilindro"] != litros_cilindro:
+                return False, (
+                    f"Este producto ya usa cilindros de {producto['litros_por_cilindro']} "
+                    f"{producto['abreviatura']}."
+                )
+            cantidad_base = (cantidad * litros_cilindro).quantize(Decimal("0.001"))
+            presentacion_nombre = "Cilindro cerrado"
+            factor = litros_cilindro
+            stock_anterior = producto["stock_actual"]
+            stock_nuevo = stock_anterior
+            stock_cilindros_nuevo = producto["stock_cilindros_cerrados"] + cantidad
+            cursor.execute(
+                """
+                UPDATE productos
+                SET stock_cilindros_cerrados = %s,
+                    litros_por_cilindro = %s
+                WHERE id = %s
+                """,
+                (stock_cilindros_nuevo, litros_cilindro, producto_id),
+            )
+            diferencia_ajuste = Decimal("0.000")
+            descripcion_movimiento = (
+                f"{producto['nombre']}: +{cantidad} cilindro(s) cerrados "
+                f"de {litros_cilindro} {producto['abreviatura']}"
+            )
 
         cursor.execute(
             """
@@ -222,6 +261,8 @@ def registrar_entrada(datos, usuario_id):
             detalle += f" / {documento}"
         if tipo_entrada == ORIGEN_BALDE_CERRADO:
             detalle += f" / {cantidad} balde(s) cerrados"
+        if tipo_entrada == ORIGEN_CILINDRO_CERRADO:
+            detalle += f" / {cantidad} cilindro(s) de {litros_cilindro} {producto['abreviatura']}"
         cursor.execute(
             """
             INSERT INTO ajustes_stock
@@ -406,5 +447,188 @@ def cerrar_balde(datos, usuario_id):
             ("Cierre", f"{producto['nombre']}: balde terminado", usuario_id),
         )
         return True, "Balde marcado como terminado."
+
+    return ejecutar_transaccion(operacion)
+
+
+def abrir_cilindro(datos, usuario_id):
+    producto_id = _entero(datos.get("producto_id"))
+    cilindros = Decimal("1.000")
+
+    if not producto_id:
+        return False, "Selecciona un producto."
+
+    def operacion(cursor):
+        cursor.execute(
+            """
+            SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
+                   p.stock_cilindro_abierto, p.cilindros_abiertos,
+                   p.stock_cilindros_cerrados, p.litros_por_cilindro,
+                   u.abreviatura
+            FROM productos p
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            WHERE p.id = %s
+            FOR UPDATE
+            """,
+            (producto_id,),
+        )
+        producto = cursor.fetchone()
+        if not producto:
+            return False, "El producto seleccionado no existe."
+        if producto["cilindros_abiertos"] > 0:
+            return False, "Primero marca como terminado el cilindro abierto de este producto."
+        if producto["stock_cilindros_cerrados"] < cilindros:
+            return False, "No hay cilindros cerrados disponibles para abrir."
+        if producto["litros_por_cilindro"] <= 0:
+            return False, "Registra primero los litros por cilindro desde Entradas."
+
+        stock_cilindros_nuevo = producto["stock_cilindros_cerrados"] - cilindros
+        cilindros_en_uso_nuevo = producto["cilindros_abiertos"] + cilindros
+        cursor.execute(
+            """
+            UPDATE productos
+            SET stock_cilindros_cerrados = %s,
+                cilindros_abiertos = %s,
+                stock_cilindro_abierto = 0,
+                stock_actual = stock_suelto
+            WHERE id = %s
+            """,
+            (stock_cilindros_nuevo, cilindros_en_uso_nuevo, producto_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO aperturas_balde
+                (producto_id, envase, tipo, baldes_abiertos, contenido_por_balde, cantidad_base,
+                 stock_baldes_anterior, stock_baldes_nuevo,
+                 baldes_en_uso_anterior, baldes_en_uso_nuevo,
+                 stock_abierto_anterior, stock_abierto_nuevo,
+                 stock_anterior, stock_nuevo, usuario_id)
+            VALUES (%s, 'cilindro', 'apertura', %s, %s, 0, %s, %s, %s, %s, %s, 0, %s, %s, %s)
+            """,
+            (
+                producto_id,
+                cilindros,
+                producto["litros_por_cilindro"],
+                producto["stock_cilindros_cerrados"],
+                stock_cilindros_nuevo,
+                producto["cilindros_abiertos"],
+                cilindros_en_uso_nuevo,
+                producto["stock_cilindro_abierto"],
+                producto["stock_actual"],
+                producto["stock_suelto"],
+                usuario_id,
+            ),
+        )
+        cursor.execute(
+            """
+            INSERT INTO ajustes_stock
+                (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+            VALUES (%s, %s, %s, 0, %s, %s)
+            """,
+            (
+                producto_id,
+                producto["stock_actual"],
+                producto["stock_suelto"],
+                "Cilindro abierto para consumo por salidas",
+                usuario_id,
+            ),
+        )
+        cursor.execute(
+            """
+            INSERT INTO movimientos (tipo, descripcion, usuario_id)
+            VALUES (%s, %s, %s)
+            """,
+            ("Apertura", f"{producto['nombre']}: 1 cilindro abierto", usuario_id),
+        )
+        return True, "Cilindro abierto. Registra las salidas reales hasta cuadrar los litros."
+
+    return ejecutar_transaccion(operacion)
+
+
+def cerrar_cilindro(datos, usuario_id):
+    producto_id = _entero(datos.get("producto_id"))
+    if not producto_id:
+        return False, "Selecciona un producto."
+
+    def operacion(cursor):
+        cursor.execute(
+            """
+            SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
+                   p.stock_cilindro_abierto, p.cilindros_abiertos,
+                   p.stock_cilindros_cerrados, p.litros_por_cilindro,
+                   u.abreviatura
+            FROM productos p
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            WHERE p.id = %s
+            FOR UPDATE
+            """,
+            (producto_id,),
+        )
+        producto = cursor.fetchone()
+        if not producto:
+            return False, "El producto seleccionado no existe."
+        if producto["cilindros_abiertos"] <= 0:
+            return False, "Este producto no tiene cilindro abierto en uso."
+
+        consumo = producto["stock_cilindro_abierto"]
+        capacidad = producto["litros_por_cilindro"]
+        if consumo != capacidad:
+            diferencia = capacidad - consumo
+            if diferencia > 0:
+                return False, f"El cilindro aun no cuadra. Faltan {diferencia} {producto['abreviatura']} por registrar."
+            return False, "El consumo del cilindro supera su capacidad. Revisa el ajuste antes de cerrarlo."
+
+        cilindros_en_uso_nuevo = producto["cilindros_abiertos"] - Decimal("1.000")
+        cursor.execute(
+            """
+            UPDATE productos
+            SET cilindros_abiertos = %s,
+                stock_cilindro_abierto = 0,
+                stock_actual = stock_suelto
+            WHERE id = %s
+            """,
+            (cilindros_en_uso_nuevo, producto_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO aperturas_balde
+                (producto_id, envase, tipo, baldes_abiertos, contenido_por_balde, cantidad_base,
+                 stock_baldes_anterior, stock_baldes_nuevo,
+                 baldes_en_uso_anterior, baldes_en_uso_nuevo,
+                 stock_abierto_anterior, stock_abierto_nuevo,
+                 stock_anterior, stock_nuevo, usuario_id)
+            VALUES (%s, 'cilindro', 'cierre', 1, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s)
+            """,
+            (
+                producto_id,
+                capacidad,
+                consumo,
+                producto["stock_cilindros_cerrados"],
+                producto["stock_cilindros_cerrados"],
+                producto["cilindros_abiertos"],
+                cilindros_en_uso_nuevo,
+                producto["stock_cilindro_abierto"],
+                producto["stock_actual"],
+                producto["stock_suelto"],
+                usuario_id,
+            ),
+        )
+        motivo = f"Cilindro terminado. Consumo registrado: {consumo} {producto['abreviatura']}"
+        cursor.execute(
+            """
+            INSERT INTO ajustes_stock
+                (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+            VALUES (%s, %s, %s, 0, %s, %s)
+            """,
+            (producto_id, producto["stock_actual"], producto["stock_suelto"], motivo, usuario_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO movimientos (tipo, descripcion, usuario_id)
+            VALUES (%s, %s, %s)
+            """,
+            ("Cierre", f"{producto['nombre']}: cilindro terminado", usuario_id),
+        )
+        return True, "Cilindro marcado como terminado y cuadrado."
 
     return ejecutar_transaccion(operacion)

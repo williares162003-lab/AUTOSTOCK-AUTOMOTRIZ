@@ -5,6 +5,7 @@ from bd import consultar_todos, consultar_uno, ejecutar_transaccion
 
 ORIGEN_SUELTO = "suelto"
 ORIGEN_BALDE_ABIERTO = "balde_abierto"
+ORIGEN_CILINDRO_ABIERTO = "cilindro_abierto"
 
 
 def _entero(valor):
@@ -32,7 +33,10 @@ def _lista(datos, nombre):
 
 
 def _origen_texto(origen):
-    return "Balde abierto" if origen == ORIGEN_BALDE_ABIERTO else "Suelto"
+    return {
+        ORIGEN_BALDE_ABIERTO: "Balde abierto",
+        ORIGEN_CILINDRO_ABIERTO: "Cilindro abierto",
+    }.get(origen, "Suelto")
 
 
 def listar_vehiculos():
@@ -127,7 +131,7 @@ def _lineas_desde_formulario(datos):
             continue
         if not producto_id:
             return None, "Selecciona un producto en cada linea."
-        if origen not in (ORIGEN_SUELTO, ORIGEN_BALDE_ABIERTO):
+        if origen not in (ORIGEN_SUELTO, ORIGEN_BALDE_ABIERTO, ORIGEN_CILINDRO_ABIERTO):
             return None, "Selecciona un origen de stock valido."
         if error:
             return None, error
@@ -200,6 +204,8 @@ def registrar_salida(datos, usuario_id):
                 """
                 SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
                        p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
+                       p.stock_cilindro_abierto, p.cilindros_abiertos,
+                       p.stock_cilindros_cerrados, p.litros_por_cilindro,
                        u.abreviatura, u.permite_decimal
                 FROM productos p
                 INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
@@ -217,14 +223,28 @@ def registrar_salida(datos, usuario_id):
             disponible = producto["stock_suelto"]
             if origen == ORIGEN_BALDE_ABIERTO and producto["baldes_abiertos"] <= 0:
                 return False, f"No hay balde abierto en uso para {producto['nombre']}."
+            if origen == ORIGEN_CILINDRO_ABIERTO and producto["cilindros_abiertos"] <= 0:
+                return False, f"No hay cilindro abierto en uso para {producto['nombre']}."
+            if (
+                origen == ORIGEN_CILINDRO_ABIERTO
+                and producto["stock_cilindro_abierto"] + cantidad > producto["litros_por_cilindro"]
+            ):
+                disponible_cilindro = producto["litros_por_cilindro"] - producto["stock_cilindro_abierto"]
+                return False, (
+                    f"No hay litros suficientes en el cilindro abierto de {producto['nombre']}. "
+                    f"Disponible: {disponible_cilindro} {producto['abreviatura']}."
+                )
             if origen == ORIGEN_SUELTO and cantidad > disponible:
                 return False, f"No hay stock suficiente de {producto['nombre']} en {_origen_texto(origen).lower()}."
 
             stock_anterior = producto["stock_actual"]
             stock_suelto_nuevo = producto["stock_suelto"]
             stock_balde_abierto_nuevo = producto["stock_balde_abierto"]
+            stock_cilindro_abierto_nuevo = producto["stock_cilindro_abierto"]
             if origen == ORIGEN_BALDE_ABIERTO:
                 stock_balde_abierto_nuevo += cantidad
+            elif origen == ORIGEN_CILINDRO_ABIERTO:
+                stock_cilindro_abierto_nuevo += cantidad
             else:
                 stock_suelto_nuevo -= cantidad
             stock_nuevo = stock_suelto_nuevo
@@ -233,10 +253,17 @@ def registrar_salida(datos, usuario_id):
                 UPDATE productos
                 SET stock_suelto = %s,
                     stock_balde_abierto = %s,
+                    stock_cilindro_abierto = %s,
                     stock_actual = %s
                 WHERE id = %s
                 """,
-                (stock_suelto_nuevo, stock_balde_abierto_nuevo, stock_nuevo, producto_id),
+                (
+                    stock_suelto_nuevo,
+                    stock_balde_abierto_nuevo,
+                    stock_cilindro_abierto_nuevo,
+                    stock_nuevo,
+                    producto_id,
+                ),
             )
             cursor.execute(
                 """
@@ -247,7 +274,11 @@ def registrar_salida(datos, usuario_id):
                 (salida_id, producto_id, cantidad, origen, stock_anterior, stock_nuevo),
             )
             motivo = f"Salida {placa} / trabajador: {trabajador} / {_origen_texto(origen)}"
-            diferencia = Decimal("0.000") if origen == ORIGEN_BALDE_ABIERTO else -cantidad
+            diferencia = (
+                Decimal("0.000")
+                if origen in (ORIGEN_BALDE_ABIERTO, ORIGEN_CILINDRO_ABIERTO)
+                else -cantidad
+            )
             cursor.execute(
                 """
                 INSERT INTO ajustes_stock

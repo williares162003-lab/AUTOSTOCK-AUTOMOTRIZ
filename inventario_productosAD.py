@@ -104,7 +104,9 @@ def listar_productos():
             """
             SELECT p.id, p.nombre, p.marca, p.descripcion, p.stock_actual,
                    p.stock_suelto, p.stock_balde_abierto, p.baldes_abiertos,
-                   p.stock_baldes_cerrados,
+                   p.stock_baldes_cerrados, p.stock_cilindro_abierto,
+                   p.cilindros_abiertos, p.stock_cilindros_cerrados,
+                   p.litros_por_cilindro,
                    p.stock_minimo,
                    p.observaciones, p.tipo_id, t.nombre AS tipo, p.categoria_id,
                    c.nombre AS categoria, p.unidad_base_id, u.nombre AS unidad,
@@ -136,6 +138,8 @@ def resumen_productos(productos=None):
         if producto["stock_actual"] > 0
         or producto.get("stock_baldes_cerrados", 0) > 0
         or producto.get("baldes_abiertos", 0) > 0
+        or producto.get("stock_cilindros_cerrados", 0) > 0
+        or producto.get("cilindros_abiertos", 0) > 0
     )
     return {
         "total": len(productos),
@@ -146,6 +150,8 @@ def resumen_productos(productos=None):
             if producto["stock_actual"] <= 0
             and producto.get("stock_baldes_cerrados", 0) <= 0
             and producto.get("baldes_abiertos", 0) <= 0
+            and producto.get("stock_cilindros_cerrados", 0) <= 0
+            and producto.get("cilindros_abiertos", 0) <= 0
         ),
         "repuestos": sum(1 for producto in productos if producto["tipo"] == "Repuesto"),
         "lubricantes": sum(1 for producto in productos if producto["tipo"] == "Lubricante"),
@@ -333,7 +339,8 @@ def editar_producto(producto_id, datos):
     actual = consultar_uno(
         """
         SELECT id, unidad_base_id, stock_actual, stock_suelto,
-               stock_balde_abierto, baldes_abiertos, stock_baldes_cerrados
+               stock_balde_abierto, baldes_abiertos, stock_baldes_cerrados,
+               stock_cilindro_abierto, cilindros_abiertos, stock_cilindros_cerrados
         FROM productos
         WHERE id = %s
         """,
@@ -349,6 +356,9 @@ def editar_producto(producto_id, datos):
         + actual["stock_balde_abierto"]
         + actual["baldes_abiertos"]
         + actual["stock_baldes_cerrados"]
+        + actual["stock_cilindro_abierto"]
+        + actual["cilindros_abiertos"]
+        + actual["stock_cilindros_cerrados"]
     )
     if stock_total != 0 and valores["unidad_base_id"] != actual["unidad_base_id"]:
         return False, "No puedes cambiar la unidad base de un producto que ya tiene stock."
@@ -399,8 +409,33 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
         datos.get("stock_baldes_cerrados_nuevo", "0"),
         "Los baldes cerrados",
     )
+    stock_cilindro_abierto, error_cilindro_abierto = _decimal(
+        datos.get("stock_cilindro_abierto_nuevo", "0"),
+        "El consumo del cilindro abierto",
+    )
+    cilindros_abiertos, error_cilindros_abiertos = _decimal(
+        datos.get("cilindros_abiertos_nuevo", "0"),
+        "Los cilindros abiertos",
+    )
+    stock_cilindros_cerrados, error_cilindros_cerrados = _decimal(
+        datos.get("stock_cilindros_cerrados_nuevo", "0"),
+        "Los cilindros cerrados",
+    )
+    litros_por_cilindro, error_litros_cilindro = _decimal(
+        datos.get("litros_por_cilindro_nuevo", "0"),
+        "Los litros por cilindro",
+    )
     motivo = datos.get("motivo", "").strip()
-    error = error_suelto or error_balde_abierto or error_baldes_abiertos or error_baldes_cerrados
+    error = (
+        error_suelto
+        or error_balde_abierto
+        or error_baldes_abiertos
+        or error_baldes_cerrados
+        or error_cilindro_abierto
+        or error_cilindros_abiertos
+        or error_cilindros_cerrados
+        or error_litros_cilindro
+    )
     if error:
         return False, error
     if len(motivo) < 3:
@@ -408,14 +443,19 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
     if (
         baldes_abiertos != baldes_abiertos.to_integral_value()
         or stock_baldes_cerrados != stock_baldes_cerrados.to_integral_value()
+        or cilindros_abiertos != cilindros_abiertos.to_integral_value()
+        or stock_cilindros_cerrados != stock_cilindros_cerrados.to_integral_value()
     ):
-        return False, "Los baldes abiertos y cerrados deben ser enteros."
+        return False, "Los baldes y cilindros abiertos o cerrados deben ser enteros."
 
     def operacion(cursor):
         cursor.execute(
             """
             SELECT p.id, p.stock_actual, p.stock_suelto, p.stock_balde_abierto,
-                   p.baldes_abiertos, p.stock_baldes_cerrados, u.permite_decimal
+                   p.baldes_abiertos, p.stock_baldes_cerrados,
+                   p.stock_cilindro_abierto, p.cilindros_abiertos,
+                   p.stock_cilindros_cerrados, p.litros_por_cilindro,
+                   u.permite_decimal
             FROM productos p
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
             WHERE p.id = %s
@@ -427,15 +467,23 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
         if not producto:
             return False, "El producto solicitado no existe."
         if not producto["permite_decimal"]:
-            cantidades = [stock_suelto, stock_balde_abierto]
+            cantidades = [stock_suelto, stock_balde_abierto, stock_cilindro_abierto]
             if any(cantidad != cantidad.to_integral_value() for cantidad in cantidades):
                 return False, "El stock debe ser entero para la unidad seleccionada."
+        if (cilindros_abiertos > 0 or stock_cilindro_abierto > 0) and litros_por_cilindro <= 0:
+            return False, "Indica los litros por cilindro si hay cilindros en uso."
+        if stock_cilindro_abierto > litros_por_cilindro and litros_por_cilindro > 0:
+            return False, "El consumo del cilindro abierto no puede superar los litros por cilindro."
 
         sin_cambios = (
             stock_suelto == producto["stock_suelto"]
             and stock_balde_abierto == producto["stock_balde_abierto"]
             and baldes_abiertos == producto["baldes_abiertos"]
             and stock_baldes_cerrados == producto["stock_baldes_cerrados"]
+            and stock_cilindro_abierto == producto["stock_cilindro_abierto"]
+            and cilindros_abiertos == producto["cilindros_abiertos"]
+            and stock_cilindros_cerrados == producto["stock_cilindros_cerrados"]
+            and litros_por_cilindro == producto["litros_por_cilindro"]
         )
         if sin_cambios:
             return False, "El nuevo stock es igual al stock actual."
@@ -449,6 +497,10 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
                 stock_balde_abierto = %s,
                 baldes_abiertos = %s,
                 stock_baldes_cerrados = %s,
+                stock_cilindro_abierto = %s,
+                cilindros_abiertos = %s,
+                stock_cilindros_cerrados = %s,
+                litros_por_cilindro = %s,
                 stock_actual = %s
             WHERE id = %s
             """,
@@ -457,6 +509,10 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
                 stock_balde_abierto,
                 baldes_abiertos,
                 stock_baldes_cerrados,
+                stock_cilindro_abierto,
+                cilindros_abiertos,
+                stock_cilindros_cerrados,
+                litros_por_cilindro,
                 stock_nuevo,
                 producto_id,
             ),
@@ -485,7 +541,8 @@ def eliminar_producto(producto_id):
     producto = consultar_uno(
         """
         SELECT p.id, p.stock_actual, p.stock_suelto,
-               p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados
+               p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
+               p.stock_cilindro_abierto, p.cilindros_abiertos, p.stock_cilindros_cerrados
         FROM productos p
         WHERE p.id = %s
         """,
@@ -498,6 +555,9 @@ def eliminar_producto(producto_id):
         + producto["stock_balde_abierto"]
         + producto["baldes_abiertos"]
         + producto["stock_baldes_cerrados"]
+        + producto["stock_cilindro_abierto"]
+        + producto["cilindros_abiertos"]
+        + producto["stock_cilindros_cerrados"]
     )
     if stock_total != 0:
         return False, "Primero ajusta el stock del producto a cero para poder eliminarlo."

@@ -40,6 +40,10 @@ PRODUCTO_ACEITE = {
     "stock_balde_abierto": Decimal("2.000"),
     "baldes_abiertos": Decimal("1.000"),
     "stock_baldes_cerrados": Decimal("1.000"),
+    "stock_cilindro_abierto": Decimal("0.000"),
+    "cilindros_abiertos": Decimal("0.000"),
+    "stock_cilindros_cerrados": Decimal("0.000"),
+    "litros_por_cilindro": Decimal("0.000"),
     "stock_minimo": Decimal("2.000"),
     "observaciones": None,
     "tipo_id": 2,
@@ -153,6 +157,9 @@ class InventarioAppTests(unittest.TestCase):
             "stock_balde_abierto": Decimal("0"),
             "baldes_abiertos": Decimal("0"),
             "stock_baldes_cerrados": Decimal("0"),
+            "stock_cilindro_abierto": Decimal("0"),
+            "cilindros_abiertos": Decimal("0"),
+            "stock_cilindros_cerrados": Decimal("0"),
         },
     )
     def test_product_with_stock_cannot_be_deleted(self, _consultar):
@@ -170,6 +177,9 @@ class InventarioAppTests(unittest.TestCase):
             "stock_balde_abierto": Decimal("0"),
             "baldes_abiertos": Decimal("0"),
             "stock_baldes_cerrados": Decimal("0"),
+            "stock_cilindro_abierto": Decimal("0"),
+            "cilindros_abiertos": Decimal("0"),
+            "stock_cilindros_cerrados": Decimal("0"),
         },
     )
     def test_product_without_stock_can_be_deleted_with_history_cleanup(self, _consultar, ejecutar_transaccion):
@@ -243,6 +253,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nueva entrada", response.data)
         self.assertIn(b"Abrir balde", response.data)
+        self.assertIn(b"Abrir cilindro", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
 
     @patch("app.registrar_entrada", return_value=(True, "Entrada registrada correctamente."))
@@ -342,6 +353,8 @@ class InventarioAppTests(unittest.TestCase):
                 "bajo_stock": 0,
                 "baldes_cerrados": Decimal("1.000"),
                 "baldes_en_uso": Decimal("0.000"),
+                "cilindros_cerrados": Decimal("0.000"),
+                "cilindros_en_uso": Decimal("0.000"),
                 "entradas": 2,
                 "productos_entrada": 1,
                 "salidas": 1,
@@ -409,6 +422,8 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn("Salida %%", sql)
         self.assertIn("Balde abierto%%", sql)
         self.assertIn("Balde terminado%%", sql)
+        self.assertIn("Cilindro abierto%%", sql)
+        self.assertIn("Cilindro terminado%%", sql)
 
     @patch("app.registrar_salida", return_value=(True, "Salida registrada correctamente."))
     def test_almacen_can_submit_output(self, registrar):

@@ -46,7 +46,7 @@
   </article>
   <article class="report-card">
     <span class="material-symbols-outlined">oil_barrel</span>
-    <div><p>Baldes cerrados</p><strong>{{ resumen.baldes_cerrados|float|round(3) }}</strong></div>
+    <div><p>Envases cerrados</p><strong>{{ (resumen.baldes_cerrados + resumen.cilindros_cerrados)|float|round(3) }}</strong></div>
   </article>
   <article class="report-card">
     <span class="material-symbols-outlined">inventory</span>
@@ -139,13 +139,13 @@
       <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Disponible</th><th>Minimo</th><th>Baldes</th></tr></thead>
       <tbody>
         {% for producto in stock_critico %}
-        {% set sin_stock = producto.stock_actual <= 0 and producto.baldes_abiertos <= 0 and producto.stock_baldes_cerrados <= 0 %}
+        {% set sin_stock = producto.stock_actual <= 0 and producto.baldes_abiertos <= 0 and producto.stock_baldes_cerrados <= 0 and producto.cilindros_abiertos <= 0 and producto.stock_cilindros_cerrados <= 0 %}
         <tr>
           <td><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></td>
           <td><strong>{{ producto.tipo }}</strong><small>{{ producto.categoria }}</small></td>
           <td><span class="report-stock {{ 'empty' if sin_stock else 'low' }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</span></td>
           <td>{{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</td>
-          <td>Cerrados {{ producto.stock_baldes_cerrados|float|round(3) }} / En uso {{ producto.baldes_abiertos|float|round(3) }}</td>
+          <td>Baldes {{ producto.stock_baldes_cerrados|float|round(3) }} cerr. / {{ producto.baldes_abiertos|float|round(3) }} uso<br>Cilindros {{ producto.stock_cilindros_cerrados|float|round(3) }} cerr. / {{ producto.cilindros_abiertos|float|round(3) }} uso</td>
         </tr>
         {% else %}
         <tr><td class="empty-row" colspan="5">No hay productos criticos.</td></tr>
@@ -213,6 +213,8 @@
             <td>
               {% if entrada.origen_stock == "balde_cerrado" %}
               <strong class="report-positive">+{{ entrada.cantidad|float|round(3) }} balde(s)</strong>
+              {% elif entrada.origen_stock == "cilindro_cerrado" %}
+              <strong class="report-positive">+{{ entrada.cantidad|float|round(3) }} cilindro(s)</strong>
               {% else %}
               <strong class="report-positive">+{{ entrada.cantidad_base|float|round(3) }} {{ entrada.abreviatura }}</strong>
               {% endif %}

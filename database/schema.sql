@@ -55,6 +55,10 @@ CREATE TABLE IF NOT EXISTS productos (
     stock_balde_abierto DECIMAL(14,3) NOT NULL DEFAULT 0,
     baldes_abiertos DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_baldes_cerrados DECIMAL(14,3) NOT NULL DEFAULT 0,
+    stock_cilindro_abierto DECIMAL(14,3) NOT NULL DEFAULT 0,
+    cilindros_abiertos DECIMAL(14,3) NOT NULL DEFAULT 0,
+    stock_cilindros_cerrados DECIMAL(14,3) NOT NULL DEFAULT 0,
+    litros_por_cilindro DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_minimo DECIMAL(14,3) NOT NULL DEFAULT 0,
     observaciones TEXT NULL,
     creado_por INT UNSIGNED NULL,
@@ -123,6 +127,7 @@ CREATE TABLE IF NOT EXISTS entradas_stock (
 CREATE TABLE IF NOT EXISTS aperturas_balde (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     producto_id INT UNSIGNED NOT NULL,
+    envase VARCHAR(20) NOT NULL DEFAULT 'balde',
     tipo VARCHAR(20) NOT NULL DEFAULT 'apertura',
     baldes_abiertos DECIMAL(14,3) NOT NULL,
     contenido_por_balde DECIMAL(14,3) NOT NULL,

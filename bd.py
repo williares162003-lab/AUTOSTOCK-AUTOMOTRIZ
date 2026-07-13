@@ -200,6 +200,30 @@ def _aplicar_migraciones(cursor):
     )
     _asegurar_columna(
         cursor,
+        "productos",
+        "stock_cilindro_abierto",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_baldes_cerrados",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "cilindros_abiertos",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_cilindro_abierto",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_cilindros_cerrados",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER cilindros_abiertos",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "litros_por_cilindro",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_cilindros_cerrados",
+    )
+    _asegurar_columna(
+        cursor,
         "entradas_stock",
         "origen_stock",
         "VARCHAR(30) NOT NULL DEFAULT 'suelto' AFTER cantidad_base",
@@ -291,8 +315,14 @@ def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
         "aperturas_balde",
+        "envase",
+        "VARCHAR(20) NOT NULL DEFAULT 'balde' AFTER producto_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
         "tipo",
-        "VARCHAR(20) NOT NULL DEFAULT 'apertura' AFTER producto_id",
+        "VARCHAR(20) NOT NULL DEFAULT 'apertura' AFTER envase",
     )
     _asegurar_columna(
         cursor,

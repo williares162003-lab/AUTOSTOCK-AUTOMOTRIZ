@@ -29,8 +29,8 @@
       <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Existencia</th><th>Estado</th><th>Presentaciones</th><th class="action-heading">Accion</th></tr></thead>
       <tbody>
         {% for producto in productos %}
-        {% set solo_baldes = producto.stock_actual <= 0 and (producto.stock_baldes_cerrados > 0 or producto.baldes_abiertos > 0) %}
-        {% set sin_stock = producto.stock_actual <= 0 and producto.stock_baldes_cerrados <= 0 and producto.baldes_abiertos <= 0 %}
+        {% set solo_baldes = producto.stock_actual <= 0 and (producto.stock_baldes_cerrados > 0 or producto.baldes_abiertos > 0 or producto.stock_cilindros_cerrados > 0 or producto.cilindros_abiertos > 0) %}
+        {% set sin_stock = producto.stock_actual <= 0 and producto.stock_baldes_cerrados <= 0 and producto.baldes_abiertos <= 0 and producto.stock_cilindros_cerrados <= 0 and producto.cilindros_abiertos <= 0 %}
         {% set bajo_stock = producto.stock_actual > 0 and producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}
         {% set estado_stock = 'baldes' if solo_baldes else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
         {% set estado_texto = 'Solo baldes' if solo_baldes else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
@@ -45,6 +45,9 @@
               <span>En uso: {{ producto.baldes_abiertos|float|round(3) }} balde(s)</span>
               <span>Usado del balde: {{ producto.stock_balde_abierto|float|round(3) }}</span>
               <span>Cerrados: {{ producto.stock_baldes_cerrados|float|round(3) }}</span>
+              <span>Cil. uso: {{ producto.cilindros_abiertos|float|round(3) }}</span>
+              <span>Usado cilindro: {{ producto.stock_cilindro_abierto|float|round(3) }}</span>
+              <span>Cil. cerrados: {{ producto.stock_cilindros_cerrados|float|round(3) }}</span>
             </div>
           </td>
           <td><span class="stock-badge {{ estado_stock }}">{{ estado_texto }}</span><small class="unit-label">{{ producto.unidad }}</small></td>
@@ -71,6 +74,10 @@
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
                 data-baldes-abiertos="{{ producto.baldes_abiertos }}"
                 data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
+                data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
+                data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
+                data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
+                data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
                 data-minimo="{{ producto.stock_minimo }}"
                 data-estado="{{ estado_texto }}"
                 data-descripcion="{{ (producto.descripcion or 'Sin descripcion')|e }}"
@@ -105,6 +112,10 @@
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
                 data-baldes-abiertos="{{ producto.baldes_abiertos }}"
                 data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
+                data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
+                data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
+                data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
+                data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
                 data-unidad="{{ producto.abreviatura }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
               ><span class="material-symbols-outlined">tune</span></button>
@@ -159,6 +170,10 @@
     <div><span>Baldes en uso</span><strong data-detail-open-buckets></strong></div>
     <div><span>Usado del balde</span><strong data-detail-stock-open-bucket></strong></div>
     <div><span>Baldes cerrados</span><strong data-detail-stock-closed-buckets></strong></div>
+    <div><span>Cilindros en uso</span><strong data-detail-open-cylinders></strong></div>
+    <div><span>Usado del cilindro</span><strong data-detail-stock-open-cylinder></strong></div>
+    <div><span>Cilindros cerrados</span><strong data-detail-stock-closed-cylinders></strong></div>
+    <div><span>Litros por cilindro</span><strong data-detail-cylinder-liters></strong></div>
     <div><span>Stock minimo para alerta</span><strong data-detail-minimum></strong></div>
     <div><span>Estado</span><strong data-detail-status></strong></div>
   </div>
@@ -212,6 +227,10 @@
       <label><span>Baldes en uso</span><input name="baldes_abiertos_nuevo" type="number" min="0" step="1" required data-new-open-buckets></label>
       <label><span>Usado del balde abierto</span><input name="stock_balde_abierto_nuevo" type="number" min="0" required data-new-stock-open-bucket></label>
       <label><span>Baldes cerrados</span><input name="stock_baldes_cerrados_nuevo" type="number" min="0" step="1" required data-new-stock-closed-buckets></label>
+      <label><span>Cilindros en uso</span><input name="cilindros_abiertos_nuevo" type="number" min="0" step="1" required data-new-open-cylinders></label>
+      <label><span>Usado del cilindro abierto</span><input name="stock_cilindro_abierto_nuevo" type="number" min="0" required data-new-stock-open-cylinder></label>
+      <label><span>Cilindros cerrados</span><input name="stock_cilindros_cerrados_nuevo" type="number" min="0" step="1" required data-new-stock-closed-cylinders></label>
+      <label><span>Litros por cilindro</span><input name="litros_por_cilindro_nuevo" type="number" min="0" step="0.001" required data-new-cylinder-liters></label>
       <label><span>Motivo</span><textarea name="motivo" rows="3" required minlength="3" maxlength="255"></textarea></label>
     </div>
     <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar ajuste</button></div>

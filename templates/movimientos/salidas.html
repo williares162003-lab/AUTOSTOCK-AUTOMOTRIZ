@@ -59,7 +59,7 @@
     <span class="material-symbols-outlined">fact_check</span>
     <h2>Salida por placa</h2>
     <p>Si la placa ya fue usada, seleccionala y se completa el modelo. Cada pedido nuevo se guarda como otra salida.</p>
-    <div><strong>Aceites</strong><span>Si sale del balde abierto, registra solo lo real: 2 galones, 1 litro, etc.</span></div>
+    <div><strong>Aceites</strong><span>Si sale del balde o cilindro abierto, registra solo lo real: 2 galones, 1 litro, etc.</span></div>
   </aside>
 </section>
 
@@ -107,6 +107,9 @@
             data-stock-suelto="{{ producto.stock_suelto }}"
             data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
             data-baldes-abiertos="{{ producto.baldes_abiertos }}"
+            data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
+            data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
+            data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
             data-unidad="{{ producto.unidad|e }}"
             data-abreviatura="{{ producto.abreviatura|e }}"
             data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
@@ -119,6 +122,7 @@
       <select name="origen_stock" required data-line-origin>
         <option value="suelto">Stock suelto</option>
         <option value="balde_abierto">Balde abierto</option>
+        <option value="cilindro_abierto">Cilindro abierto</option>
       </select>
     </label>
     <label>

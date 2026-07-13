@@ -85,6 +85,8 @@ def generar_reporte_csv(filtros):
     escritor.writerow(["Lineas de salida", resumen["lineas_salida"]])
     escritor.writerow(["Baldes cerrados", resumen["baldes_cerrados"]])
     escritor.writerow(["Baldes en uso", resumen["baldes_en_uso"]])
+    escritor.writerow(["Cilindros cerrados", resumen["cilindros_cerrados"]])
+    escritor.writerow(["Cilindros en uso", resumen["cilindros_en_uso"]])
     escritor.writerow([])
 
     escritor.writerow(["Actividad"])
@@ -140,13 +142,14 @@ def generar_reporte_csv(filtros):
     escritor.writerow(["Fecha", "Producto", "Marca", "Entrada", "Unidad", "Documento", "Motivo", "Usuario"])
     for entrada in reporte["entradas_recientes"]:
         es_balde = entrada["origen_stock"] == "balde_cerrado"
+        es_cilindro = entrada["origen_stock"] == "cilindro_cerrado"
         escritor.writerow(
             [
                 entrada["creado_en"],
                 entrada["producto"],
                 entrada["marca"] or "Sin marca",
-                entrada["cantidad"] if es_balde else entrada["cantidad_base"],
-                "balde(s)" if es_balde else entrada["abreviatura"],
+                entrada["cantidad"] if es_balde or es_cilindro else entrada["cantidad_base"],
+                "balde(s)" if es_balde else ("cilindro(s)" if es_cilindro else entrada["abreviatura"]),
                 entrada["documento"] or "",
                 entrada["motivo"],
                 entrada["usuario"],
@@ -155,7 +158,7 @@ def generar_reporte_csv(filtros):
     escritor.writerow([])
 
     escritor.writerow(["Productos que requieren atencion"])
-    escritor.writerow(["Producto", "Marca", "Tipo", "Categoria", "Disponible", "Minimo", "Unidad", "Baldes cerrados", "Baldes en uso"])
+    escritor.writerow(["Producto", "Marca", "Tipo", "Categoria", "Disponible", "Minimo", "Unidad", "Baldes cerrados", "Baldes en uso", "Cilindros cerrados", "Cilindros en uso"])
     for producto in reporte["stock_critico"]:
         escritor.writerow(
             [
@@ -168,6 +171,8 @@ def generar_reporte_csv(filtros):
                 producto["abreviatura"],
                 producto["stock_baldes_cerrados"],
                 producto["baldes_abiertos"],
+                producto["stock_cilindros_cerrados"],
+                producto["cilindros_abiertos"],
             ]
         )
 
@@ -191,11 +196,13 @@ def _resumen_reportes(filtros):
     inventario = consultar_uno(
         """
         SELECT COUNT(*) AS productos,
-               COALESCE(SUM(stock_actual > 0 OR stock_baldes_cerrados > 0 OR baldes_abiertos > 0), 0) AS con_stock,
-               COALESCE(SUM(stock_actual <= 0 AND stock_baldes_cerrados <= 0 AND baldes_abiertos <= 0), 0) AS sin_stock,
+               COALESCE(SUM(stock_actual > 0 OR stock_baldes_cerrados > 0 OR baldes_abiertos > 0 OR stock_cilindros_cerrados > 0 OR cilindros_abiertos > 0), 0) AS con_stock,
+               COALESCE(SUM(stock_actual <= 0 AND stock_baldes_cerrados <= 0 AND baldes_abiertos <= 0 AND stock_cilindros_cerrados <= 0 AND cilindros_abiertos <= 0), 0) AS sin_stock,
                COALESCE(SUM(stock_actual > 0 AND stock_minimo > 0 AND stock_actual <= stock_minimo), 0) AS bajo_stock,
                COALESCE(SUM(stock_baldes_cerrados), 0) AS baldes_cerrados,
-               COALESCE(SUM(baldes_abiertos), 0) AS baldes_en_uso
+               COALESCE(SUM(baldes_abiertos), 0) AS baldes_en_uso,
+               COALESCE(SUM(stock_cilindros_cerrados), 0) AS cilindros_cerrados,
+               COALESCE(SUM(cilindros_abiertos), 0) AS cilindros_en_uso
         FROM productos
         """
     )
@@ -226,6 +233,8 @@ def _resumen_reportes(filtros):
         "bajo_stock": int(inventario["bajo_stock"]),
         "baldes_cerrados": inventario["baldes_cerrados"],
         "baldes_en_uso": inventario["baldes_en_uso"],
+        "cilindros_cerrados": inventario["cilindros_cerrados"],
+        "cilindros_en_uso": inventario["cilindros_en_uso"],
         "entradas": entradas["entradas"],
         "productos_entrada": entradas["productos_entrada"],
         "salidas": salidas["salidas"],
@@ -241,15 +250,16 @@ def _stock_critico():
             """
             SELECT p.nombre, p.marca, p.stock_actual, p.stock_minimo,
                    p.stock_suelto, p.baldes_abiertos, p.stock_baldes_cerrados,
+                   p.cilindros_abiertos, p.stock_cilindros_cerrados,
                    t.nombre AS tipo, c.nombre AS categoria, u.abreviatura
             FROM productos p
             INNER JOIN tipos_producto t ON t.id = p.tipo_id
             INNER JOIN categorias c ON c.id = p.categoria_id
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
             WHERE (p.stock_minimo > 0 AND p.stock_actual <= p.stock_minimo)
-               OR (p.stock_actual <= 0 AND p.baldes_abiertos <= 0 AND p.stock_baldes_cerrados <= 0)
+               OR (p.stock_actual <= 0 AND p.baldes_abiertos <= 0 AND p.stock_baldes_cerrados <= 0 AND p.cilindros_abiertos <= 0 AND p.stock_cilindros_cerrados <= 0)
             ORDER BY
-              (p.stock_actual <= 0 AND p.baldes_abiertos <= 0 AND p.stock_baldes_cerrados <= 0) DESC,
+              (p.stock_actual <= 0 AND p.baldes_abiertos <= 0 AND p.stock_baldes_cerrados <= 0 AND p.cilindros_abiertos <= 0 AND p.stock_cilindros_cerrados <= 0) DESC,
               p.stock_actual ASC,
               p.nombre
             LIMIT 12
@@ -308,7 +318,7 @@ def _entradas_recientes(filtros):
         for fila in consultar_todos(
             """
             SELECT e.creado_en, e.cantidad, e.cantidad_base, e.origen_stock,
-                   e.presentacion_nombre, e.documento, e.motivo,
+                   e.presentacion_nombre, e.factor, e.documento, e.motivo,
                    p.nombre AS producto, p.marca, u.abreviatura,
                    COALESCE(us.nombre, 'Usuario eliminado') AS usuario
             FROM entradas_stock e
@@ -330,9 +340,9 @@ def _stock_por_tipo():
         for fila in consultar_todos(
             """
             SELECT t.nombre AS tipo, COUNT(p.id) AS productos,
-                   COALESCE(SUM(p.stock_actual > 0 OR p.stock_baldes_cerrados > 0 OR p.baldes_abiertos > 0), 0) AS con_stock,
+                   COALESCE(SUM(p.stock_actual > 0 OR p.stock_baldes_cerrados > 0 OR p.baldes_abiertos > 0 OR p.stock_cilindros_cerrados > 0 OR p.cilindros_abiertos > 0), 0) AS con_stock,
                    COALESCE(SUM(p.stock_actual > 0 AND p.stock_minimo > 0 AND p.stock_actual <= p.stock_minimo), 0) AS bajo_stock,
-                   COALESCE(SUM(p.stock_actual <= 0 AND p.stock_baldes_cerrados <= 0 AND p.baldes_abiertos <= 0), 0) AS sin_stock
+                   COALESCE(SUM(p.stock_actual <= 0 AND p.stock_baldes_cerrados <= 0 AND p.baldes_abiertos <= 0 AND p.stock_cilindros_cerrados <= 0 AND p.cilindros_abiertos <= 0), 0) AS sin_stock
             FROM tipos_producto t
             LEFT JOIN productos p ON p.tipo_id = t.id
             GROUP BY t.id, t.nombre
