@@ -159,7 +159,7 @@
     <div><span>Baldes en uso</span><strong data-detail-open-buckets></strong></div>
     <div><span>Usado del balde</span><strong data-detail-stock-open-bucket></strong></div>
     <div><span>Baldes cerrados</span><strong data-detail-stock-closed-buckets></strong></div>
-    <div><span>Stock minimo</span><strong data-detail-minimum></strong></div>
+    <div><span>Stock minimo para alerta</span><strong data-detail-minimum></strong></div>
     <div><span>Estado</span><strong data-detail-status></strong></div>
   </div>
   <dl class="detail-grid">
@@ -189,7 +189,7 @@
       <label><span>Unidad base</span><select name="unidad_base_id" required>{% for unidad in unidades %}<option value="{{ unidad.id }}">{{ unidad.nombre }} ({{ unidad.abreviatura }})</option>{% endfor %}</select></label>
       <label class="span-two"><span>Descripcion (opcional)</span><textarea name="descripcion" rows="2"></textarea></label>
       <label data-initial-stock><span>Stock inicial</span><input name="stock_actual" type="number" min="0" step="0.001" value="0" required></label>
-      <label><span>Stock minimo</span><input name="stock_minimo" type="number" min="0" step="0.001" value="0" required></label>
+      <label><span>Stock minimo para alerta</span><input name="stock_minimo" type="number" min="0" step="0.001" value="0" required><small>Usa 0 si no quieres alerta.</small></label>
       <label class="span-two"><span>Observaciones (opcional)</span><textarea name="observaciones" rows="2"></textarea></label>
     </div>
 

@@ -94,6 +94,8 @@
 .product-form-grid select,
 .product-form-grid textarea,
 .presentation-row input {
+  box-sizing: border-box;
+  font: inherit;
   color: #263447;
   background: #ffffff;
   border: 1px solid var(--borde);
@@ -349,13 +351,31 @@
   font-weight: 800;
 }
 
+.product-form-grid label > small {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .product-form-grid input,
 .product-form-grid select,
 .product-form-grid textarea,
 .presentation-row input {
   width: 100%;
+  min-height: 42px;
   padding: 9px 10px;
   resize: vertical;
+}
+
+.product-form-grid select {
+  padding-right: 32px;
+}
+
+.product-form-grid textarea {
+  min-height: 74px;
+  line-height: 1.45;
 }
 
 .product-form-grid input:focus,
