@@ -329,6 +329,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertEqual(movimientos, [])
         self.assertEqual(errores, [])
         sql = consultar.call_args.args[0]
+        self.assertIn("Entrada:%%", sql)
         self.assertIn("Salida %%", sql)
         self.assertIn("Balde abierto%%", sql)
         self.assertIn("Balde terminado%%", sql)
