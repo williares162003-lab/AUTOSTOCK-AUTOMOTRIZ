@@ -66,12 +66,62 @@ def _columna_existe(cursor, tabla, columna):
     return cursor.fetchone()["total"] > 0
 
 
+def _indice_existe(cursor, tabla, indice):
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS total
+        FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = %s
+          AND INDEX_NAME = %s
+        """,
+        (tabla, indice),
+    )
+    return cursor.fetchone()["total"] > 0
+
+
 def _asegurar_columna(cursor, tabla, columna, definicion):
     if not _columna_existe(cursor, tabla, columna):
         cursor.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {definicion}")
 
 
 def _aplicar_migraciones(cursor):
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS areas_almacen (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            nombre VARCHAR(80) NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY uk_areas_almacen_nombre (nombre)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+    )
+    cursor.execute(
+        """
+        INSERT IGNORE INTO areas_almacen (id, nombre) VALUES
+            (1, 'Mecanica'),
+            (2, 'Pintura')
+        """
+    )
+    _asegurar_columna(
+        cursor,
+        "tipos_producto",
+        "area_id",
+        "INT UNSIGNED NULL AFTER id",
+    )
+    cursor.execute(
+        """
+        UPDATE tipos_producto
+        SET area_id = (SELECT id FROM areas_almacen WHERE LOWER(nombre) = 'mecanica' LIMIT 1)
+        WHERE area_id IS NULL
+        """
+    )
+    if _indice_existe(cursor, "tipos_producto", "uk_tipos_producto_nombre"):
+        cursor.execute("ALTER TABLE tipos_producto DROP INDEX uk_tipos_producto_nombre")
+    if not _indice_existe(cursor, "tipos_producto", "uk_tipos_producto_area_nombre"):
+        cursor.execute(
+            "ALTER TABLE tipos_producto ADD UNIQUE KEY uk_tipos_producto_area_nombre (area_id, nombre)"
+        )
     _asegurar_columna(
         cursor,
         "productos",
@@ -420,6 +470,7 @@ def inicializar_base_datos(reset=False):
                 cursor.execute("DROP TABLE IF EXISTS categorias")
                 cursor.execute("DROP TABLE IF EXISTS unidades_medida")
                 cursor.execute("DROP TABLE IF EXISTS tipos_producto")
+                cursor.execute("DROP TABLE IF EXISTS areas_almacen")
                 cursor.execute("DROP TABLE IF EXISTS movimientos")
                 cursor.execute("DROP TABLE IF EXISTS usuarios")
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 1")

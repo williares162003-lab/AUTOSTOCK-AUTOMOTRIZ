@@ -17,8 +17,9 @@
     <div><h2>Vista del almacen</h2><p><span data-product-count>{{ resumen.total }}</span> resultados</p></div>
     <div class="inventory-filters">
       <label class="inventory-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar producto" data-product-search></label>
-      <select data-type-filter aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select>
-      <select data-category-filter aria-label="Filtrar por categoria"><option value="">Todas las categorias</option>{% for categoria in categorias %}<option value="{{ categoria.id }}">{{ categoria.nombre }}</option>{% endfor %}</select>
+      <select data-area-filter aria-label="Filtrar por area"><option value="">Todas las areas</option>{% for area in areas %}<option value="{{ area.id }}">{{ area.nombre }}</option>{% endfor %}</select>
+      <select data-type-filter aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>{% for tipo in tipos %}<option value="{{ tipo.id }}" data-area="{{ tipo.area_id }}">{{ tipo.nombre }}</option>{% endfor %}</select>
+      <select data-category-filter aria-label="Filtrar por categoria"><option value="">Todas las categorias</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-area="{{ categoria.area_id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>{% endfor %}</select>
       <select data-status-filter aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="bajo">Bajo minimo</option><option value="baldes">Solo baldes</option><option value="sin_stock">Sin stock</option></select>
       <button class="primary-button" type="button" data-open-product><span class="material-symbols-outlined">add_box</span>Nuevo producto</button>
     </div>
@@ -34,9 +35,9 @@
         {% set bajo_stock = producto.stock_actual > 0 and producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}
         {% set estado_stock = 'baldes' if solo_baldes else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
         {% set estado_texto = 'Solo baldes' if solo_baldes else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
-        <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
+        <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.area ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-area="{{ producto.area_id }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
           <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></div></div></td>
-          <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.categoria }}</small></td>
+          <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.area }} / {{ producto.categoria }}</small></td>
           <td>
             <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</strong>
             <small>Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</small>
@@ -65,6 +66,7 @@
                 data-view-product
                 data-nombre="{{ producto.nombre|e }}"
                 data-marca="{{ (producto.marca or 'Sin marca')|e }}"
+                data-area="{{ producto.area|e }}"
                 data-tipo="{{ producto.tipo|e }}"
                 data-categoria="{{ producto.categoria|e }}"
                 data-unidad="{{ producto.unidad|e }}"
@@ -91,6 +93,7 @@
                 data-edit-product
                 data-action="{{ url_for('editar_producto', producto_id=producto.id) }}"
                 data-nombre="{{ producto.nombre|e }}"
+                data-area-id="{{ producto.area_id }}"
                 data-tipo-id="{{ producto.tipo_id }}"
                 data-categoria-id="{{ producto.categoria_id }}"
                 data-marca="{{ (producto.marca or '')|e }}"
@@ -179,6 +182,7 @@
   </div>
   <dl class="detail-grid">
     <div><dt>Tipo</dt><dd data-detail-type></dd></div>
+    <div><dt>Area</dt><dd data-detail-area></dd></div>
     <div><dt>Categoria</dt><dd data-detail-category></dd></div>
     <div><dt>Unidad base</dt><dd data-detail-unit></dd></div>
     <div><dt>Marca</dt><dd data-detail-brand></dd></div>
@@ -198,8 +202,9 @@
     <div class="dialog-header"><div><h2 data-dialog-title>Nuevo producto</h2></div><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
     <div class="product-form-grid">
       <label class="span-two"><span>Nombre</span><input name="nombre" required minlength="3" maxlength="180"></label>
-      <label><span>Tipo de producto</span><select name="tipo_id" required data-form-type>{% for tipo in tipos %}<option value="{{ tipo.id }}">{{ tipo.nombre }}</option>{% endfor %}</select></label>
-      <label><span>Categoria</span><select name="categoria_id" required data-form-category>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>{% endfor %}</select></label>
+      <label><span>Area</span><select required data-form-area>{% for area in areas %}<option value="{{ area.id }}">{{ area.nombre }}</option>{% endfor %}</select></label>
+      <label><span>Tipo de producto</span><select name="tipo_id" required data-form-type>{% for tipo in tipos %}<option value="{{ tipo.id }}" data-area="{{ tipo.area_id }}">{{ tipo.nombre }}</option>{% endfor %}</select></label>
+      <label><span>Categoria</span><select name="categoria_id" required data-form-category>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-area="{{ categoria.area_id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>{% endfor %}</select></label>
       <label><span>Marca (opcional)</span><input name="marca" maxlength="100"></label>
       <label><span>Unidad base</span><select name="unidad_base_id" required>{% for unidad in unidades %}<option value="{{ unidad.id }}">{{ unidad.nombre }} ({{ unidad.abreviatura }})</option>{% endfor %}</select></label>
       <label class="span-two"><span>Descripcion (opcional)</span><textarea name="descripcion" rows="2"></textarea></label>

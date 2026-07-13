@@ -7,22 +7,31 @@
 {% block content %}
 <section class="inventory-table types-panel">
   <div class="inventory-toolbar">
-    <div><h2>Tipos de producto</h2><p>{{ tipos|length }} tipos</p></div>
-    <button class="primary-button" type="button" data-open-type><span class="material-symbols-outlined">add_circle</span>Nuevo tipo</button>
+    <div><h2>Areas y tipos</h2><p>{{ tipos|length }} tipos mostrados</p></div>
+    <div class="category-toolbar-actions">
+      <form method="get" class="inventory-filters category-filter-form">
+        <select name="area_id" aria-label="Filtrar por area" onchange="this.form.submit()">
+          <option value="">Todas las areas</option>
+          {% for area in areas %}<option value="{{ area.id }}"{% if area_seleccionada == area.id %} selected{% endif %}>{{ area.nombre }}</option>{% endfor %}
+        </select>
+        <button class="secondary-button filter-button" type="submit"><span class="material-symbols-outlined">filter_alt</span>Filtrar</button>
+      </form>
+      <button class="primary-button" type="button" data-open-type><span class="material-symbols-outlined">add_circle</span>Nuevo tipo</button>
+    </div>
   </div>
   <div class="type-grid">
-    <a class="type-choice{% if not tipo_seleccionado %} selected{% endif %}" href="{{ url_for('categorias') }}">
+    <a class="type-choice{% if not tipo_seleccionado %} selected{% endif %}" href="{{ url_for('categorias', area_id=area_seleccionada) if area_seleccionada else url_for('categorias') }}">
       <span class="material-symbols-outlined">apps</span>
       <div><strong>Todos los tipos</strong><small>Ver todas las categorias</small></div>
     </a>
     {% for tipo in tipos %}
       <article class="category-item type-item{% if tipo_seleccionado == tipo.id %} selected{% endif %}">
-        <a class="type-choice" href="{{ url_for('categorias', tipo_id=tipo.id) }}" aria-label="Mostrar categorias de {{ tipo.nombre }}">
+        <a class="type-choice" href="{{ url_for('categorias', area_id=tipo.area_id, tipo_id=tipo.id) }}" aria-label="Mostrar categorias de {{ tipo.nombre }}">
           <span class="material-symbols-outlined">label</span>
-          <div><strong>{{ tipo.nombre }}</strong><small>Seleccionar tipo</small></div>
+          <div><strong>{{ tipo.nombre }}</strong><small>{{ tipo.area }}</small></div>
         </a>
         <div class="category-actions">
-          <button class="icon-action" type="button" title="Editar tipo" data-edit-type data-action="{{ url_for('editar_tipo', tipo_id=tipo.id) }}" data-nombre="{{ tipo.nombre|e }}"><span class="material-symbols-outlined">edit</span></button>
+          <button class="icon-action" type="button" title="Editar tipo" data-edit-type data-action="{{ url_for('editar_tipo', tipo_id=tipo.id) }}" data-nombre="{{ tipo.nombre|e }}" data-area-id="{{ tipo.area_id }}"><span class="material-symbols-outlined">edit</span></button>
           <form method="post" action="{{ url_for('eliminar_tipo', tipo_id=tipo.id) }}" data-delete-type data-name="{{ tipo.nombre|e }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="icon-action danger" type="submit" title="Eliminar tipo"><span class="material-symbols-outlined">delete</span></button>
@@ -38,6 +47,10 @@
     <div><h2>Categorias registradas</h2><p>{{ categorias|length }} categorias mostradas</p></div>
     <div class="category-toolbar-actions">
       <form method="get" class="inventory-filters category-filter-form">
+        <select name="area_id" aria-label="Filtrar por area" onchange="this.form.submit()">
+          <option value="">Todas las areas</option>
+          {% for area in areas %}<option value="{{ area.id }}"{% if area_seleccionada == area.id %} selected{% endif %}>{{ area.nombre }}</option>{% endfor %}
+        </select>
         <select name="tipo_id" aria-label="Filtrar por tipo" onchange="this.form.submit()">
           <option value="">Todos los tipos</option>
           {% for tipo in tipos %}<option value="{{ tipo.id }}"{% if tipo_seleccionado == tipo.id %} selected{% endif %}>{{ tipo.nombre }}</option>{% endfor %}
@@ -56,6 +69,7 @@
           {% if categoria.nombre|lower != 'sin clasificar' %}
           <form method="post" action="{{ url_for('eliminar_categoria', categoria_id=categoria.id) }}" data-delete-form data-name="{{ categoria.nombre|e }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="area_id" value="{{ area_seleccionada or categoria.area_id }}">
             <input type="hidden" name="tipo_id" value="{{ tipo_seleccionado or categoria.tipo_id }}">
             <button class="icon-action danger" type="submit" title="Eliminar categoria"><span class="material-symbols-outlined">delete</span></button>
           </form>
@@ -75,6 +89,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="dialog-header"><h2 data-type-title>Nuevo tipo</h2><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
     <div class="product-form-grid single-column">
+      <label><span>Area</span><select name="area_id" required data-type-area>{% for area in areas %}<option value="{{ area.id }}"{% if area_seleccionada == area.id %} selected{% endif %}>{{ area.nombre }}</option>{% endfor %}</select></label>
       <label><span>Nombre del tipo</span><input name="nombre" required minlength="3" maxlength="80"></label>
     </div>
     <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar tipo</button></div>
@@ -84,13 +99,15 @@
 <dialog class="inventory-dialog category-dialog category-manage-dialog" data-category-dialog>
   <div class="dialog-header"><h2>Agregar categoria</h2><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
   <div class="product-form-grid single-column category-target">
-    <label><span>Tipo de producto</span><select required data-category-target-type>{% for tipo in tipos %}<option value="{{ tipo.id }}"{% if tipo_seleccionado == tipo.id %} selected{% endif %}>{{ tipo.nombre }}</option>{% endfor %}</select></label>
+    <label><span>Area</span><select required data-category-target-area>{% for area in areas %}<option value="{{ area.id }}"{% if area_seleccionada == area.id %} selected{% endif %}>{{ area.nombre }}</option>{% endfor %}</select></label>
+    <label><span>Tipo de producto</span><select required data-category-target-type>{% for tipo in todos_tipos %}<option value="{{ tipo.id }}" data-area="{{ tipo.area_id }}"{% if tipo_seleccionado == tipo.id %} selected{% endif %}>{{ tipo.nombre }}</option>{% endfor %}</select></label>
   </div>
 
   <section class="category-add-section">
     <div class="section-heading"><h3>Categoria existente</h3></div>
     <form method="post" action="{{ url_for('crear_categoria') }}" class="category-inline-form" data-existing-category-form>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="area_id" data-category-area-input>
       <input type="hidden" name="tipo_id" data-category-type-input>
       <label><span>Seleccionar categoria</span><select name="nombre" required data-existing-category>
         {% for categoria in catalogo_categorias %}<option value="{{ categoria.nombre }}" data-tipos="{{ categoria.tipos|join(',') }}">{{ categoria.nombre }}</option>{% endfor %}
@@ -104,6 +121,7 @@
     <div class="section-heading"><h3>Nueva categoria</h3></div>
     <form method="post" action="{{ url_for('crear_categoria') }}" class="category-inline-form" data-new-category-form>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="area_id" data-category-area-input>
       <input type="hidden" name="tipo_id" data-category-type-input>
       <label><span>Nombre de la categoria</span><input name="nombre" required minlength="3" maxlength="100"></label>
       <button class="primary-button" type="submit"><span class="material-symbols-outlined">create_new_folder</span>Crear categoria</button>

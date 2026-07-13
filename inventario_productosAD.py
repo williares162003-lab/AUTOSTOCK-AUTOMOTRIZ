@@ -3,19 +3,40 @@ from decimal import Decimal, InvalidOperation
 from bd import consultar_todos, consultar_uno, ejecutar, ejecutar_transaccion
 
 
+def listar_areas():
+    filas = consultar_todos("SELECT id, nombre FROM areas_almacen ORDER BY id")
+    return [dict(fila) for fila in filas]
+
+
 def listar_tipos():
-    return [dict(fila) for fila in consultar_todos("SELECT id, nombre FROM tipos_producto ORDER BY id")]
+    return [
+        dict(fila)
+        for fila in consultar_todos(
+            """
+            SELECT t.id, t.nombre, t.area_id, a.nombre AS area
+            FROM tipos_producto t
+            INNER JOIN areas_almacen a ON a.id = t.area_id
+            ORDER BY a.id, t.nombre
+            """
+        )
+    ]
 
 
 def crear_tipo(datos):
     nombre = datos.get("nombre", "").strip()
+    area_id = _entero(datos.get("area_id")) or _area_mecanica_id()
     if len(nombre) < 3:
         return False, "Ingresa un nombre de tipo valido."
-    if consultar_uno("SELECT id FROM tipos_producto WHERE LOWER(nombre) = LOWER(%s)", (nombre,)):
-        return False, "Ese tipo de producto ya existe."
+    if not consultar_uno("SELECT id FROM areas_almacen WHERE id = %s", (area_id,)):
+        return False, "Selecciona un area valida."
+    if consultar_uno(
+        "SELECT id FROM tipos_producto WHERE area_id = %s AND LOWER(nombre) = LOWER(%s)",
+        (area_id, nombre),
+    ):
+        return False, "Ese tipo de producto ya existe en esa area."
 
     def operacion(cursor):
-        cursor.execute("INSERT INTO tipos_producto (nombre) VALUES (%s)", (nombre,))
+        cursor.execute("INSERT INTO tipos_producto (area_id, nombre) VALUES (%s, %s)", (area_id, nombre))
         cursor.execute(
             "INSERT INTO categorias (tipo_id, nombre) VALUES (%s, 'Sin clasificar')",
             (cursor.lastrowid,),
@@ -29,14 +50,18 @@ def editar_tipo(tipo_id, datos):
     nombre = datos.get("nombre", "").strip()
     if len(nombre) < 3:
         return False, "Ingresa un nombre de tipo valido."
-    if not consultar_uno("SELECT id FROM tipos_producto WHERE id = %s", (tipo_id,)):
+    actual = consultar_uno("SELECT id, area_id FROM tipos_producto WHERE id = %s", (tipo_id,))
+    if not actual:
         return False, "El tipo solicitado no existe."
+    area_id = _entero(datos.get("area_id")) or actual["area_id"]
+    if not consultar_uno("SELECT id FROM areas_almacen WHERE id = %s", (area_id,)):
+        return False, "Selecciona un area valida."
     if consultar_uno(
-        "SELECT id FROM tipos_producto WHERE LOWER(nombre) = LOWER(%s) AND id <> %s",
-        (nombre, tipo_id),
+        "SELECT id FROM tipos_producto WHERE area_id = %s AND LOWER(nombre) = LOWER(%s) AND id <> %s",
+        (area_id, nombre, tipo_id),
     ):
-        return False, "Ese tipo de producto ya existe."
-    ejecutar("UPDATE tipos_producto SET nombre = %s WHERE id = %s", (nombre, tipo_id))
+        return False, "Ese tipo de producto ya existe en esa area."
+    ejecutar("UPDATE tipos_producto SET area_id = %s, nombre = %s WHERE id = %s", (area_id, nombre, tipo_id))
     return True, "Tipo de producto actualizado correctamente."
 
 
@@ -78,6 +103,13 @@ def preparar_categorias_generales():
     )
 
 
+def _area_mecanica_id():
+    area = consultar_uno("SELECT id FROM areas_almacen WHERE LOWER(nombre) = 'mecanica' LIMIT 1")
+    if area:
+        return area["id"]
+    return ejecutar("INSERT INTO areas_almacen (nombre) VALUES ('Mecanica')")
+
+
 def listar_unidades():
     filas = consultar_todos(
         "SELECT id, nombre, abreviatura, permite_decimal FROM unidades_medida ORDER BY id"
@@ -88,10 +120,12 @@ def listar_unidades():
 def listar_categorias():
     filas = consultar_todos(
         """
-        SELECT c.id, c.nombre, c.tipo_id, t.nombre AS tipo
+        SELECT c.id, c.nombre, c.tipo_id, t.nombre AS tipo,
+               t.area_id, a.nombre AS area
         FROM categorias c
         INNER JOIN tipos_producto t ON t.id = c.tipo_id
-        ORDER BY t.id, c.nombre
+        INNER JOIN areas_almacen a ON a.id = t.area_id
+        ORDER BY a.id, t.nombre, c.nombre
         """
     )
     return [dict(fila) for fila in filas]
@@ -108,14 +142,16 @@ def listar_productos():
                    p.cilindros_abiertos, p.stock_cilindros_cerrados,
                    p.litros_por_cilindro,
                    p.stock_minimo,
-                   p.observaciones, p.tipo_id, t.nombre AS tipo, p.categoria_id,
+                   p.observaciones, p.tipo_id, t.nombre AS tipo, t.area_id,
+                   a.nombre AS area, p.categoria_id,
                    c.nombre AS categoria, p.unidad_base_id, u.nombre AS unidad,
                    u.abreviatura, u.permite_decimal
             FROM productos p
             INNER JOIN tipos_producto t ON t.id = p.tipo_id
+            INNER JOIN areas_almacen a ON a.id = t.area_id
             INNER JOIN categorias c ON c.id = p.categoria_id
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
-            ORDER BY p.nombre
+            ORDER BY a.id, t.nombre, c.nombre, p.nombre
             """
         )
     ]

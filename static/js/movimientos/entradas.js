@@ -1,4 +1,5 @@
 const entryType = document.querySelector("[data-entry-type]");
+const entryProductArea = document.querySelector("[data-entry-product-area]");
 const entryProductType = document.querySelector("[data-entry-product-type]");
 const entryProductCategory = document.querySelector("[data-entry-product-category]");
 const productSelect = document.querySelector("[data-product-select]");
@@ -16,9 +17,11 @@ const baseQuantity = document.querySelector("[data-base-quantity]");
 const estimatedStock = document.querySelector("[data-estimated-stock]");
 
 const bucketProductType = document.querySelector("[data-bucket-product-type]");
+const bucketProductArea = document.querySelector("[data-bucket-product-area]");
 const bucketProductCategory = document.querySelector("[data-bucket-product-category]");
 const bucketProduct = document.querySelector("[data-bucket-product]");
 const bucketCloseProductType = document.querySelector("[data-bucket-close-product-type]");
+const bucketCloseProductArea = document.querySelector("[data-bucket-close-product-area]");
 const bucketCloseProductCategory = document.querySelector("[data-bucket-close-product-category]");
 const bucketCloseProduct = document.querySelector("[data-bucket-close-product]");
 const bucketClosed = document.querySelector("[data-bucket-closed]");
@@ -27,9 +30,11 @@ const bucketUsed = document.querySelector("[data-bucket-used]");
 const closeOpen = document.querySelector("[data-close-open]");
 const closeUsed = document.querySelector("[data-close-used]");
 const cylinderProductType = document.querySelector("[data-cylinder-product-type]");
+const cylinderProductArea = document.querySelector("[data-cylinder-product-area]");
 const cylinderProductCategory = document.querySelector("[data-cylinder-product-category]");
 const cylinderProduct = document.querySelector("[data-cylinder-product]");
 const cylinderCloseProductType = document.querySelector("[data-cylinder-close-product-type]");
+const cylinderCloseProductArea = document.querySelector("[data-cylinder-close-product-area]");
 const cylinderCloseProductCategory = document.querySelector("[data-cylinder-close-product-category]");
 const cylinderCloseProduct = document.querySelector("[data-cylinder-close-product]");
 const cylinderClosed = document.querySelector("[data-cylinder-closed]");
@@ -52,9 +57,36 @@ function formatQuantity(value) {
   });
 }
 
-function filterCategoriesByType(typeSelect, categorySelect) {
-  if (!typeSelect || !categorySelect) return;
+function filterTypesByArea(areaSelect, typeSelect) {
+  if (!areaSelect || !typeSelect) return;
 
+  const selectedArea = areaSelect.value;
+  const currentValue = typeSelect.value;
+  let currentVisible = false;
+  Array.from(typeSelect.options).forEach((option) => {
+    if (!option.value) {
+      option.hidden = false;
+      option.disabled = true;
+      option.textContent = selectedArea ? "Selecciona un tipo" : "Primero selecciona un area";
+      return;
+    }
+
+    const visible = selectedArea && option.dataset.area === selectedArea;
+    option.hidden = !visible;
+    option.disabled = !visible;
+    if (visible && option.value === currentValue) currentVisible = true;
+  });
+
+  if (!selectedArea || !currentVisible) {
+    typeSelect.value = "";
+  }
+  typeSelect.disabled = !selectedArea;
+}
+
+function filterCategoriesBySelection(areaSelect, typeSelect, categorySelect) {
+  if (!areaSelect || !typeSelect || !categorySelect) return;
+
+  const selectedArea = areaSelect.value;
   const selectedType = typeSelect.value;
   const currentValue = categorySelect.value;
   let currentVisible = false;
@@ -62,24 +94,31 @@ function filterCategoriesByType(typeSelect, categorySelect) {
     if (!option.value) {
       option.hidden = false;
       option.disabled = true;
+      option.textContent = !selectedArea
+        ? "Primero selecciona un area"
+        : (!selectedType ? "Primero selecciona un tipo" : "Selecciona una categoria");
       return;
     }
 
-    const visible = selectedType && option.dataset.type === selectedType;
+    const visible = selectedArea
+      && selectedType
+      && option.dataset.area === selectedArea
+      && option.dataset.type === selectedType;
     option.hidden = !visible;
     option.disabled = !visible;
     if (visible && option.value === currentValue) currentVisible = true;
   });
 
-  if (!selectedType || !currentVisible) {
+  if (!selectedArea || !selectedType || !currentVisible) {
     categorySelect.value = "";
   }
-  categorySelect.disabled = !selectedType;
+  categorySelect.disabled = !selectedArea || !selectedType;
 }
 
-function filterProductsBySelection(typeSelect, categorySelect, select) {
-  if (!typeSelect || !categorySelect || !select) return;
+function filterProductsBySelection(areaSelect, typeSelect, categorySelect, select) {
+  if (!areaSelect || !typeSelect || !categorySelect || !select) return;
 
+  const selectedArea = areaSelect.value;
   const selectedType = typeSelect.value;
   const selectedCategory = categorySelect.value;
   const placeholder = Array.from(select.options).find((option) => !option.value);
@@ -91,8 +130,10 @@ function filterProductsBySelection(typeSelect, categorySelect, select) {
       return;
     }
 
-    const visible = selectedType
+    const visible = selectedArea
+      && selectedType
       && selectedCategory
+      && option.dataset.area === selectedArea
       && option.dataset.type === selectedType
       && option.dataset.category === selectedCategory;
     option.hidden = !visible;
@@ -101,11 +142,13 @@ function filterProductsBySelection(typeSelect, categorySelect, select) {
   });
 
   const current = select.options[select.selectedIndex] || null;
-  if (!selectedType || !selectedCategory || !firstVisible) {
+  if (!selectedArea || !selectedType || !selectedCategory || !firstVisible) {
     if (placeholder) {
-      placeholder.textContent = !selectedType
-        ? "Primero selecciona un tipo"
-        : (!selectedCategory ? "Primero selecciona una categoria" : "No hay productos en esta categoria");
+      placeholder.textContent = !selectedArea
+        ? "Primero selecciona un area"
+        : (!selectedType
+          ? "Primero selecciona un tipo"
+          : (!selectedCategory ? "Primero selecciona una categoria" : "No hay productos en esta categoria"));
     }
     select.value = "";
     select.disabled = true;
@@ -121,9 +164,10 @@ function filterProductsBySelection(typeSelect, categorySelect, select) {
   }
 }
 
-function syncProductPicker(typeSelect, categorySelect, select) {
-  filterCategoriesByType(typeSelect, categorySelect);
-  filterProductsBySelection(typeSelect, categorySelect, select);
+function syncProductPicker(areaSelect, typeSelect, categorySelect, select) {
+  filterTypesByArea(areaSelect, typeSelect);
+  filterCategoriesBySelection(areaSelect, typeSelect, categorySelect);
+  filterProductsBySelection(areaSelect, typeSelect, categorySelect, select);
 }
 
 function toggleField(field, isHidden) {
@@ -304,13 +348,14 @@ function updateCylinderClosePreview() {
 }
 
 function refreshEntry() {
-  syncProductPicker(entryProductType, entryProductCategory, productSelect);
+  syncProductPicker(entryProductArea, entryProductType, entryProductCategory, productSelect);
   rebuildPresentations();
   syncEntryMode();
   updatePreview();
 }
 
 entryType.addEventListener("change", refreshEntry);
+entryProductArea.addEventListener("change", refreshEntry);
 entryProductType.addEventListener("change", refreshEntry);
 entryProductCategory.addEventListener("change", refreshEntry);
 productSelect.addEventListener("change", () => {
@@ -322,57 +367,73 @@ quantityInput.addEventListener("input", updatePreview);
 cylinderLitersInput.addEventListener("input", updatePreview);
 
 if (bucketProduct) {
+  bucketProductArea.addEventListener("change", () => {
+    syncProductPicker(bucketProductArea, bucketProductType, bucketProductCategory, bucketProduct);
+    updateBucketPreview();
+  });
   bucketProductType.addEventListener("change", () => {
-    syncProductPicker(bucketProductType, bucketProductCategory, bucketProduct);
+    syncProductPicker(bucketProductArea, bucketProductType, bucketProductCategory, bucketProduct);
     updateBucketPreview();
   });
   bucketProductCategory.addEventListener("change", () => {
-    syncProductPicker(bucketProductType, bucketProductCategory, bucketProduct);
+    syncProductPicker(bucketProductArea, bucketProductType, bucketProductCategory, bucketProduct);
     updateBucketPreview();
   });
-  syncProductPicker(bucketProductType, bucketProductCategory, bucketProduct);
+  syncProductPicker(bucketProductArea, bucketProductType, bucketProductCategory, bucketProduct);
   bucketProduct.addEventListener("change", updateBucketPreview);
   updateBucketPreview();
 }
 
 if (bucketCloseProduct) {
+  bucketCloseProductArea.addEventListener("change", () => {
+    syncProductPicker(bucketCloseProductArea, bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
+    updateClosePreview();
+  });
   bucketCloseProductType.addEventListener("change", () => {
-    syncProductPicker(bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
+    syncProductPicker(bucketCloseProductArea, bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
     updateClosePreview();
   });
   bucketCloseProductCategory.addEventListener("change", () => {
-    syncProductPicker(bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
+    syncProductPicker(bucketCloseProductArea, bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
     updateClosePreview();
   });
-  syncProductPicker(bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
+  syncProductPicker(bucketCloseProductArea, bucketCloseProductType, bucketCloseProductCategory, bucketCloseProduct);
   bucketCloseProduct.addEventListener("change", updateClosePreview);
   updateClosePreview();
 }
 
 if (cylinderProduct) {
+  cylinderProductArea.addEventListener("change", () => {
+    syncProductPicker(cylinderProductArea, cylinderProductType, cylinderProductCategory, cylinderProduct);
+    updateCylinderPreview();
+  });
   cylinderProductType.addEventListener("change", () => {
-    syncProductPicker(cylinderProductType, cylinderProductCategory, cylinderProduct);
+    syncProductPicker(cylinderProductArea, cylinderProductType, cylinderProductCategory, cylinderProduct);
     updateCylinderPreview();
   });
   cylinderProductCategory.addEventListener("change", () => {
-    syncProductPicker(cylinderProductType, cylinderProductCategory, cylinderProduct);
+    syncProductPicker(cylinderProductArea, cylinderProductType, cylinderProductCategory, cylinderProduct);
     updateCylinderPreview();
   });
-  syncProductPicker(cylinderProductType, cylinderProductCategory, cylinderProduct);
+  syncProductPicker(cylinderProductArea, cylinderProductType, cylinderProductCategory, cylinderProduct);
   cylinderProduct.addEventListener("change", updateCylinderPreview);
   updateCylinderPreview();
 }
 
 if (cylinderCloseProduct) {
+  cylinderCloseProductArea.addEventListener("change", () => {
+    syncProductPicker(cylinderCloseProductArea, cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
+    updateCylinderClosePreview();
+  });
   cylinderCloseProductType.addEventListener("change", () => {
-    syncProductPicker(cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
+    syncProductPicker(cylinderCloseProductArea, cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
     updateCylinderClosePreview();
   });
   cylinderCloseProductCategory.addEventListener("change", () => {
-    syncProductPicker(cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
+    syncProductPicker(cylinderCloseProductArea, cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
     updateCylinderClosePreview();
   });
-  syncProductPicker(cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
+  syncProductPicker(cylinderCloseProductArea, cylinderCloseProductType, cylinderCloseProductCategory, cylinderCloseProduct);
   cylinderCloseProduct.addEventListener("change", updateCylinderClosePreview);
   updateCylinderClosePreview();
 }

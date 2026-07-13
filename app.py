@@ -30,6 +30,7 @@ from inventario_productosAD import (
     eliminar_categoria as eliminar_categoria_ad,
     eliminar_producto as eliminar_producto_ad,
     eliminar_tipo as eliminar_tipo_ad,
+    listar_areas,
     listar_categorias,
     listar_ajustes_stock,
     listar_productos,
@@ -72,9 +73,11 @@ def tipos_desde_productos(productos):
     for producto in productos:
         tipo_id = producto.get("tipo_id")
         tipo = producto.get("tipo")
+        area_id = producto.get("area_id")
+        area = producto.get("area")
         if tipo_id and tipo and tipo_id not in tipos:
-            tipos[tipo_id] = {"id": tipo_id, "nombre": tipo}
-    return sorted(tipos.values(), key=lambda item: item["nombre"])
+            tipos[tipo_id] = {"id": tipo_id, "nombre": tipo, "area_id": area_id, "area": area}
+    return sorted(tipos.values(), key=lambda item: (item.get("area_id") or 0, item["nombre"]))
 
 
 def inicializar_sistema(reset=False):
@@ -160,6 +163,7 @@ def productos():
             "page_subtitle": "Consulta que articulos hay, cuanto stock queda y que necesita reposicion.",
             "productos": productos_registrados,
             "resumen": resumen_productos(productos_registrados),
+            "areas": listar_areas(),
             "tipos": listar_tipos(),
             "categorias": listar_categorias(),
             "unidades": listar_unidades(),
@@ -214,6 +218,7 @@ def entradas():
         {
             "page_title": "Entradas",
             "page_subtitle": "Registra compras y reposiciones para aumentar el stock del almacen.",
+            "areas": listar_areas(),
             "tipos": tipos_desde_productos(productos_registrados),
             "categorias": listar_categorias(),
             "productos": productos_registrados,
@@ -279,6 +284,7 @@ def salidas():
         {
             "page_title": "Salidas",
             "page_subtitle": "Registra entregas internas por placa y trabajador.",
+            "areas": listar_areas(),
             "tipos": tipos_desde_productos(productos_registrados),
             "categorias": listar_categorias(),
             "productos": productos_registrados,
@@ -353,16 +359,27 @@ def kardex():
 @app.get("/inventario/categorias")
 @login_requerido
 def categorias():
+    areas_registradas = listar_areas()
     tipos_registrados = listar_tipos()
     categorias_registradas = listar_categorias()
+    area_seleccionada = request.args.get("area_id", type=int)
     tipo_seleccionado = request.args.get("tipo_id", type=int)
-    ids_validos = {tipo["id"] for tipo in tipos_registrados}
+    areas_validas = {area["id"] for area in areas_registradas}
+    if area_seleccionada not in areas_validas:
+        area_seleccionada = None
+    tipos_visibles = [
+        tipo
+        for tipo in tipos_registrados
+        if not area_seleccionada or tipo["area_id"] == area_seleccionada
+    ]
+    ids_validos = {tipo["id"] for tipo in tipos_visibles}
     if tipo_seleccionado not in ids_validos:
         tipo_seleccionado = None
     categorias_visibles = [
         categoria
         for categoria in categorias_registradas
-        if not tipo_seleccionado or categoria["tipo_id"] == tipo_seleccionado
+        if (not area_seleccionada or categoria["area_id"] == area_seleccionada)
+        and (not tipo_seleccionado or categoria["tipo_id"] == tipo_seleccionado)
     ]
     catalogo_por_nombre = {}
     for categoria in categorias_registradas:
@@ -378,8 +395,11 @@ def categorias():
         {
             "page_title": "Tipos y categorias",
             "page_subtitle": "Organiza las familias de productos del almacen.",
+            "areas": areas_registradas,
             "categorias": categorias_visibles,
-            "tipos": tipos_registrados,
+            "tipos": tipos_visibles,
+            "todos_tipos": tipos_registrados,
+            "area_seleccionada": area_seleccionada,
             "tipo_seleccionado": tipo_seleccionado,
             "catalogo_categorias": sorted(
                 catalogo_por_nombre.values(), key=lambda categoria: categoria["nombre"].lower()
@@ -458,8 +478,11 @@ def eliminar_tipo(tipo_id):
 def crear_categoria():
     correcto, mensaje = crear_categoria_ad(request.form)
     flash(mensaje, "success" if correcto else "error")
+    area_id = request.form.get("area_id", type=int)
     tipo_id = request.form.get("tipo_id", type=int)
-    return redirect(url_for("categorias", tipo_id=tipo_id) if tipo_id else url_for("categorias"))
+    if tipo_id:
+        return redirect(url_for("categorias", area_id=area_id, tipo_id=tipo_id))
+    return redirect(url_for("categorias", area_id=area_id) if area_id else url_for("categorias"))
 
 
 @app.post("/inventario/categorias/<int:categoria_id>/eliminar")
@@ -468,8 +491,11 @@ def crear_categoria():
 def eliminar_categoria(categoria_id):
     correcto, mensaje = eliminar_categoria_ad(categoria_id)
     flash(mensaje, "success" if correcto else "error")
+    area_id = request.form.get("area_id", type=int)
     tipo_id = request.form.get("tipo_id", type=int)
-    return redirect(url_for("categorias", tipo_id=tipo_id) if tipo_id else url_for("categorias"))
+    if tipo_id:
+        return redirect(url_for("categorias", area_id=area_id, tipo_id=tipo_id))
+    return redirect(url_for("categorias", area_id=area_id) if area_id else url_for("categorias"))
 
 
 @app.post("/sistema/usuarios/crear")

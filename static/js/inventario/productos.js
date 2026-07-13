@@ -1,14 +1,30 @@
 const productDialog = document.querySelector("[data-product-dialog]");
 const productForm = document.querySelector("[data-product-form]");
+const areaSelect = productForm.querySelector("[data-form-area]");
 const typeSelect = productForm.elements.tipo_id;
 const categorySelect = productForm.elements.categoria_id;
 const presentationList = document.querySelector("[data-presentation-list]");
+
+function filterFormTypes(selectedType = "") {
+  const areaId = areaSelect.value;
+  let firstVisible = null;
+  Array.from(typeSelect.options).forEach((option) => {
+    const visible = option.dataset.area === areaId;
+    option.hidden = !visible;
+    option.disabled = !visible;
+    if (visible && !firstVisible) firstVisible = option;
+  });
+  const selected = Array.from(typeSelect.options).find(
+    (option) => option.value === String(selectedType) && !option.hidden
+  );
+  typeSelect.value = (selected || firstVisible)?.value || "";
+}
 
 function filterFormCategories(selectedCategory = "") {
   const typeId = typeSelect.value;
   let firstVisible = null;
   Array.from(categorySelect.options).forEach((option) => {
-    const visible = option.dataset.type === typeId;
+    const visible = option.dataset.type === typeId && option.dataset.area === areaSelect.value;
     option.hidden = !visible;
     option.disabled = !visible;
     if (visible && !firstVisible) firstVisible = option;
@@ -40,11 +56,16 @@ function openCreateProduct() {
   document.querySelector("[data-initial-stock]").hidden = false;
   productForm.elements.stock_actual.disabled = false;
   presentationList.innerHTML = "";
+  filterFormTypes();
   filterFormCategories();
   productDialog.showModal();
 }
 
 document.querySelector("[data-open-product]").addEventListener("click", openCreateProduct);
+areaSelect.addEventListener("change", () => {
+  filterFormTypes();
+  filterFormCategories();
+});
 typeSelect.addEventListener("change", () => filterFormCategories());
 document.querySelector("[data-add-presentation]").addEventListener("click", () => addPresentation());
 
@@ -64,7 +85,8 @@ document.querySelectorAll("[data-edit-product]").forEach((button) => {
     Object.entries(fields).forEach(([field, dataKey]) => {
       productForm.elements[field].value = button.dataset[dataKey] || "";
     });
-    typeSelect.value = button.dataset.tipoId;
+    areaSelect.value = button.dataset.areaId;
+    filterFormTypes(button.dataset.tipoId);
     filterFormCategories(button.dataset.categoriaId);
     document.querySelector("[data-initial-stock]").hidden = true;
     productForm.elements.stock_actual.disabled = true;
@@ -95,6 +117,7 @@ document.querySelectorAll("[data-view-product]").forEach((button) => {
     detailDialog.querySelector("[data-detail-cylinder-liters]").textContent = `${button.dataset.litrosPorCilindro} ${button.dataset.abreviatura}`;
     detailDialog.querySelector("[data-detail-minimum]").textContent = `${button.dataset.minimo} ${button.dataset.abreviatura}`;
     detailDialog.querySelector("[data-detail-status]").textContent = button.dataset.estado;
+    detailDialog.querySelector("[data-detail-area]").textContent = button.dataset.area;
     detailDialog.querySelector("[data-detail-type]").textContent = button.dataset.tipo;
     detailDialog.querySelector("[data-detail-category]").textContent = button.dataset.categoria;
     detailDialog.querySelector("[data-detail-unit]").textContent = `${button.dataset.unidad} (${button.dataset.abreviatura})`;
@@ -158,6 +181,7 @@ document.querySelectorAll("[data-delete-form]").forEach((form) => {
 
 const productRows = Array.from(document.querySelectorAll("[data-product-row]"));
 const productSearch = document.querySelector("[data-product-search]");
+const areaFilter = document.querySelector("[data-area-filter]");
 const typeFilter = document.querySelector("[data-type-filter]");
 const categoryFilter = document.querySelector("[data-category-filter]");
 const statusFilter = document.querySelector("[data-status-filter]");
@@ -169,6 +193,7 @@ function filterProducts() {
   let visible = 0;
   productRows.forEach((row) => {
     const matches = row.dataset.search.includes(search)
+      && (!areaFilter.value || row.dataset.area === areaFilter.value)
       && (!typeFilter.value || row.dataset.type === typeFilter.value)
       && (!categoryFilter.value || row.dataset.category === categoryFilter.value)
       && (!statusFilter.value || row.dataset.status === statusFilter.value);
@@ -179,4 +204,29 @@ function filterProducts() {
   filterEmpty.hidden = visible !== 0;
 }
 
-[productSearch, typeFilter, categoryFilter, statusFilter].forEach((control) => control.addEventListener("input", filterProducts));
+function syncFilterOptions() {
+  Array.from(typeFilter.options).forEach((option) => {
+    if (!option.value) return;
+    const visible = !areaFilter.value || option.dataset.area === areaFilter.value;
+    option.hidden = !visible;
+    option.disabled = !visible;
+  });
+  if (typeFilter.selectedOptions[0]?.disabled) typeFilter.value = "";
+  Array.from(categoryFilter.options).forEach((option) => {
+    if (!option.value) return;
+    const visible = (!areaFilter.value || option.dataset.area === areaFilter.value)
+      && (!typeFilter.value || option.dataset.type === typeFilter.value);
+    option.hidden = !visible;
+    option.disabled = !visible;
+  });
+  if (categoryFilter.selectedOptions[0]?.disabled) categoryFilter.value = "";
+}
+
+[productSearch, areaFilter, typeFilter, categoryFilter, statusFilter].forEach((control) => {
+  control.addEventListener("input", () => {
+    syncFilterOptions();
+    filterProducts();
+  });
+});
+
+syncFilterOptions();

@@ -21,12 +21,16 @@ from reportesAD import normalizar_filtros_reportes
 from tests.test_app import USUARIO_ALMACEN
 
 
-TIPOS = [{"id": 1, "nombre": "Repuesto"}, {"id": 2, "nombre": "Lubricante"}]
+AREAS = [{"id": 1, "nombre": "Mecanica"}, {"id": 2, "nombre": "Pintura"}]
+TIPOS = [
+    {"id": 1, "nombre": "Repuesto", "area_id": 1, "area": "Mecanica"},
+    {"id": 2, "nombre": "Lubricante", "area_id": 1, "area": "Mecanica"},
+]
 CATEGORIAS = [
-    {"id": 1, "nombre": "Sin clasificar", "tipo_id": 1, "tipo": "Repuesto"},
-    {"id": 2, "nombre": "Amortiguador", "tipo_id": 1, "tipo": "Repuesto"},
-    {"id": 3, "nombre": "Raqueta limpia parabrisas", "tipo_id": 1, "tipo": "Repuesto"},
-    {"id": 14, "nombre": "Aceite de motor", "tipo_id": 2, "tipo": "Lubricante"},
+    {"id": 1, "nombre": "Sin clasificar", "tipo_id": 1, "tipo": "Repuesto", "area_id": 1, "area": "Mecanica"},
+    {"id": 2, "nombre": "Amortiguador", "tipo_id": 1, "tipo": "Repuesto", "area_id": 1, "area": "Mecanica"},
+    {"id": 3, "nombre": "Raqueta limpia parabrisas", "tipo_id": 1, "tipo": "Repuesto", "area_id": 1, "area": "Mecanica"},
+    {"id": 14, "nombre": "Aceite de motor", "tipo_id": 2, "tipo": "Lubricante", "area_id": 1, "area": "Mecanica"},
 ]
 UNIDADES = [
     {"id": 1, "nombre": "Unidad", "abreviatura": "und", "permite_decimal": 0},
@@ -50,6 +54,8 @@ PRODUCTO_ACEITE = {
     "observaciones": None,
     "tipo_id": 2,
     "tipo": "Lubricante",
+    "area_id": 1,
+    "area": "Mecanica",
     "categoria_id": 14,
     "categoria": "Aceite de motor",
     "unidad_base_id": 3,
@@ -68,6 +74,7 @@ class InventarioAppTests(unittest.TestCase):
             sesion["usuario"] = USUARIO_ALMACEN
             sesion["_csrf_token"] = "csrf-inventario"
 
+    @patch("app.listar_areas", return_value=AREAS)
     @patch("app.listar_ajustes_stock", return_value=[])
     @patch("app.listar_unidades", return_value=UNIDADES)
     @patch("app.listar_categorias", return_value=CATEGORIAS)
@@ -84,12 +91,13 @@ class InventarioAppTests(unittest.TestCase):
         },
     )
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_products(self, _productos, _resumen, _tipos, _categorias, _unidades, _ajustes):
+    def test_almacen_can_open_products(self, _productos, _resumen, _tipos, _categorias, _unidades, _ajustes, _areas):
         response = self.client.get("/inventario/productos")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Balde", response.data)
         self.assertIn(b"Con stock", response.data)
+        self.assertIn(b"Mecanica", response.data)
         self.assertIn(b"Disponible", response.data)
         self.assertIn(b"Usado del balde", response.data)
         self.assertIn(b"data-view-product", response.data)
@@ -211,23 +219,26 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("contiene categorias", mensaje)
 
+    @patch("app.listar_areas", return_value=AREAS)
     @patch("app.listar_tipos", return_value=TIPOS)
     @patch("app.listar_categorias", return_value=CATEGORIAS)
-    def test_almacen_can_manage_types_and_categories(self, _categorias, _tipos):
+    def test_almacen_can_manage_types_and_categories(self, _categorias, _tipos, _areas):
         response = self.client.get("/inventario/categorias")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nuevo tipo", response.data)
         self.assertIn(b"Nueva categoria", response.data)
+        self.assertIn(b"Mecanica", response.data)
         self.assertNotIn(b"Editar categoria", response.data)
 
+    @patch("app.listar_areas", return_value=AREAS)
     @patch("app.listar_tipos", return_value=TIPOS)
     @patch("app.listar_categorias", return_value=CATEGORIAS)
-    def test_category_type_filter_is_applied_by_server(self, _categorias, _tipos):
+    def test_category_type_filter_is_applied_by_server(self, _categorias, _tipos, _areas):
         response = self.client.get("/inventario/categorias?tipo_id=1")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Sin clasificar", response.data)
         self.assertNotIn(b'data-category-name="Aceite de motor"', response.data)
-        self.assertIn(b'<option value="Aceite de motor" data-tipos="2">', response.data)
+        self.assertIn(b'<option value="Aceite de motor" data-tipos="2"', response.data)
         self.assertIn(b'<option value="1" selected>', response.data)
 
     @patch("app.crear_tipo_ad", return_value=(True, "Tipo de producto creado correctamente."))
@@ -246,17 +257,19 @@ class InventarioAppTests(unittest.TestCase):
         ejecutar.assert_called_once()
         self.assertIn("Sin clasificar", ejecutar.call_args.args[0])
 
+    @patch("app.listar_areas", return_value=AREAS)
     @patch("app.resumen_entradas", return_value={"total": 0, "hoy": 0, "mes": 0, "productos": 0})
     @patch("app.listar_aperturas_balde", return_value=[])
     @patch("app.listar_entradas", return_value=[])
     @patch("app.listar_categorias", return_value=CATEGORIAS)
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_entries(self, _productos, _categorias, _entradas, _aperturas, _resumen):
+    def test_almacen_can_open_entries(self, _productos, _categorias, _entradas, _aperturas, _resumen, _areas):
         response = self.client.get("/movimientos/entradas")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nueva entrada", response.data)
         self.assertIn(b"Abrir balde", response.data)
         self.assertIn(b"Abrir cilindro", response.data)
+        self.assertIn(b"Mecanica", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Raqueta limpia parabrisas", response.data)
 
@@ -292,16 +305,18 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("producto", mensaje)
 
+    @patch("app.listar_areas", return_value=AREAS)
     @patch("app.resumen_salidas", return_value={"total": 0, "hoy": 0, "mes": 0, "vehiculos": 0})
     @patch("app.listar_salidas", return_value=[])
     @patch("app.listar_vehiculos", return_value=[{"id": 1, "placa": "ABC-123", "modelo": "Toyota Yaris"}])
     @patch("app.listar_categorias", return_value=CATEGORIAS)
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_outputs(self, _productos, _categorias, _vehiculos, _salidas, _resumen):
+    def test_almacen_can_open_outputs(self, _productos, _categorias, _vehiculos, _salidas, _resumen, _areas):
         response = self.client.get("/movimientos/salidas")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nueva salida", response.data)
         self.assertIn(b"ABC-123", response.data)
+        self.assertIn(b"Mecanica", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Sale de", response.data)
 

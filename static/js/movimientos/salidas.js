@@ -17,9 +17,36 @@ function formatQuantity(value) {
   });
 }
 
-function filterCategoriesByType(typeSelect, categorySelect) {
-  if (!typeSelect || !categorySelect) return;
+function filterTypesByArea(areaSelect, typeSelect) {
+  if (!areaSelect || !typeSelect) return;
 
+  const selectedArea = areaSelect.value;
+  const currentValue = typeSelect.value;
+  let currentVisible = false;
+  Array.from(typeSelect.options).forEach((option) => {
+    if (!option.value) {
+      option.hidden = false;
+      option.disabled = true;
+      option.textContent = selectedArea ? "Selecciona" : "Primero area";
+      return;
+    }
+
+    const visible = selectedArea && option.dataset.area === selectedArea;
+    option.hidden = !visible;
+    option.disabled = !visible;
+    if (visible && option.value === currentValue) currentVisible = true;
+  });
+
+  if (!selectedArea || !currentVisible) {
+    typeSelect.value = "";
+  }
+  typeSelect.disabled = !selectedArea;
+}
+
+function filterCategoriesBySelection(areaSelect, typeSelect, categorySelect) {
+  if (!areaSelect || !typeSelect || !categorySelect) return;
+
+  const selectedArea = areaSelect.value;
   const selectedType = typeSelect.value;
   const currentValue = categorySelect.value;
   let currentVisible = false;
@@ -27,24 +54,31 @@ function filterCategoriesByType(typeSelect, categorySelect) {
     if (!option.value) {
       option.hidden = false;
       option.disabled = true;
+      option.textContent = !selectedArea
+        ? "Primero area"
+        : (!selectedType ? "Primero el tipo" : "Selecciona categoria");
       return;
     }
 
-    const visible = selectedType && option.dataset.type === selectedType;
+    const visible = selectedArea
+      && selectedType
+      && option.dataset.area === selectedArea
+      && option.dataset.type === selectedType;
     option.hidden = !visible;
     option.disabled = !visible;
     if (visible && option.value === currentValue) currentVisible = true;
   });
 
-  if (!selectedType || !currentVisible) {
+  if (!selectedArea || !selectedType || !currentVisible) {
     categorySelect.value = "";
   }
-  categorySelect.disabled = !selectedType;
+  categorySelect.disabled = !selectedArea || !selectedType;
 }
 
-function filterProductsBySelection(typeSelect, categorySelect, productSelect) {
-  if (!typeSelect || !categorySelect || !productSelect) return;
+function filterProductsBySelection(areaSelect, typeSelect, categorySelect, productSelect) {
+  if (!areaSelect || !typeSelect || !categorySelect || !productSelect) return;
 
+  const selectedArea = areaSelect.value;
   const selectedType = typeSelect.value;
   const selectedCategory = categorySelect.value;
   const placeholder = Array.from(productSelect.options).find((option) => !option.value);
@@ -56,8 +90,10 @@ function filterProductsBySelection(typeSelect, categorySelect, productSelect) {
       return;
     }
 
-    const visible = selectedType
+    const visible = selectedArea
+      && selectedType
       && selectedCategory
+      && option.dataset.area === selectedArea
       && option.dataset.type === selectedType
       && option.dataset.category === selectedCategory;
     option.hidden = !visible;
@@ -66,11 +102,13 @@ function filterProductsBySelection(typeSelect, categorySelect, productSelect) {
   });
 
   const current = productSelect.options[productSelect.selectedIndex] || null;
-  if (!selectedType || !selectedCategory || !firstVisible) {
+  if (!selectedArea || !selectedType || !selectedCategory || !firstVisible) {
     if (placeholder) {
-      placeholder.textContent = !selectedType
-        ? "Primero el tipo"
-        : (!selectedCategory ? "Primero categoria" : "No hay productos en esta categoria");
+      placeholder.textContent = !selectedArea
+        ? "Primero area"
+        : (!selectedType
+          ? "Primero el tipo"
+          : (!selectedCategory ? "Primero categoria" : "No hay productos en esta categoria"));
     }
     productSelect.value = "";
     productSelect.disabled = true;
@@ -86,9 +124,10 @@ function filterProductsBySelection(typeSelect, categorySelect, productSelect) {
   }
 }
 
-function syncProductPicker(typeSelect, categorySelect, productSelect) {
-  filterCategoriesByType(typeSelect, categorySelect);
-  filterProductsBySelection(typeSelect, categorySelect, productSelect);
+function syncProductPicker(areaSelect, typeSelect, categorySelect, productSelect) {
+  filterTypesByArea(areaSelect, typeSelect);
+  filterCategoriesBySelection(areaSelect, typeSelect, categorySelect);
+  filterProductsBySelection(areaSelect, typeSelect, categorySelect, productSelect);
 }
 
 function syncVehicleModel() {
@@ -151,15 +190,20 @@ function updateLine(row) {
 function addLine() {
   const fragment = lineTemplate.content.cloneNode(true);
   const row = fragment.querySelector("[data-output-line]");
+  const areaSelect = row.querySelector("[data-line-area]");
   const typeSelect = row.querySelector("[data-line-type]");
   const categorySelect = row.querySelector("[data-line-category]");
   const productSelect = row.querySelector("[data-line-product]");
+  areaSelect.addEventListener("change", () => {
+    syncProductPicker(areaSelect, typeSelect, categorySelect, productSelect);
+    updateLine(row);
+  });
   typeSelect.addEventListener("change", () => {
-    syncProductPicker(typeSelect, categorySelect, productSelect);
+    syncProductPicker(areaSelect, typeSelect, categorySelect, productSelect);
     updateLine(row);
   });
   categorySelect.addEventListener("change", () => {
-    syncProductPicker(typeSelect, categorySelect, productSelect);
+    syncProductPicker(areaSelect, typeSelect, categorySelect, productSelect);
     updateLine(row);
   });
   productSelect.addEventListener("change", () => updateLine(row));
@@ -168,7 +212,7 @@ function addLine() {
     if (linesContainer.children.length > 1) row.remove();
   });
   linesContainer.appendChild(row);
-  syncProductPicker(typeSelect, categorySelect, productSelect);
+  syncProductPicker(areaSelect, typeSelect, categorySelect, productSelect);
   updateLine(row);
 }
 

@@ -13,11 +13,27 @@ CREATE TABLE IF NOT EXISTS usuarios (
     UNIQUE KEY uk_usuarios_usuario (usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS tipos_producto (
+CREATE TABLE IF NOT EXISTS areas_almacen (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(80) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_tipos_producto_nombre (nombre)
+    UNIQUE KEY uk_areas_almacen_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO areas_almacen (id, nombre) VALUES
+    (1, 'Mecanica'),
+    (2, 'Pintura');
+
+CREATE TABLE IF NOT EXISTS tipos_producto (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    area_id INT UNSIGNED NOT NULL DEFAULT 1,
+    nombre VARCHAR(80) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_tipos_producto_area_nombre (area_id, nombre),
+    KEY idx_tipos_producto_area (area_id),
+    CONSTRAINT fk_tipos_producto_area
+        FOREIGN KEY (area_id) REFERENCES areas_almacen (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS unidades_medida (

@@ -98,11 +98,20 @@
 <template data-output-line-template>
   <div class="output-line" data-output-line>
     <label>
-      <span>Tipo</span>
-      <select required data-line-type>
+      <span>Area</span>
+      <select required data-line-area>
         <option value="">Selecciona</option>
+        {% for area in areas %}
+          <option value="{{ area.id }}">{{ area.nombre }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Tipo</span>
+      <select required data-line-type disabled>
+        <option value="">Primero area</option>
         {% for tipo in tipos %}
-          <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+          <option value="{{ tipo.id }}" data-area="{{ tipo.area_id }}">{{ tipo.nombre }}</option>
         {% endfor %}
       </select>
     </label>
@@ -111,7 +120,7 @@
       <select required data-line-category disabled>
         <option value="">Primero el tipo</option>
         {% for categoria in categorias %}
-          <option value="{{ categoria.id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+          <option value="{{ categoria.id }}" data-area="{{ categoria.area_id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
         {% endfor %}
       </select>
     </label>
@@ -122,6 +131,7 @@
         {% for producto in productos %}
           <option
             value="{{ producto.id }}"
+            data-area="{{ producto.area_id }}"
             data-type="{{ producto.tipo_id }}"
             data-category="{{ producto.categoria_id }}"
             data-stock="{{ producto.stock_actual }}"
