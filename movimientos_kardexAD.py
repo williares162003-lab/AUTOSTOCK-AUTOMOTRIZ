@@ -1,6 +1,10 @@
+import logging
 from datetime import datetime
 
 from bd import consultar_todos, consultar_uno
+
+
+logger = logging.getLogger(__name__)
 
 
 def _fecha_valida(valor):
@@ -27,10 +31,18 @@ def _origen_texto(origen):
     }.get(origen, "Stock suelto")
 
 
-def _aplicar_filtros(base, parametros, columna_fecha, producto_id, fecha_inicio, fecha_fin):
+def _aplicar_filtros(
+    base,
+    parametros,
+    columna_fecha,
+    producto_id,
+    fecha_inicio,
+    fecha_fin,
+    columna_producto,
+):
     filtros = []
     if producto_id:
-        filtros.append("producto_id = %s")
+        filtros.append(f"{columna_producto} = %s")
         parametros.append(producto_id)
     if fecha_inicio:
         filtros.append(f"DATE({columna_fecha}) >= %s")
@@ -75,7 +87,9 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
         INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
         LEFT JOIN usuarios us ON us.id = e.usuario_id
     """
-    sql = _aplicar_filtros(sql, parametros, "e.creado_en", producto_id, fecha_inicio, fecha_fin)
+    sql = _aplicar_filtros(
+        sql, parametros, "e.creado_en", producto_id, fecha_inicio, fecha_fin, "e.producto_id"
+    )
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
     for fila in filas:
@@ -119,7 +133,9 @@ def _salidas(producto_id, fecha_inicio, fecha_fin):
         INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
         LEFT JOIN usuarios us ON us.id = s.usuario_id
     """
-    sql = _aplicar_filtros(sql, parametros, "s.creado_en", producto_id, fecha_inicio, fecha_fin)
+    sql = _aplicar_filtros(
+        sql, parametros, "s.creado_en", producto_id, fecha_inicio, fecha_fin, "d.producto_id"
+    )
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
     for fila in filas:
@@ -160,7 +176,9 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin):
         INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
         LEFT JOIN usuarios us ON us.id = a.usuario_id
     """
-    sql = _aplicar_filtros(sql, parametros, "a.creado_en", producto_id, fecha_inicio, fecha_fin)
+    sql = _aplicar_filtros(
+        sql, parametros, "a.creado_en", producto_id, fecha_inicio, fecha_fin, "a.producto_id"
+    )
     if " WHERE " in sql:
         sql += """
           AND a.motivo NOT LIKE 'Entrada:%'
@@ -216,7 +234,9 @@ def _baldes(producto_id, fecha_inicio, fecha_fin):
         INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
         LEFT JOIN usuarios us ON us.id = a.usuario_id
     """
-    sql = _aplicar_filtros(sql, parametros, "a.creado_en", producto_id, fecha_inicio, fecha_fin)
+    sql = _aplicar_filtros(
+        sql, parametros, "a.creado_en", producto_id, fecha_inicio, fecha_fin, "a.producto_id"
+    )
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
     for fila in filas:
@@ -248,23 +268,43 @@ def _baldes(producto_id, fecha_inicio, fecha_fin):
 
 
 def listar_movimientos_kardex(filtros):
+    movimientos, errores = listar_movimientos_kardex_con_errores(filtros)
+    if errores:
+        raise RuntimeError("; ".join(error["detalle"] for error in errores))
+    return movimientos
+
+
+def listar_movimientos_kardex_con_errores(filtros):
     producto_id = _entero(filtros.get("producto_id"))
     fecha_inicio = _fecha_valida(filtros.get("fecha_inicio"))
     fecha_fin = _fecha_valida(filtros.get("fecha_fin"))
     tipo = filtros.get("tipo", "")
 
     movimientos = []
-    if tipo in ("", "entrada"):
-        movimientos.extend(_entradas(producto_id, fecha_inicio, fecha_fin))
-    if tipo in ("", "salida"):
-        movimientos.extend(_salidas(producto_id, fecha_inicio, fecha_fin))
-    if tipo in ("", "ajuste"):
-        movimientos.extend(_ajustes(producto_id, fecha_inicio, fecha_fin))
-    if tipo in ("", "balde"):
-        movimientos.extend(_baldes(producto_id, fecha_inicio, fecha_fin))
+    errores = []
+    consultas = (
+        ("entrada", "entradas", _entradas),
+        ("salida", "salidas", _salidas),
+        ("ajuste", "ajustes", _ajustes),
+        ("balde", "baldes", _baldes),
+    )
+    for clave, etiqueta, consulta in consultas:
+        if tipo not in ("", clave):
+            continue
+        try:
+            movimientos.extend(consulta(producto_id, fecha_inicio, fecha_fin))
+        except Exception as error:
+            logger.exception("No se pudo cargar kardex de %s", etiqueta)
+            errores.append(
+                {
+                    "tipo": clave,
+                    "mensaje": f"No se pudo leer {etiqueta}.",
+                    "detalle": str(error),
+                }
+            )
 
-    movimientos.sort(key=lambda item: item["fecha"], reverse=True)
-    return movimientos[:250]
+    movimientos.sort(key=lambda item: item["fecha"] or datetime.min, reverse=True)
+    return movimientos[:250], errores
 
 
 def resumen_kardex(movimientos):

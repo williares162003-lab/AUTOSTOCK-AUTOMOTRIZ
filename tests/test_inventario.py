@@ -290,25 +290,28 @@ class InventarioAppTests(unittest.TestCase):
     @patch("app.resumen_kardex", return_value={"total": 1, "entradas": 1, "salidas": 0, "ajustes": 0, "baldes": 0})
     @patch("app.obtener_producto_kardex", return_value=PRODUCTO_ACEITE)
     @patch(
-        "app.listar_movimientos_kardex",
-        return_value=[
-            {
-                "fecha": "2026-07-12 10:00:00",
-                "producto": "Aceite 20W50",
-                "marca": None,
-                "tipo": "Entrada",
-                "tipo_clase": "entrada",
-                "origen": "Stock suelto",
-                "detalle": "Compra",
-                "referencia": "Factura 1",
-                "entrada": Decimal("2.000"),
-                "salida": None,
-                "unidad": "gal",
-                "stock_anterior": Decimal("8.000"),
-                "stock_nuevo": Decimal("10.000"),
-                "usuario": "William",
-            }
-        ],
+        "app.listar_movimientos_kardex_con_errores",
+        return_value=(
+            [
+                {
+                    "fecha": "2026-07-12 10:00:00",
+                    "producto": "Aceite 20W50",
+                    "marca": None,
+                    "tipo": "Entrada",
+                    "tipo_clase": "entrada",
+                    "origen": "Stock suelto",
+                    "detalle": "Compra",
+                    "referencia": "Factura 1",
+                    "entrada": Decimal("2.000"),
+                    "salida": None,
+                    "unidad": "gal",
+                    "stock_anterior": Decimal("8.000"),
+                    "stock_nuevo": Decimal("10.000"),
+                    "usuario": "William",
+                }
+            ],
+            [],
+        ),
     )
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
     def test_almacen_can_open_kardex(self, _productos, _movimientos, _producto, _resumen):

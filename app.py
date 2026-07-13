@@ -48,7 +48,7 @@ from movimientos_entradasAD import (
     resumen_entradas,
 )
 from movimientos_kardexAD import (
-    listar_movimientos_kardex,
+    listar_movimientos_kardex_con_errores,
     obtener_producto_kardex,
     resumen_kardex,
 )
@@ -273,12 +273,15 @@ def kardex():
     }
     errores_kardex = []
     try:
-        movimientos = listar_movimientos_kardex(filtros)
+        movimientos, errores_kardex = listar_movimientos_kardex_con_errores(filtros)
     except Exception:
         app.logger.exception("No se pudo cargar el kardex")
         movimientos = []
         errores_kardex.append(
-            "No se pudo cargar el historial. Actualiza la base de datos con python app.py init-db."
+            {
+                "mensaje": "No se pudo cargar el historial.",
+                "detalle": "Actualiza la base de datos con python app.py init-db.",
+            }
         )
     producto_id = request.args.get("producto_id", type=int)
     producto_seleccionado = None
@@ -287,7 +290,12 @@ def kardex():
             producto_seleccionado = obtener_producto_kardex(producto_id)
         except Exception:
             app.logger.exception("No se pudo cargar el producto del kardex")
-            errores_kardex.append("No se pudo cargar el resumen del producto seleccionado.")
+            errores_kardex.append(
+                {
+                    "mensaje": "No se pudo cargar el resumen del producto seleccionado.",
+                    "detalle": "Revisa que la tabla productos tenga las columnas nuevas de stock.",
+                }
+            )
     contexto = contexto_base("kardex")
     contexto.update(
         {
@@ -479,6 +487,16 @@ def ejecutar_comando():
                 print(f"  {usuario} / {contrasena}")
         else:
             print("Los usuarios iniciales ya existian.")
+        return True
+    if len(sys.argv) > 1 and sys.argv[1] == "check-kardex":
+        movimientos, errores = listar_movimientos_kardex_con_errores({})
+        print(f"Kardex: {len(movimientos)} movimientos leidos.")
+        if errores:
+            print("Errores encontrados:")
+            for error in errores:
+                print(f"  - {error['mensaje']} {error['detalle']}")
+        else:
+            print("Kardex sin errores.")
         return True
     return False
 

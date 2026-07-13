@@ -19,7 +19,7 @@
   <div>
     <h2>Kardex pendiente de actualizar</h2>
     {% for error in errores_kardex %}
-      <p>{{ error }}</p>
+      <p><strong>{{ error.mensaje }}</strong> {{ error.detalle }}</p>
     {% endfor %}
   </div>
 </section>
