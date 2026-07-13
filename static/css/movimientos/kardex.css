@@ -66,7 +66,7 @@
 
 .kardex-filters {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(140px, 0.3fr)) auto auto;
+  grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(130px, 0.3fr)) auto auto;
   align-items: end;
   gap: 10px;
   padding: 18px 22px;

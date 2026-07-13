@@ -23,6 +23,10 @@ def _entero(valor):
         return None
 
 
+def _placa_valida(valor):
+    return (valor or "").strip().upper()[:20]
+
+
 def _origen_texto(origen):
     return {
         "suelto": "Stock suelto",
@@ -122,6 +126,10 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
 
 
 def _salidas(producto_id, fecha_inicio, fecha_fin):
+    return _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, "")
+
+
+def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa):
     parametros = []
     sql = """
         SELECT d.id, d.producto_id, d.cantidad_base, d.origen_stock,
@@ -138,6 +146,9 @@ def _salidas(producto_id, fecha_inicio, fecha_fin):
     sql = _aplicar_filtros(
         sql, parametros, "s.creado_en", producto_id, fecha_inicio, fecha_fin, "d.producto_id"
     )
+    if placa:
+        sql += (" AND " if " WHERE " in sql else " WHERE ") + "UPPER(s.placa) LIKE %s"
+        parametros.append(f"%{placa}%")
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
     for fila in filas:
@@ -291,16 +302,19 @@ def listar_movimientos_kardex_con_errores(filtros):
     fecha_inicio = _fecha_valida(filtros.get("fecha_inicio"))
     fecha_fin = _fecha_valida(filtros.get("fecha_fin"))
     tipo = filtros.get("tipo", "")
+    placa = _placa_valida(filtros.get("placa", ""))
 
     movimientos = []
     errores = []
     consultas = (
         ("entrada", "entradas", _entradas),
-        ("salida", "salidas", _salidas),
+        ("salida", "salidas", lambda producto, inicio, fin: _salidas_filtradas(producto, inicio, fin, placa)),
         ("ajuste", "ajustes", _ajustes),
         ("balde", "baldes", _baldes),
     )
     for clave, etiqueta, consulta in consultas:
+        if placa and clave != "salida":
+            continue
         if tipo not in ("", clave):
             continue
         try:

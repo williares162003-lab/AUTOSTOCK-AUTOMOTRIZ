@@ -23,15 +23,19 @@
       <span>Hasta</span>
       <input type="date" name="fecha_fin" value="{{ filtros.fecha_fin }}">
     </label>
+    <label>
+      <span>Placa</span>
+      <input type="text" name="placa" maxlength="20" value="{{ filtros.get('placa', '') }}" placeholder="ABC-123">
+    </label>
     <button class="primary-button" type="submit"><span class="material-symbols-outlined">filter_alt</span>Filtrar</button>
     <a class="secondary-button" href="{{ url_for('reportes') }}"><span class="material-symbols-outlined">restart_alt</span>Limpiar</a>
     <div class="report-quick-filters" aria-label="Filtros rapidos">
-      <a href="{{ url_for('reportes', fecha_inicio=atajos.hoy.inicio, fecha_fin=atajos.hoy.fin) }}">Hoy</a>
-      <a href="{{ url_for('reportes', fecha_inicio=atajos.ayer.inicio, fecha_fin=atajos.ayer.fin) }}">Ayer</a>
-      <a href="{{ url_for('reportes', fecha_inicio=atajos.semana.inicio, fecha_fin=atajos.semana.fin) }}">Semana</a>
-      <a href="{{ url_for('reportes', fecha_inicio=atajos.mes.inicio, fecha_fin=atajos.mes.fin) }}">Mes</a>
+      <a href="{{ url_for('reportes', fecha_inicio=atajos.hoy.inicio, fecha_fin=atajos.hoy.fin, placa=filtros.get('placa', '')) }}">Hoy</a>
+      <a href="{{ url_for('reportes', fecha_inicio=atajos.ayer.inicio, fecha_fin=atajos.ayer.fin, placa=filtros.get('placa', '')) }}">Ayer</a>
+      <a href="{{ url_for('reportes', fecha_inicio=atajos.semana.inicio, fecha_fin=atajos.semana.fin, placa=filtros.get('placa', '')) }}">Semana</a>
+      <a href="{{ url_for('reportes', fecha_inicio=atajos.mes.inicio, fecha_fin=atajos.mes.fin, placa=filtros.get('placa', '')) }}">Mes</a>
     </div>
-    <a class="report-export-button" href="{{ url_for('exportar_reportes', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin) }}"><span class="material-symbols-outlined">download</span>Exportar CSV</a>
+    <a class="report-export-button" href="{{ url_for('exportar_reportes', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin, placa=filtros.get('placa', '')) }}"><span class="material-symbols-outlined">download</span>Exportar CSV</a>
   </form>
 </section>
 
@@ -92,6 +96,39 @@
     </table>
   </div>
 </section>
+
+{% if filtros.get('placa') %}
+<section class="inventory-table report-section">
+  <div class="inventory-toolbar">
+    <div>
+      <h2>Detalle de placa {{ filtros.placa }}</h2>
+      <p>{{ detalle_placa|length }} productos entregados en el periodo</p>
+    </div>
+    <a class="secondary-button" href="{{ url_for('kardex', placa=filtros.placa, tipo='salida', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin) }}"><span class="material-symbols-outlined">fact_check</span>Ver en Kardex</a>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Fecha</th><th>Placa</th><th>Modelo</th><th>Trabajador</th><th>Producto</th><th>Cantidad</th><th>Origen</th><th>Usuario</th></tr></thead>
+      <tbody>
+        {% for detalle in detalle_placa %}
+        <tr>
+          <td>{{ detalle.creado_en }}</td>
+          <td><strong>{{ detalle.placa }}</strong></td>
+          <td>{{ detalle.modelo or "Sin modelo" }}</td>
+          <td>{{ detalle.trabajador }}</td>
+          <td><strong>{{ detalle.producto }}</strong><small>{{ detalle.marca or "Sin marca" }}</small></td>
+          <td><strong class="report-negative">-{{ detalle.cantidad|float|round(3) }} {{ detalle.abreviatura }}</strong></td>
+          <td>{{ detalle.origen_texto }}</td>
+          <td>{{ detalle.usuario }}</td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-row" colspan="8">No hay salidas para esta placa en el periodo seleccionado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 
 <section class="report-grid two-columns">
   <article class="inventory-table">

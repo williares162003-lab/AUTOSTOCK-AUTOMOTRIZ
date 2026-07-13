@@ -322,6 +322,7 @@ def kardex():
         "fecha_inicio": request.args.get("fecha_inicio", ""),
         "fecha_fin": request.args.get("fecha_fin", ""),
         "tipo": request.args.get("tipo", ""),
+        "placa": request.args.get("placa", "").strip().upper(),
     }
     errores_kardex = []
     try:
@@ -410,6 +411,7 @@ def reportes():
         {
             "fecha_inicio": request.args.get("fecha_inicio", ""),
             "fecha_fin": request.args.get("fecha_fin", ""),
+            "placa": request.args.get("placa", ""),
         }
     )
     contexto = contexto_base("reportes")
@@ -430,6 +432,7 @@ def exportar_reportes():
         {
             "fecha_inicio": request.args.get("fecha_inicio", ""),
             "fecha_fin": request.args.get("fecha_fin", ""),
+            "placa": request.args.get("placa", ""),
         }
     )
     respuesta = Response("\ufeff" + contenido, mimetype="text/csv; charset=utf-8")

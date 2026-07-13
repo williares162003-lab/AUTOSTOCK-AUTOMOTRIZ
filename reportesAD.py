@@ -15,6 +15,10 @@ def _fecha_valida(valor):
         return None
 
 
+def _placa_valida(valor):
+    return (valor or "").strip().upper()[:20]
+
+
 def normalizar_filtros_reportes(filtros):
     hoy = date.today()
     inicio = _fecha_valida(filtros.get("fecha_inicio")) or hoy
@@ -24,11 +28,19 @@ def normalizar_filtros_reportes(filtros):
     return {
         "fecha_inicio": inicio.isoformat(),
         "fecha_fin": fin.isoformat(),
+        "placa": _placa_valida(filtros.get("placa", "")),
     }
 
 
 def _parametros_fecha(filtros):
     return (filtros["fecha_inicio"], filtros["fecha_fin"])
+
+
+def _filtro_placa(filtros, alias="s"):
+    placa = filtros.get("placa", "")
+    if not placa:
+        return "", ()
+    return f" AND UPPER({alias}.placa) LIKE %s", (f"%{placa}%",)
 
 
 def obtener_reporte_general(filtros):
@@ -45,6 +57,7 @@ def obtener_reporte_general(filtros):
         "movimientos_dia": _movimientos_por_dia(filtros),
         "top_salidas": _productos_mas_retirados(filtros),
         "salidas_vehiculos": _salidas_por_vehiculo(filtros),
+        "detalle_placa": _detalle_por_placa(filtros),
         "entradas_recientes": _entradas_recientes(filtros),
         "stock_tipos": _stock_por_tipo(),
         "ajustes_recientes": _ajustes_recientes(filtros),
@@ -72,6 +85,8 @@ def generar_reporte_csv(filtros):
     escritor.writerow(["AUTOMAN Chiclayo E.I.R.L."])
     escritor.writerow(["Reporte de almacen"])
     escritor.writerow(["Desde", filtros["fecha_inicio"], "Hasta", filtros["fecha_fin"]])
+    if filtros["placa"]:
+        escritor.writerow(["Placa", filtros["placa"]])
     escritor.writerow([])
 
     escritor.writerow(["Resumen"])
@@ -138,6 +153,26 @@ def generar_reporte_csv(filtros):
         )
     escritor.writerow([])
 
+    if filtros["placa"]:
+        escritor.writerow([f"Detalle de placa {filtros['placa']}"])
+        escritor.writerow(["Fecha", "Placa", "Modelo", "Trabajador", "Producto", "Marca", "Cantidad", "Unidad", "Origen", "Usuario"])
+        for detalle in reporte["detalle_placa"]:
+            escritor.writerow(
+                [
+                    detalle["creado_en"],
+                    detalle["placa"],
+                    detalle["modelo"] or "",
+                    detalle["trabajador"],
+                    detalle["producto"],
+                    detalle["marca"] or "Sin marca",
+                    detalle["cantidad"],
+                    detalle["abreviatura"],
+                    detalle["origen_texto"],
+                    detalle["usuario"],
+                ]
+            )
+        escritor.writerow([])
+
     escritor.writerow(["Entradas recientes"])
     escritor.writerow(["Fecha", "Producto", "Marca", "Entrada", "Unidad", "Documento", "Motivo", "Usuario"])
     for entrada in reporte["entradas_recientes"]:
@@ -176,7 +211,8 @@ def generar_reporte_csv(filtros):
             ]
         )
 
-    nombre = f"reporte-automan-{filtros['fecha_inicio']}-a-{filtros['fecha_fin']}.csv"
+    placa = f"-{filtros['placa']}" if filtros["placa"] else ""
+    nombre = f"reporte-automan{placa}-{filtros['fecha_inicio']}-a-{filtros['fecha_fin']}.csv"
     return nombre, contenido.getvalue()
 
 
@@ -187,6 +223,7 @@ def _actividad_periodo(filtros):
             "fecha_fin": filtros["fecha_fin"],
             "tipo": "",
             "producto_id": "",
+            "placa": filtros["placa"],
         }
     )
     return movimientos[:120], errores
@@ -215,16 +252,18 @@ def _resumen_reportes(filtros):
         """,
         _parametros_fecha(filtros),
     )
+    placa_sql, placa_params = _filtro_placa(filtros)
     salidas = consultar_uno(
-        """
+        f"""
         SELECT COUNT(DISTINCT s.id) AS salidas,
                COUNT(d.id) AS lineas_salida,
                COUNT(DISTINCT d.producto_id) AS productos_salida
         FROM salidas_stock s
         LEFT JOIN salidas_stock_detalle d ON d.salida_id = s.id
         WHERE DATE(s.creado_en) BETWEEN %s AND %s
+        {placa_sql}
         """,
-        _parametros_fecha(filtros),
+        _parametros_fecha(filtros) + placa_params,
     )
     return {
         "productos": inventario["productos"],
@@ -269,10 +308,11 @@ def _stock_critico():
 
 
 def _productos_mas_retirados(filtros):
+    placa_sql, placa_params = _filtro_placa(filtros)
     return [
         dict(fila)
         for fila in consultar_todos(
-            """
+            f"""
             SELECT p.nombre, p.marca, t.nombre AS tipo, c.nombre AS categoria,
                    u.abreviatura, COUNT(d.id) AS movimientos,
                    COALESCE(SUM(d.cantidad_base), 0) AS cantidad
@@ -283,33 +323,71 @@ def _productos_mas_retirados(filtros):
             INNER JOIN categorias c ON c.id = p.categoria_id
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
             WHERE DATE(s.creado_en) BETWEEN %s AND %s
+            {placa_sql}
             GROUP BY p.id, p.nombre, p.marca, t.nombre, c.nombre, u.abreviatura
             ORDER BY cantidad DESC, movimientos DESC, p.nombre
             LIMIT 8
             """,
-            _parametros_fecha(filtros),
+            _parametros_fecha(filtros) + placa_params,
         )
     ]
 
 
 def _salidas_por_vehiculo(filtros):
+    placa_sql, placa_params = _filtro_placa(filtros)
     return [
         dict(fila)
         for fila in consultar_todos(
-            """
+            f"""
             SELECT s.placa, COALESCE(s.modelo, 'Sin modelo') AS modelo,
                    s.trabajador, COUNT(DISTINCT s.id) AS salidas,
                    COUNT(d.id) AS productos, MAX(s.creado_en) AS ultimo_movimiento
             FROM salidas_stock s
             LEFT JOIN salidas_stock_detalle d ON d.salida_id = s.id
             WHERE DATE(s.creado_en) BETWEEN %s AND %s
+            {placa_sql}
             GROUP BY s.placa, s.modelo, s.trabajador
             ORDER BY salidas DESC, productos DESC, ultimo_movimiento DESC
             LIMIT 8
             """,
-            _parametros_fecha(filtros),
+            _parametros_fecha(filtros) + placa_params,
         )
     ]
+
+
+def _detalle_por_placa(filtros):
+    if not filtros.get("placa"):
+        return []
+    placa_sql, placa_params = _filtro_placa(filtros)
+    filas = consultar_todos(
+        f"""
+        SELECT s.creado_en, s.placa, s.modelo, s.trabajador,
+               p.nombre AS producto, p.marca, d.cantidad_base AS cantidad,
+               d.origen_stock, u.abreviatura,
+               COALESCE(us.nombre, 'Usuario eliminado') AS usuario
+        FROM salidas_stock s
+        INNER JOIN salidas_stock_detalle d ON d.salida_id = s.id
+        INNER JOIN productos p ON p.id = d.producto_id
+        INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+        LEFT JOIN usuarios us ON us.id = s.usuario_id
+        WHERE DATE(s.creado_en) BETWEEN %s AND %s
+        {placa_sql}
+        ORDER BY s.creado_en DESC, d.id DESC
+        LIMIT 120
+        """,
+        _parametros_fecha(filtros) + placa_params,
+    )
+    origenes = {
+        "suelto": "Stock suelto",
+        "balde_abierto": "Balde abierto",
+        "cilindro_abierto": "Cilindro abierto",
+    }
+    detalles = []
+    for fila in filas:
+        detalle = dict(fila)
+        detalle["origen_texto"] = origenes.get(detalle["origen_stock"], "Stock suelto")
+        detalles.append(detalle)
+    return detalles
 
 
 def _entradas_recientes(filtros):
@@ -353,7 +431,7 @@ def _stock_por_tipo():
 
 
 def _movimientos_por_dia(filtros):
-    entradas = consultar_todos(
+    entradas = [] if filtros.get("placa") else consultar_todos(
         """
         SELECT DATE(creado_en) AS fecha, COUNT(*) AS entradas
         FROM entradas_stock
@@ -362,14 +440,16 @@ def _movimientos_por_dia(filtros):
         """,
         _parametros_fecha(filtros),
     )
+    placa_sql, placa_params = _filtro_placa(filtros)
     salidas = consultar_todos(
-        """
+        f"""
         SELECT DATE(creado_en) AS fecha, COUNT(*) AS salidas
         FROM salidas_stock
         WHERE DATE(creado_en) BETWEEN %s AND %s
+        {placa_sql}
         GROUP BY DATE(creado_en)
         """,
-        _parametros_fecha(filtros),
+        _parametros_fecha(filtros) + placa_params,
     )
     entradas_por_fecha = {fila["fecha"].isoformat(): int(fila["entradas"]) for fila in entradas}
     salidas_por_fecha = {fila["fecha"].isoformat(): int(fila["salidas"]) for fila in salidas}
