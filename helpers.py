@@ -87,7 +87,6 @@ def nav_items(usuario):
             "icon": "settings",
             "endpoint": None,
             "active_prefix": "usuarios",
-            "highlight": True,
             "children": [
                 {"label": "Usuarios", "icon": "group", "endpoint": "usuarios"},
                 {"label": "Permisos", "icon": "lock", "endpoint": None},

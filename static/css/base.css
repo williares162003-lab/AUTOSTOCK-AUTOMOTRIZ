@@ -141,18 +141,15 @@ button {
 }
 
 .nav-parent.activo {
+  color: var(--primario);
+  background: transparent;
   border: 1px solid var(--primario);
 }
 
-.nav-group-highlight > .nav-link {
-  background: var(--primario);
-  color: #ffffff;
-}
-
-.nav-group-highlight > .nav-link:hover,
-.nav-group-highlight > .nav-link.activo {
-  background: var(--primario);
-  color: #ffffff;
+.nav-link.deshabilitado:hover,
+.nav-child.deshabilitado:hover {
+  color: #3f4a5a;
+  background: transparent;
 }
 
 .nav-children {
