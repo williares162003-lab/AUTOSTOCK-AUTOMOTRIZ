@@ -74,6 +74,30 @@ def _asegurar_columna(cursor, tabla, columna, definicion):
 def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
+        "entradas_stock",
+        "presentacion_id",
+        "INT UNSIGNED NULL AFTER producto_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "presentacion_nombre",
+        "VARCHAR(80) NOT NULL DEFAULT 'Unidad base' AFTER presentacion_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "factor",
+        "DECIMAL(14,3) NOT NULL DEFAULT 1 AFTER presentacion_nombre",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "cantidad_base",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER cantidad",
+    )
+    _asegurar_columna(
+        cursor,
         "productos",
         "stock_suelto",
         "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_actual",
@@ -117,6 +141,36 @@ def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
         "aperturas_balde",
+        "baldes_abiertos",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER tipo",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "contenido_por_balde",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER baldes_abiertos",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "cantidad_base",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER contenido_por_balde",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "stock_baldes_anterior",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER cantidad_base",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "stock_baldes_nuevo",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_baldes_anterior",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
         "baldes_en_uso_anterior",
         "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_baldes_nuevo",
     )
@@ -125,6 +179,30 @@ def _aplicar_migraciones(cursor):
         "aperturas_balde",
         "baldes_en_uso_nuevo",
         "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER baldes_en_uso_anterior",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "stock_abierto_anterior",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER baldes_en_uso_nuevo",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "stock_abierto_nuevo",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_abierto_anterior",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "stock_anterior",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_abierto_nuevo",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "stock_nuevo",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_anterior",
     )
     cursor.execute(
         """
