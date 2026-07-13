@@ -34,6 +34,43 @@
   outline: 0;
 }
 
+.report-quick-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+}
+
+.report-quick-filters a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--primario-oscuro);
+  background: var(--primario-suave);
+  border: 1px solid #c7d7e7;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 22px 18px;
+  padding: 12px;
+  color: #92400e;
+  background: #fff8db;
+  border: 1px solid #f3cf61;
+  border-radius: 8px;
+}
+
+.report-warning p {
+  margin: 0;
+  font-size: 12px;
+}
+
 .report-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -142,6 +179,36 @@
   color: #15803d;
 }
 
+.report-movement-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.report-movement-badge.entrada {
+  color: #15803d;
+  background: #e8f7ee;
+}
+
+.report-movement-badge.salida {
+  color: #92400e;
+  background: #fff8db;
+}
+
+.report-movement-badge.ajuste {
+  color: #475569;
+  background: #f4f6f8;
+}
+
+.report-movement-badge.balde {
+  color: var(--primario-oscuro);
+  background: var(--primario-suave);
+}
+
 .inventory-table td small {
   display: block;
   margin-top: 4px;
@@ -173,9 +240,19 @@
 
   .report-filters,
   .report-filters label,
+  .report-quick-filters,
   .report-filters .primary-button,
   .report-filters .secondary-button {
     width: 100%;
+  }
+
+  .report-quick-filters {
+    justify-content: stretch;
+  }
+
+  .report-quick-filters a {
+    flex: 1;
+    justify-content: center;
   }
 
   .report-bar-row {

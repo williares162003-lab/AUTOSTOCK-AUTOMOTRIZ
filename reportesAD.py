@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 
 from bd import consultar_todos, consultar_uno
+from movimientos_kardexAD import listar_movimientos_kardex_con_errores
 
 
 def _fecha_valida(valor):
@@ -14,7 +15,7 @@ def _fecha_valida(valor):
 
 def normalizar_filtros_reportes(filtros):
     hoy = date.today()
-    inicio = _fecha_valida(filtros.get("fecha_inicio")) or hoy.replace(day=1)
+    inicio = _fecha_valida(filtros.get("fecha_inicio")) or hoy
     fin = _fecha_valida(filtros.get("fecha_fin")) or hoy
     if inicio > fin:
         inicio, fin = fin, inicio
@@ -30,9 +31,14 @@ def _parametros_fecha(filtros):
 
 def obtener_reporte_general(filtros):
     filtros = normalizar_filtros_reportes(filtros)
+    actividad, errores_actividad = _actividad_periodo(filtros)
     return {
         "filtros": filtros,
+        "atajos": _atajos_fecha(),
+        "periodo_es_dia": filtros["fecha_inicio"] == filtros["fecha_fin"],
         "resumen": _resumen_reportes(filtros),
+        "actividad": actividad,
+        "errores_actividad": errores_actividad,
         "stock_critico": _stock_critico(),
         "movimientos_dia": _movimientos_por_dia(filtros),
         "top_salidas": _productos_mas_retirados(filtros),
@@ -41,6 +47,28 @@ def obtener_reporte_general(filtros):
         "stock_tipos": _stock_por_tipo(),
         "ajustes_recientes": _ajustes_recientes(filtros),
     }
+
+
+def _atajos_fecha():
+    hoy = date.today()
+    ayer = hoy - timedelta(days=1)
+    return {
+        "hoy": {"inicio": hoy.isoformat(), "fin": hoy.isoformat()},
+        "ayer": {"inicio": ayer.isoformat(), "fin": ayer.isoformat()},
+        "mes": {"inicio": hoy.replace(day=1).isoformat(), "fin": hoy.isoformat()},
+    }
+
+
+def _actividad_periodo(filtros):
+    movimientos, errores = listar_movimientos_kardex_con_errores(
+        {
+            "fecha_inicio": filtros["fecha_inicio"],
+            "fecha_fin": filtros["fecha_fin"],
+            "tipo": "",
+            "producto_id": "",
+        }
+    )
+    return movimientos[:120], errores
 
 
 def _resumen_reportes(filtros):

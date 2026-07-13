@@ -17,6 +17,7 @@ from inventario_productosAD import (
 from movimientos_entradasAD import abrir_balde, registrar_entrada
 from movimientos_kardexAD import listar_movimientos_kardex_con_errores
 from movimientos_salidasAD import registrar_salida
+from reportesAD import normalizar_filtros_reportes
 from tests.test_app import USUARIO_ALMACEN
 
 
@@ -327,6 +328,12 @@ class InventarioAppTests(unittest.TestCase):
         "app.obtener_reporte_general",
         return_value={
             "filtros": {"fecha_inicio": "2026-07-01", "fecha_fin": "2026-07-12"},
+            "atajos": {
+                "hoy": {"inicio": "2026-07-12", "fin": "2026-07-12"},
+                "ayer": {"inicio": "2026-07-11", "fin": "2026-07-11"},
+                "mes": {"inicio": "2026-07-01", "fin": "2026-07-12"},
+            },
+            "periodo_es_dia": False,
             "resumen": {
                 "productos": 1,
                 "con_stock": 1,
@@ -340,6 +347,22 @@ class InventarioAppTests(unittest.TestCase):
                 "lineas_salida": 1,
                 "productos_salida": 1,
             },
+            "actividad": [
+                {
+                    "fecha": "2026-07-12 10:00:00",
+                    "producto": "Aceite 20W50",
+                    "marca": None,
+                    "tipo": "Salida",
+                    "tipo_clase": "salida",
+                    "origen": "Stock suelto",
+                    "detalle": "ABC-123 / Juan Perez",
+                    "entrada": None,
+                    "salida": Decimal("1.000"),
+                    "unidad": "gal",
+                    "usuario": "William",
+                }
+            ],
+            "errores_actividad": [],
             "stock_critico": [],
             "movimientos_dia": [{"fecha": "2026-07-12", "entradas": 2, "salidas": 1, "entradas_pct": 100, "salidas_pct": 50}],
             "top_salidas": [{"nombre": "Aceite 20W50", "marca": None, "categoria": "Aceite de motor", "cantidad": Decimal("1.000"), "abreviatura": "gal", "movimientos": 1}],
@@ -353,9 +376,15 @@ class InventarioAppTests(unittest.TestCase):
         response = self.client.get("/reportes")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Reportes", response.data)
+        self.assertIn(b"Actividad del periodo", response.data)
+        self.assertIn(b"Hoy", response.data)
         self.assertIn(b"Productos mas retirados", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"/reportes", response.data)
+
+    def test_reports_default_to_current_day(self):
+        filtros = normalizar_filtros_reportes({})
+        self.assertEqual(filtros["fecha_inicio"], filtros["fecha_fin"])
 
     @patch("movimientos_kardexAD.consultar_todos", return_value=[])
     def test_kardex_adjustment_query_escapes_literal_percent(self, consultar):
