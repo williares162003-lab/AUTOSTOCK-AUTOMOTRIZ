@@ -109,7 +109,9 @@ function updateLine(row) {
 
   const originValue = origin.value;
   const abbreviation = product.dataset.abreviatura;
-  quantity.step = product.dataset.decimal === "1" ? "0.001" : "1";
+  const allowsDecimal = product.dataset.decimal === "1";
+  quantity.step = allowsDecimal ? "0.001" : "1";
+  quantity.min = allowsDecimal ? "0.001" : "1";
   if (originValue === "balde_abierto") {
     const openBuckets = toNumber(product.dataset.baldesAbiertos);
     const used = toNumber(product.dataset.stockBaldeAbierto);
