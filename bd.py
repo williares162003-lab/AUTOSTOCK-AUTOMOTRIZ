@@ -74,6 +74,48 @@ def _asegurar_columna(cursor, tabla, columna, definicion):
 def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
+        "productos",
+        "marca",
+        "VARCHAR(100) NULL AFTER categoria_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "descripcion",
+        "TEXT NULL AFTER marca",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "unidad_base_id",
+        "INT UNSIGNED NOT NULL DEFAULT 1 AFTER descripcion",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_actual",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER unidad_base_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_minimo",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_actual",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "observaciones",
+        "TEXT NULL AFTER stock_minimo",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "creado_por",
+        "INT UNSIGNED NULL AFTER observaciones",
+    )
+    _asegurar_columna(
+        cursor,
         "entradas_stock",
         "presentacion_id",
         "INT UNSIGNED NULL AFTER producto_id",
@@ -95,6 +137,48 @@ def _aplicar_migraciones(cursor):
         "entradas_stock",
         "cantidad_base",
         "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER cantidad",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "stock_anterior",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER origen_stock",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "stock_nuevo",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_anterior",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "proveedor",
+        "VARCHAR(160) NULL AFTER stock_nuevo",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "documento",
+        "VARCHAR(80) NULL AFTER proveedor",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "motivo",
+        "VARCHAR(255) NOT NULL DEFAULT 'Entrada de almacen' AFTER documento",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "usuario_id",
+        "INT UNSIGNED NULL AFTER motivo",
+    )
+    _asegurar_columna(
+        cursor,
+        "entradas_stock",
+        "creado_en",
+        "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER usuario_id",
     )
     _asegurar_columna(
         cursor,
@@ -129,8 +213,86 @@ def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
         "salidas_stock_detalle",
+        "cantidad_base",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER producto_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock_detalle",
         "origen_stock",
         "VARCHAR(30) NOT NULL DEFAULT 'suelto' AFTER cantidad_base",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock_detalle",
+        "stock_anterior",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER origen_stock",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock_detalle",
+        "stock_nuevo",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_anterior",
+    )
+    _asegurar_columna(
+        cursor,
+        "vehiculos_atendidos",
+        "modelo",
+        "VARCHAR(120) NULL AFTER placa",
+    )
+    _asegurar_columna(
+        cursor,
+        "vehiculos_atendidos",
+        "ultimo_uso",
+        "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER modelo",
+    )
+    _asegurar_columna(
+        cursor,
+        "vehiculos_atendidos",
+        "creado_en",
+        "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER ultimo_uso",
+    )
+    _asegurar_columna(
+        cursor,
+        "vehiculos_atendidos",
+        "actualizado_en",
+        "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER creado_en",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "vehiculo_id",
+        "INT UNSIGNED NULL AFTER id",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "placa",
+        "VARCHAR(20) NULL AFTER vehiculo_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "modelo",
+        "VARCHAR(120) NULL AFTER placa",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "trabajador",
+        "VARCHAR(160) NOT NULL DEFAULT 'Sin registrar' AFTER modelo",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "usuario_id",
+        "INT UNSIGNED NULL AFTER trabajador",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "creado_en",
+        "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER usuario_id",
     )
     _asegurar_columna(
         cursor,

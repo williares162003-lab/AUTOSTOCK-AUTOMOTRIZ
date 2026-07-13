@@ -13,6 +13,18 @@
   <article class="inventory-stat primary"><span class="material-symbols-outlined">oil_barrel</span><strong>{{ resumen.baldes }}</strong><p>Baldes</p></article>
 </div>
 
+{% if errores_kardex %}
+<section class="inventory-table kardex-warning">
+  <span class="material-symbols-outlined">warning</span>
+  <div>
+    <h2>Kardex pendiente de actualizar</h2>
+    {% for error in errores_kardex %}
+      <p>{{ error }}</p>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section class="inventory-table kardex-guide">
   <div class="kardex-guide-content">
     <span class="material-symbols-outlined">info</span>

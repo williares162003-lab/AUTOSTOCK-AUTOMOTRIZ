@@ -1,7 +1,37 @@
 .kardex-guide,
+.kardex-warning,
 .kardex-filters-panel,
 .kardex-product-summary {
   margin-bottom: 18px;
+}
+
+.kardex-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  color: #92400e;
+  background: #fff8db;
+  border-color: #f3cf61;
+}
+
+.kardex-warning > .material-symbols-outlined {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+}
+
+.kardex-warning h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.kardex-warning p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .kardex-guide-content {

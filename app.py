@@ -271,18 +271,34 @@ def kardex():
         "fecha_fin": request.args.get("fecha_fin", ""),
         "tipo": request.args.get("tipo", ""),
     }
-    movimientos = listar_movimientos_kardex(filtros)
+    errores_kardex = []
+    try:
+        movimientos = listar_movimientos_kardex(filtros)
+    except Exception:
+        app.logger.exception("No se pudo cargar el kardex")
+        movimientos = []
+        errores_kardex.append(
+            "No se pudo cargar el historial. Actualiza la base de datos con python app.py init-db."
+        )
     producto_id = request.args.get("producto_id", type=int)
+    producto_seleccionado = None
+    if producto_id:
+        try:
+            producto_seleccionado = obtener_producto_kardex(producto_id)
+        except Exception:
+            app.logger.exception("No se pudo cargar el producto del kardex")
+            errores_kardex.append("No se pudo cargar el resumen del producto seleccionado.")
     contexto = contexto_base("kardex")
     contexto.update(
         {
             "page_title": "Kardex",
             "page_subtitle": "Consulta el historial de entradas, salidas, ajustes y control de baldes.",
             "productos": listar_productos(),
-            "producto_seleccionado": obtener_producto_kardex(producto_id),
+            "producto_seleccionado": producto_seleccionado,
             "movimientos": movimientos,
             "resumen": resumen_kardex(movimientos),
             "filtros": filtros,
+            "errores_kardex": errores_kardex,
         }
     )
     return render_template("movimientos/kardex.html", **contexto)
