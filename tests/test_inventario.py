@@ -368,7 +368,7 @@ class InventarioAppTests(unittest.TestCase):
             "movimientos_dia": [{"fecha": "2026-07-12", "entradas": 2, "salidas": 1, "entradas_pct": 100, "salidas_pct": 50}],
             "top_salidas": [{"nombre": "Aceite 20W50", "marca": None, "categoria": "Aceite de motor", "cantidad": Decimal("1.000"), "abreviatura": "gal", "movimientos": 1}],
             "salidas_vehiculos": [],
-            "entradas_proveedores": [],
+            "entradas_recientes": [],
             "stock_tipos": [{"tipo": "Lubricante", "productos": 1, "con_stock": 1, "bajo_stock": 0, "sin_stock": 0}],
             "ajustes_recientes": [],
         },
@@ -382,6 +382,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Semana", response.data)
         self.assertIn(b"Exportar CSV", response.data)
         self.assertIn(b"Productos mas retirados", response.data)
+        self.assertIn(b"Entradas recientes", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"/reportes", response.data)
 

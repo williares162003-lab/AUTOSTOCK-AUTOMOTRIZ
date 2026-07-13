@@ -79,7 +79,7 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
     sql = """
         SELECT e.id, e.producto_id, e.creado_en AS fecha, e.origen_stock,
                e.cantidad, e.cantidad_base, e.presentacion_nombre,
-               e.stock_anterior, e.stock_nuevo, e.proveedor, e.documento, e.motivo,
+               e.stock_anterior, e.stock_nuevo, e.documento, e.motivo,
                p.nombre AS producto, p.marca, u.abreviatura,
                COALESCE(us.nombre, 'Usuario eliminado') AS usuario
         FROM entradas_stock e
@@ -104,10 +104,7 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
                 "tipo_clase": "entrada",
                 "origen": _origen_texto(fila["origen_stock"]),
                 "detalle": fila["motivo"] or "Entrada de almacen",
-                "referencia": " / ".join(
-                    valor for valor in [fila["proveedor"], fila["documento"]] if valor
-                )
-                or "-",
+                "referencia": fila["documento"] or "-",
                 "entrada": fila["cantidad"] if es_balde else fila["cantidad_base"],
                 "salida": None,
                 "unidad": "balde(s)" if es_balde else fila["abreviatura"],

@@ -153,14 +153,8 @@ def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
         "entradas_stock",
-        "proveedor",
-        "VARCHAR(160) NULL AFTER stock_nuevo",
-    )
-    _asegurar_columna(
-        cursor,
-        "entradas_stock",
         "documento",
-        "VARCHAR(80) NULL AFTER proveedor",
+        "VARCHAR(80) NULL AFTER stock_nuevo",
     )
     _asegurar_columna(
         cursor,

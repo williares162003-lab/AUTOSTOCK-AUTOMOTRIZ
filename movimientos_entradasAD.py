@@ -35,7 +35,7 @@ def listar_entradas(limite=30):
     filas = consultar_todos(
         """
         SELECT e.id, e.cantidad, e.cantidad_base, e.origen_stock, e.presentacion_nombre,
-               e.stock_anterior, e.stock_nuevo, e.proveedor, e.documento,
+               e.stock_anterior, e.stock_nuevo, e.documento,
                e.motivo, e.creado_en, p.nombre AS producto, p.marca,
                u.abreviatura, COALESCE(us.nombre, 'Usuario eliminado') AS usuario
         FROM entradas_stock e
@@ -105,7 +105,6 @@ def registrar_entrada(datos, usuario_id):
     tipo_entrada = datos.get("tipo_entrada", ORIGEN_SUELTO)
     presentacion_id = datos.get("presentacion_id", "base")
     cantidad, error = _decimal(datos.get("cantidad"), "La cantidad")
-    proveedor = datos.get("proveedor", "").strip() or None
     documento = datos.get("documento", "").strip() or None
     motivo = datos.get("motivo", "").strip() or "Entrada de almacen"
 
@@ -200,8 +199,8 @@ def registrar_entrada(datos, usuario_id):
             INSERT INTO entradas_stock
                 (producto_id, presentacion_id, presentacion_nombre, factor, cantidad,
                  cantidad_base, origen_stock, stock_anterior, stock_nuevo,
-                 proveedor, documento, motivo, usuario_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 documento, motivo, usuario_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 producto_id,
@@ -213,15 +212,12 @@ def registrar_entrada(datos, usuario_id):
                 tipo_entrada,
                 stock_anterior,
                 stock_nuevo,
-                proveedor,
                 documento,
                 motivo,
                 usuario_id,
             ),
         )
         detalle = f"Entrada: {motivo}"
-        if proveedor:
-            detalle += f" / {proveedor}"
         if documento:
             detalle += f" / {documento}"
         if tipo_entrada == ORIGEN_BALDE_CERRADO:

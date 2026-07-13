@@ -201,17 +201,24 @@
 
 <section class="report-grid two-columns">
   <article class="inventory-table">
-    <div class="inventory-toolbar"><div><h2>Entradas por proveedor</h2><p>Compras y reposiciones</p></div></div>
+    <div class="inventory-toolbar"><div><h2>Entradas recientes</h2><p>Compras y reposiciones</p></div></div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Proveedor</th><th>Entradas</th><th>Productos</th><th>Ultima entrada</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Producto</th><th>Entrada</th><th>Documento</th></tr></thead>
         <tbody>
-          {% for proveedor in entradas_proveedores %}
+          {% for entrada in entradas_recientes %}
           <tr>
-            <td><strong>{{ proveedor.proveedor }}</strong></td>
-            <td>{{ proveedor.entradas }}</td>
-            <td>{{ proveedor.productos }}</td>
-            <td>{{ proveedor.ultima_entrada }}</td>
+            <td>{{ entrada.creado_en }}</td>
+            <td><strong>{{ entrada.producto }}</strong><small>{{ entrada.marca or "Sin marca" }}</small></td>
+            <td>
+              {% if entrada.origen_stock == "balde_cerrado" %}
+              <strong class="report-positive">+{{ entrada.cantidad|float|round(3) }} balde(s)</strong>
+              {% else %}
+              <strong class="report-positive">+{{ entrada.cantidad_base|float|round(3) }} {{ entrada.abreviatura }}</strong>
+              {% endif %}
+              <small>{{ entrada.motivo }}</small>
+            </td>
+            <td>{{ entrada.documento or "-" }}</td>
           </tr>
           {% else %}
           <tr><td class="empty-row" colspan="4">Sin entradas en el periodo.</td></tr>

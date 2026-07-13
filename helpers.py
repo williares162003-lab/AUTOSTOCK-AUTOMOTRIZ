@@ -76,7 +76,6 @@ def nav_items(usuario):
                 {"label": "Kardex", "icon": "fact_check", "endpoint": "kardex"},
             ],
         },
-        {"label": "Proveedores", "icon": "local_shipping", "endpoint": None},
         {"label": "Reportes", "icon": "monitoring", "endpoint": "reportes"},
     ]
 

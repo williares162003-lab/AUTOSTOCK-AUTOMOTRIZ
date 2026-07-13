@@ -45,7 +45,7 @@ def obtener_reporte_general(filtros):
         "movimientos_dia": _movimientos_por_dia(filtros),
         "top_salidas": _productos_mas_retirados(filtros),
         "salidas_vehiculos": _salidas_por_vehiculo(filtros),
-        "entradas_proveedores": _entradas_por_proveedor(filtros),
+        "entradas_recientes": _entradas_recientes(filtros),
         "stock_tipos": _stock_por_tipo(),
         "ajustes_recientes": _ajustes_recientes(filtros),
     }
@@ -136,15 +136,20 @@ def generar_reporte_csv(filtros):
         )
     escritor.writerow([])
 
-    escritor.writerow(["Entradas por proveedor"])
-    escritor.writerow(["Proveedor", "Entradas", "Productos", "Ultima entrada"])
-    for proveedor in reporte["entradas_proveedores"]:
+    escritor.writerow(["Entradas recientes"])
+    escritor.writerow(["Fecha", "Producto", "Marca", "Entrada", "Unidad", "Documento", "Motivo", "Usuario"])
+    for entrada in reporte["entradas_recientes"]:
+        es_balde = entrada["origen_stock"] == "balde_cerrado"
         escritor.writerow(
             [
-                proveedor["proveedor"],
-                proveedor["entradas"],
-                proveedor["productos"],
-                proveedor["ultima_entrada"],
+                entrada["creado_en"],
+                entrada["producto"],
+                entrada["marca"] or "Sin marca",
+                entrada["cantidad"] if es_balde else entrada["cantidad_base"],
+                "balde(s)" if es_balde else entrada["abreviatura"],
+                entrada["documento"] or "",
+                entrada["motivo"],
+                entrada["usuario"],
             ]
         )
     escritor.writerow([])
@@ -297,19 +302,21 @@ def _salidas_por_vehiculo(filtros):
     ]
 
 
-def _entradas_por_proveedor(filtros):
+def _entradas_recientes(filtros):
     return [
         dict(fila)
         for fila in consultar_todos(
             """
-            SELECT COALESCE(NULLIF(proveedor, ''), 'Sin proveedor') AS proveedor,
-                   COUNT(*) AS entradas,
-                   COUNT(DISTINCT producto_id) AS productos,
-                   MAX(creado_en) AS ultima_entrada
-            FROM entradas_stock
-            WHERE DATE(creado_en) BETWEEN %s AND %s
-            GROUP BY COALESCE(NULLIF(proveedor, ''), 'Sin proveedor')
-            ORDER BY entradas DESC, productos DESC, ultima_entrada DESC
+            SELECT e.creado_en, e.cantidad, e.cantidad_base, e.origen_stock,
+                   e.presentacion_nombre, e.documento, e.motivo,
+                   p.nombre AS producto, p.marca, u.abreviatura,
+                   COALESCE(us.nombre, 'Usuario eliminado') AS usuario
+            FROM entradas_stock e
+            INNER JOIN productos p ON p.id = e.producto_id
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            LEFT JOIN usuarios us ON us.id = e.usuario_id
+            WHERE DATE(e.creado_en) BETWEEN %s AND %s
+            ORDER BY e.id DESC
             LIMIT 8
             """,
             _parametros_fecha(filtros),

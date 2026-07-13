@@ -101,7 +101,6 @@ CREATE TABLE IF NOT EXISTS entradas_stock (
     origen_stock VARCHAR(30) NOT NULL DEFAULT 'suelto',
     stock_anterior DECIMAL(14,3) NOT NULL,
     stock_nuevo DECIMAL(14,3) NOT NULL,
-    proveedor VARCHAR(160) NULL,
     documento VARCHAR(80) NULL,
     motivo VARCHAR(255) NOT NULL,
     usuario_id INT UNSIGNED NULL,
