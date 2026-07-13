@@ -4,7 +4,6 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario/productos.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/reportes/reportes.css') }}">
 {% endblock %}
-
 {% block content %}
 <div class="inventory-stats">
   <article class="inventory-stat neutral"><span class="material-symbols-outlined">inventory_2</span><strong>{{ resumen.productos }}</strong><p>Productos</p></article>
@@ -38,6 +37,17 @@
     <a class="report-export-button" href="{{ url_for('exportar_reportes', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin, placa=filtros.get('placa', '')) }}"><span class="material-symbols-outlined">download</span>Exportar CSV</a>
   </form>
 </section>
+
+{% if errores_reporte %}
+<div class="report-warning">
+  <span class="material-symbols-outlined">warning</span>
+  <div>
+    {% for error in errores_reporte %}
+    <p><strong>{{ error.mensaje }}</strong> {{ error.detalle }}</p>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <section class="report-summary-grid">
   <article class="report-card">
@@ -133,7 +143,7 @@
               <div class="report-exit-item">
                 <div>
                   <strong>{{ item.producto }}</strong>
-                  <small>{{ item.marca or "Sin marca" }} · {{ item.origen_texto }}</small>
+                  <small>{{ item.marca or "Sin marca" }} - {{ item.origen_texto }}</small>
                 </div>
                 <span>-{{ item.cantidad|float|round(3) }} {{ item.abreviatura }}</span>
               </div>

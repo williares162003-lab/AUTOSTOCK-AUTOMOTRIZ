@@ -45,23 +45,61 @@ def _filtro_placa(filtros, alias="s"):
 
 def obtener_reporte_general(filtros):
     filtros = normalizar_filtros_reportes(filtros)
-    actividad, errores_actividad = _actividad_periodo(filtros)
+    errores_reporte = []
+    actividad, errores_actividad = _seguro(
+        "actividad del periodo",
+        lambda: _actividad_periodo(filtros),
+        ([], []),
+        errores_reporte,
+    )
     return {
         "filtros": filtros,
         "atajos": _atajos_fecha(),
         "periodo_es_dia": filtros["fecha_inicio"] == filtros["fecha_fin"],
-        "resumen": _resumen_reportes(filtros),
+        "resumen": _seguro("resumen", lambda: _resumen_reportes(filtros), _resumen_vacio(), errores_reporte),
         "actividad": actividad,
         "errores_actividad": errores_actividad,
-        "stock_critico": _stock_critico(),
-        "movimientos_dia": _movimientos_por_dia(filtros),
-        "top_salidas": _productos_mas_retirados(filtros),
-        "salidas_vehiculos": _salidas_por_vehiculo(filtros),
-        "salidas_agrupadas": _salidas_agrupadas_por_dia(filtros),
-        "detalle_placa": _detalle_por_placa(filtros),
-        "entradas_recientes": _entradas_recientes(filtros),
-        "stock_tipos": _stock_por_tipo(),
-        "ajustes_recientes": _ajustes_recientes(filtros),
+        "errores_reporte": errores_reporte,
+        "stock_critico": _seguro("productos criticos", _stock_critico, [], errores_reporte),
+        "movimientos_dia": _seguro("movimientos por dia", lambda: _movimientos_por_dia(filtros), [], errores_reporte),
+        "top_salidas": _seguro("productos mas retirados", lambda: _productos_mas_retirados(filtros), [], errores_reporte),
+        "salidas_vehiculos": _seguro("salidas por vehiculo", lambda: _salidas_por_vehiculo(filtros), [], errores_reporte),
+        "salidas_agrupadas": _seguro("salidas por dia y placa", lambda: _salidas_agrupadas_por_dia(filtros), [], errores_reporte),
+        "detalle_placa": _seguro("detalle por placa", lambda: _detalle_por_placa(filtros), [], errores_reporte),
+        "entradas_recientes": _seguro("entradas recientes", lambda: _entradas_recientes(filtros), [], errores_reporte),
+        "stock_tipos": _seguro("stock por tipo", _stock_por_tipo, [], errores_reporte),
+        "ajustes_recientes": _seguro("ajustes recientes", lambda: _ajustes_recientes(filtros), [], errores_reporte),
+    }
+
+
+def _seguro(nombre, funcion, predeterminado, errores):
+    try:
+        return funcion()
+    except Exception as error:
+        errores.append(
+            {
+                "mensaje": f"No se pudo cargar {nombre}.",
+                "detalle": f"{type(error).__name__}: {str(error)[:180]}",
+            }
+        )
+        return predeterminado
+
+
+def _resumen_vacio():
+    return {
+        "productos": 0,
+        "con_stock": 0,
+        "sin_stock": 0,
+        "bajo_stock": 0,
+        "baldes_cerrados": 0,
+        "baldes_en_uso": 0,
+        "cilindros_cerrados": 0,
+        "cilindros_en_uso": 0,
+        "entradas": 0,
+        "productos_entrada": 0,
+        "salidas": 0,
+        "lineas_salida": 0,
+        "productos_salida": 0,
     }
 
 
