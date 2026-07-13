@@ -42,6 +42,7 @@ from inventario_productosAD import (
 from loginAD import autenticar_usuario, preparar_usuarios_iniciales
 from movimientos_entradasAD import (
     abrir_balde,
+    abrir_caja,
     abrir_cilindro,
     cerrar_balde,
     cerrar_cilindro,
@@ -249,6 +250,15 @@ def abrir_balde_entrada():
     return redirect(url_for("entradas"))
 
 
+@app.post("/movimientos/entradas/abrir-caja")
+@login_requerido
+@csrf_requerido
+def abrir_caja_entrada():
+    correcto, mensaje = abrir_caja(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("entradas"))
+
+
 @app.post("/movimientos/entradas/cerrar-balde")
 @login_requerido
 @csrf_requerido
@@ -345,7 +355,7 @@ def kardex():
     contexto.update(
         {
             "page_title": "Kardex",
-            "page_subtitle": "Consulta el historial de entradas, salidas, ajustes y control de baldes.",
+            "page_subtitle": "Consulta el historial de entradas, salidas, ajustes y control de envases.",
             "productos": listar_productos(),
             "producto_seleccionado": producto_seleccionado,
             "movimientos": movimientos,

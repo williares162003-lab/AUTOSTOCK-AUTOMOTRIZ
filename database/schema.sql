@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS categorias (
 CREATE TABLE IF NOT EXISTS productos (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(180) NOT NULL,
+    codigo VARCHAR(80) NULL,
     tipo_id INT UNSIGNED NOT NULL,
     categoria_id INT UNSIGNED NOT NULL,
     marca VARCHAR(100) NULL,
@@ -75,6 +76,8 @@ CREATE TABLE IF NOT EXISTS productos (
     cilindros_abiertos DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_cilindros_cerrados DECIMAL(14,3) NOT NULL DEFAULT 0,
     litros_por_cilindro DECIMAL(14,3) NOT NULL DEFAULT 0,
+    stock_cajas_cerradas DECIMAL(14,3) NOT NULL DEFAULT 0,
+    unidades_por_caja DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_minimo DECIMAL(14,3) NOT NULL DEFAULT 0,
     observaciones TEXT NULL,
     creado_por INT UNSIGNED NULL,

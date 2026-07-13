@@ -27,6 +27,7 @@
             <option value="suelto">Stock suelto</option>
             <option value="balde_cerrado">Baldes cerrados</option>
             <option value="cilindro_cerrado">Cilindros cerrados</option>
+            <option value="caja_cerrada">Cajas cerradas</option>
           </select>
         </label>
         <label>
@@ -75,11 +76,13 @@
                 data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
                 data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
                 data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+                data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
+                data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
                 data-unidad="{{ producto.unidad|e }}"
                 data-abreviatura="{{ producto.abreviatura|e }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
                 data-presentaciones="{{ producto.presentaciones|tojson|forceescape }}"
-              >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+              >{% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
             {% endfor %}
           </select>
         </label>
@@ -94,6 +97,10 @@
         <label data-cylinder-liters-field hidden>
           <span>Litros por cilindro</span>
           <input name="litros_cilindro" type="number" min="0.001" step="0.001" data-cylinder-liters>
+        </label>
+        <label data-box-units-field hidden>
+          <span>Unidades por caja</span>
+          <input name="unidades_caja" type="number" min="0.001" step="0.001" data-box-units>
         </label>
         <label>
           <span>Documento (opcional)</span>
@@ -118,8 +125,8 @@
   <aside class="entry-help">
     <span class="material-symbols-outlined">info</span>
     <h2>Como suma el stock</h2>
-    <p>El stock suelto queda disponible para entregar. Baldes y cilindros cerrados se guardan aparte hasta que abras uno.</p>
-    <div><strong>Cajas</strong><span>Para cajas con piezas, usa Presentaciones: Caja = 24 und, por ejemplo.</span></div>
+    <p>El stock suelto queda disponible para entregar. Baldes, cilindros y cajas cerradas se guardan aparte hasta que abras uno.</p>
+    <div><strong>Cajas</strong><span>Registra cuantas cajas entran y cuantas unidades trae cada una. Al abrir una caja, pasa a stock suelto.</span></div>
     <div><strong>Cilindros</strong><span>Registra cuantos cilindros entran y cuantos litros trae cada uno.</span></div>
   </aside>
 </section>
@@ -173,7 +180,7 @@
               data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
               data-baldes-abiertos="{{ producto.baldes_abiertos }}"
               data-abreviatura="{{ producto.abreviatura|e }}"
-            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+            >{% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
@@ -185,6 +192,65 @@
     </div>
     <div class="dialog-actions">
       <button class="primary-button" type="submit"><span class="material-symbols-outlined">oil_barrel</span>Abrir balde</button>
+    </div>
+  </form>
+  <form method="post" action="{{ url_for('abrir_caja_entrada') }}" class="entry-form bucket-form" data-box-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="product-form-grid">
+      <label>
+        <span>Area</span>
+        <select required data-box-product-area>
+          <option value="">Selecciona un area</option>
+          {% for area in areas %}
+            <option value="{{ area.id }}">{{ area.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Tipo de producto</span>
+        <select required data-box-product-type disabled>
+          <option value="">Primero selecciona un area</option>
+          {% for tipo in tipos %}
+            <option value="{{ tipo.id }}" data-area="{{ tipo.area_id }}">{{ tipo.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Categoria</span>
+        <select required data-box-product-category disabled>
+          <option value="">Primero selecciona un tipo</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" data-area="{{ categoria.area_id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="span-two">
+        <span>Producto con caja cerrada</span>
+        <select name="producto_id" required data-box-product disabled>
+          <option value="">Primero selecciona una categoria</option>
+          {% for producto in productos %}
+            <option
+              value="{{ producto.id }}"
+              data-area="{{ producto.area_id }}"
+              data-type="{{ producto.tipo_id }}"
+              data-category="{{ producto.categoria_id }}"
+              data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
+              data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
+              data-stock-suelto="{{ producto.stock_suelto }}"
+              data-abreviatura="{{ producto.abreviatura|e }}"
+            >{% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="entry-preview">
+      <div><span>Cajas cerradas</span><strong data-box-closed>-</strong></div>
+      <div><span>Unidades por caja</span><strong data-box-units-preview>-</strong></div>
+      <div><span>Suelto actual</span><strong data-box-loose>-</strong></div>
+      <div><span>Al abrir</span><strong data-box-estimated>-</strong></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="primary-button" type="submit"><span class="material-symbols-outlined">inventory_2</span>Abrir caja</button>
     </div>
   </form>
   <form method="post" action="{{ url_for('cerrar_balde_entrada') }}" class="entry-form bucket-close-form" data-bucket-close-form>
@@ -230,7 +296,7 @@
               data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
               data-baldes-abiertos="{{ producto.baldes_abiertos }}"
               data-abreviatura="{{ producto.abreviatura|e }}"
-            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+            >{% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
@@ -289,7 +355,7 @@
               data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
               data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
               data-abreviatura="{{ producto.abreviatura|e }}"
-            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+            >{% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
@@ -348,7 +414,7 @@
               data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
               data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
               data-abreviatura="{{ producto.abreviatura|e }}"
-            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+            >{% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
@@ -403,6 +469,8 @@
               <strong class="adjustment-value positive">+{{ entrada.cantidad|float|round(3) }} balde(s)</strong><small>{{ entrada.presentacion_nombre }}</small>
             {% elif entrada.origen_stock == "cilindro_cerrado" %}
               <strong class="adjustment-value positive">+{{ entrada.cantidad|float|round(3) }} cilindro(s)</strong><small>{{ entrada.factor|float|round(3) }} {{ entrada.abreviatura }} c/u</small>
+            {% elif entrada.origen_stock == "caja_cerrada" %}
+              <strong class="adjustment-value positive">+{{ entrada.cantidad|float|round(3) }} caja(s)</strong><small>{{ entrada.factor|float|round(3) }} {{ entrada.abreviatura }} c/u</small>
             {% else %}
               <strong class="adjustment-value positive">+{{ entrada.cantidad_base|float|round(3) }} {{ entrada.abreviatura }}</strong><small>{{ entrada.cantidad|float|round(3) }} {{ entrada.presentacion_nombre }}</small>
             {% endif %}

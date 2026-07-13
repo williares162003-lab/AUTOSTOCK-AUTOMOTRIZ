@@ -20,7 +20,7 @@
       <select data-area-filter aria-label="Filtrar por area"><option value="">Todas las areas</option>{% for area in areas %}<option value="{{ area.id }}">{{ area.nombre }}</option>{% endfor %}</select>
       <select data-type-filter aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>{% for tipo in tipos %}<option value="{{ tipo.id }}" data-area="{{ tipo.area_id }}">{{ tipo.nombre }}</option>{% endfor %}</select>
       <select data-category-filter aria-label="Filtrar por categoria"><option value="">Todas las categorias</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-area="{{ categoria.area_id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>{% endfor %}</select>
-      <select data-status-filter aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="bajo">Bajo minimo</option><option value="baldes">Solo baldes</option><option value="sin_stock">Sin stock</option></select>
+      <select data-status-filter aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="bajo">Bajo minimo</option><option value="envases">Solo envases</option><option value="sin_stock">Sin stock</option></select>
       <button class="primary-button" type="button" data-open-product><span class="material-symbols-outlined">add_box</span>Nuevo producto</button>
     </div>
   </div>
@@ -30,25 +30,29 @@
       <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Existencia</th><th>Estado</th><th>Presentaciones</th><th class="action-heading">Accion</th></tr></thead>
       <tbody>
         {% for producto in productos %}
-        {% set solo_baldes = producto.stock_actual <= 0 and (producto.stock_baldes_cerrados > 0 or producto.baldes_abiertos > 0 or producto.stock_cilindros_cerrados > 0 or producto.cilindros_abiertos > 0) %}
-        {% set sin_stock = producto.stock_actual <= 0 and producto.stock_baldes_cerrados <= 0 and producto.baldes_abiertos <= 0 and producto.stock_cilindros_cerrados <= 0 and producto.cilindros_abiertos <= 0 %}
-        {% set bajo_stock = producto.stock_actual > 0 and producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}
-        {% set estado_stock = 'baldes' if solo_baldes else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
-        {% set estado_texto = 'Solo baldes' if solo_baldes else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
-        <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.area ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-area="{{ producto.area_id }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
-          <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></div></div></td>
+        {% set stock_total = producto.stock_total|default(producto.stock_actual) %}
+        {% set solo_envases = producto.stock_actual <= 0 and (producto.stock_baldes_cerrados > 0 or producto.baldes_abiertos > 0 or producto.stock_cilindros_cerrados > 0 or producto.cilindros_abiertos > 0 or producto.stock_cajas_cerradas|default(0) > 0) %}
+        {% set sin_stock = producto.stock_actual <= 0 and producto.stock_baldes_cerrados <= 0 and producto.baldes_abiertos <= 0 and producto.stock_cilindros_cerrados <= 0 and producto.cilindros_abiertos <= 0 and producto.stock_cajas_cerradas|default(0) <= 0 %}
+        {% set bajo_stock = stock_total > 0 and producto.stock_minimo > 0 and stock_total <= producto.stock_minimo %}
+        {% set estado_stock = 'envases' if solo_envases else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
+        {% set estado_texto = 'Solo envases' if solo_envases else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
+        <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.codigo or '') ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.area ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-area="{{ producto.area_id }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
+          <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.codigo or producto.marca or "Sin marca" }}{% if producto.codigo and producto.marca %} / {{ producto.marca }}{% endif %}</small></div></div></td>
           <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.area }} / {{ producto.categoria }}</small></td>
           <td>
             <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</strong>
             <small>Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</small>
             <div class="stock-breakdown">
               <span>Suelto: {{ producto.stock_suelto|float|round(3) }}</span>
+              <span>Total: {{ stock_total|float|round(3) }}</span>
               <span>En uso: {{ producto.baldes_abiertos|float|round(3) }} balde(s)</span>
               <span>Usado del balde: {{ producto.stock_balde_abierto|float|round(3) }}</span>
               <span>Cerrados: {{ producto.stock_baldes_cerrados|float|round(3) }}</span>
               <span>Cil. uso: {{ producto.cilindros_abiertos|float|round(3) }}</span>
               <span>Usado cilindro: {{ producto.stock_cilindro_abierto|float|round(3) }}</span>
               <span>Cil. cerrados: {{ producto.stock_cilindros_cerrados|float|round(3) }}</span>
+              <span>Cajas cerr.: {{ producto.stock_cajas_cerradas|default(0)|float|round(3) }}</span>
+              <span>Und/caja: {{ producto.unidades_por_caja|default(0)|float|round(3) }}</span>
             </div>
           </td>
           <td><span class="stock-badge {{ estado_stock }}">{{ estado_texto }}</span><small class="unit-label">{{ producto.unidad }}</small></td>
@@ -65,6 +69,7 @@
                 title="Ver detalle"
                 data-view-product
                 data-nombre="{{ producto.nombre|e }}"
+                data-codigo="{{ (producto.codigo or '')|e }}"
                 data-marca="{{ (producto.marca or 'Sin marca')|e }}"
                 data-area="{{ producto.area|e }}"
                 data-tipo="{{ producto.tipo|e }}"
@@ -80,6 +85,9 @@
                 data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
                 data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
                 data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+                data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
+                data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
+                data-stock-total="{{ stock_total }}"
                 data-minimo="{{ producto.stock_minimo }}"
                 data-estado="{{ estado_texto }}"
                 data-descripcion="{{ (producto.descripcion or 'Sin descripcion')|e }}"
@@ -93,6 +101,7 @@
                 data-edit-product
                 data-action="{{ url_for('editar_producto', producto_id=producto.id) }}"
                 data-nombre="{{ producto.nombre|e }}"
+                data-codigo="{{ (producto.codigo or '')|e }}"
                 data-area-id="{{ producto.area_id }}"
                 data-tipo-id="{{ producto.tipo_id }}"
                 data-categoria-id="{{ producto.categoria_id }}"
@@ -119,6 +128,9 @@
                 data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
                 data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
                 data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+                data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
+                data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
+                data-stock-total="{{ stock_total }}"
                 data-unidad="{{ producto.abreviatura }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
               ><span class="material-symbols-outlined">tune</span></button>
@@ -177,6 +189,9 @@
     <div><span>Usado del cilindro</span><strong data-detail-stock-open-cylinder></strong></div>
     <div><span>Cilindros cerrados</span><strong data-detail-stock-closed-cylinders></strong></div>
     <div><span>Litros por cilindro</span><strong data-detail-cylinder-liters></strong></div>
+    <div><span>Cajas cerradas</span><strong data-detail-closed-boxes></strong></div>
+    <div><span>Unidades por caja</span><strong data-detail-box-units></strong></div>
+    <div><span>Total con cajas</span><strong data-detail-total-stock></strong></div>
     <div><span>Stock minimo para alerta</span><strong data-detail-minimum></strong></div>
     <div><span>Estado</span><strong data-detail-status></strong></div>
   </div>
@@ -185,6 +200,7 @@
     <div><dt>Area</dt><dd data-detail-area></dd></div>
     <div><dt>Categoria</dt><dd data-detail-category></dd></div>
     <div><dt>Unidad base</dt><dd data-detail-unit></dd></div>
+    <div><dt>Codigo</dt><dd data-detail-code></dd></div>
     <div><dt>Marca</dt><dd data-detail-brand></dd></div>
     <div class="span-two"><dt>Descripcion</dt><dd data-detail-description></dd></div>
     <div class="span-two"><dt>Observaciones</dt><dd data-detail-notes></dd></div>
@@ -202,6 +218,7 @@
     <div class="dialog-header"><div><h2 data-dialog-title>Nuevo producto</h2></div><button type="button" class="dialog-close" title="Cerrar" data-close-dialog><span class="material-symbols-outlined">close</span></button></div>
     <div class="product-form-grid">
       <label class="span-two"><span>Nombre</span><input name="nombre" required minlength="3" maxlength="180"></label>
+      <label><span>Codigo (opcional)</span><input name="codigo" maxlength="80" placeholder="UB-123, P-45"></label>
       <label><span>Area</span><select required data-form-area>{% for area in areas %}<option value="{{ area.id }}">{{ area.nombre }}</option>{% endfor %}</select></label>
       <label><span>Tipo de producto</span><select name="tipo_id" required data-form-type>{% for tipo in tipos %}<option value="{{ tipo.id }}" data-area="{{ tipo.area_id }}">{{ tipo.nombre }}</option>{% endfor %}</select></label>
       <label><span>Categoria</span><select name="categoria_id" required data-form-category>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-area="{{ categoria.area_id }}" data-type="{{ categoria.tipo_id }}">{{ categoria.nombre }}</option>{% endfor %}</select></label>
@@ -236,6 +253,8 @@
       <label><span>Usado del cilindro abierto</span><input name="stock_cilindro_abierto_nuevo" type="number" min="0" required data-new-stock-open-cylinder></label>
       <label><span>Cilindros cerrados</span><input name="stock_cilindros_cerrados_nuevo" type="number" min="0" step="1" required data-new-stock-closed-cylinders></label>
       <label><span>Litros por cilindro</span><input name="litros_por_cilindro_nuevo" type="number" min="0" step="0.001" required data-new-cylinder-liters></label>
+      <label><span>Cajas cerradas</span><input name="stock_cajas_cerradas_nuevo" type="number" min="0" step="1" required data-new-stock-closed-boxes></label>
+      <label><span>Unidades por caja</span><input name="unidades_por_caja_nuevo" type="number" min="0" step="0.001" required data-new-box-units></label>
       <label><span>Motivo</span><textarea name="motivo" rows="3" required minlength="3" maxlength="255"></textarea></label>
     </div>
     <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancelar</button><button class="primary-button" type="submit"><span class="material-symbols-outlined">save</span>Guardar ajuste</button></div>

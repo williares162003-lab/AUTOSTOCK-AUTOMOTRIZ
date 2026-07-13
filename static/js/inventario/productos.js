@@ -76,6 +76,7 @@ document.querySelectorAll("[data-edit-product]").forEach((button) => {
     document.querySelector("[data-dialog-title]").textContent = "Editar producto";
     const fields = {
       nombre: "nombre",
+      codigo: "codigo",
       marca: "marca",
       descripcion: "descripcion",
       unidad_base_id: "unidadBaseId",
@@ -115,12 +116,16 @@ document.querySelectorAll("[data-view-product]").forEach((button) => {
     detailDialog.querySelector("[data-detail-stock-open-cylinder]").textContent = `${button.dataset.stockCilindroAbierto} ${button.dataset.abreviatura}`;
     detailDialog.querySelector("[data-detail-stock-closed-cylinders]").textContent = `${button.dataset.stockCilindrosCerrados} cilindro(s)`;
     detailDialog.querySelector("[data-detail-cylinder-liters]").textContent = `${button.dataset.litrosPorCilindro} ${button.dataset.abreviatura}`;
+    detailDialog.querySelector("[data-detail-closed-boxes]").textContent = `${button.dataset.stockCajasCerradas || 0} caja(s)`;
+    detailDialog.querySelector("[data-detail-box-units]").textContent = `${button.dataset.unidadesPorCaja || 0} ${button.dataset.abreviatura}`;
+    detailDialog.querySelector("[data-detail-total-stock]").textContent = `${button.dataset.stockTotal || button.dataset.stock} ${button.dataset.abreviatura}`;
     detailDialog.querySelector("[data-detail-minimum]").textContent = `${button.dataset.minimo} ${button.dataset.abreviatura}`;
     detailDialog.querySelector("[data-detail-status]").textContent = button.dataset.estado;
     detailDialog.querySelector("[data-detail-area]").textContent = button.dataset.area;
     detailDialog.querySelector("[data-detail-type]").textContent = button.dataset.tipo;
     detailDialog.querySelector("[data-detail-category]").textContent = button.dataset.categoria;
     detailDialog.querySelector("[data-detail-unit]").textContent = `${button.dataset.unidad} (${button.dataset.abreviatura})`;
+    detailDialog.querySelector("[data-detail-code]").textContent = button.dataset.codigo || "Sin codigo";
     detailDialog.querySelector("[data-detail-brand]").textContent = button.dataset.marca;
     detailDialog.querySelector("[data-detail-description]").textContent = button.dataset.descripcion;
     detailDialog.querySelector("[data-detail-notes]").textContent = button.dataset.observaciones;
@@ -157,6 +162,8 @@ document.querySelectorAll("[data-adjust-stock]").forEach((button) => {
     const openCylindersInput = stockDialog.querySelector("[data-new-open-cylinders]");
     const closedCylindersInput = stockDialog.querySelector("[data-new-stock-closed-cylinders]");
     const cylinderLitersInput = stockDialog.querySelector("[data-new-cylinder-liters]");
+    const closedBoxesInput = stockDialog.querySelector("[data-new-stock-closed-boxes]");
+    const boxUnitsInput = stockDialog.querySelector("[data-new-box-units]");
     const step = button.dataset.decimal === "1" ? "0.001" : "1";
     looseInput.value = button.dataset.stockSuelto;
     openBucketInput.value = button.dataset.stockBaldeAbierto;
@@ -166,9 +173,12 @@ document.querySelectorAll("[data-adjust-stock]").forEach((button) => {
     openCylindersInput.value = button.dataset.cilindrosAbiertos;
     closedCylindersInput.value = button.dataset.stockCilindrosCerrados;
     cylinderLitersInput.value = button.dataset.litrosPorCilindro;
+    closedBoxesInput.value = button.dataset.stockCajasCerradas || "0";
+    boxUnitsInput.value = button.dataset.unidadesPorCaja || "0";
     looseInput.step = step;
     openBucketInput.step = step;
     openCylinderInput.step = step;
+    boxUnitsInput.step = step;
     stockDialog.showModal();
   });
 });

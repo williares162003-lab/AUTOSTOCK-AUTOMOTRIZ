@@ -144,7 +144,7 @@
             data-unidad="{{ producto.unidad|e }}"
             data-abreviatura="{{ producto.abreviatura|e }}"
             data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
-          >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+          >{% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
         {% endfor %}
       </select>
     </label>

@@ -6,6 +6,7 @@ from bd import consultar_todos, consultar_uno, ejecutar_transaccion
 ORIGEN_SUELTO = "suelto"
 ORIGEN_BALDE_CERRADO = "balde_cerrado"
 ORIGEN_CILINDRO_CERRADO = "cilindro_cerrado"
+ORIGEN_CAJA_CERRADA = "caja_cerrada"
 
 
 def _entero(valor):
@@ -30,6 +31,7 @@ def _origen_texto(origen):
         ORIGEN_SUELTO: "Stock suelto",
         ORIGEN_BALDE_CERRADO: "Balde cerrado",
         ORIGEN_CILINDRO_CERRADO: "Cilindro cerrado",
+        ORIGEN_CAJA_CERRADA: "Caja cerrada",
     }.get(origen, "Stock suelto")
 
 
@@ -78,10 +80,15 @@ def listar_aperturas_balde(limite=12):
     aperturas = []
     for fila in filas:
         apertura = dict(fila)
-        envase = "Cilindro" if apertura["envase"] == "cilindro" else "Balde"
+        envases = {"cilindro": "Cilindro", "caja": "Caja"}
+        envase = envases.get(apertura["envase"], "Balde")
         apertura["envase_texto"] = envase
-        apertura["unidad_envase"] = "cilindro(s)" if apertura["envase"] == "cilindro" else "balde(s)"
-        apertura["tipo_texto"] = f"{envase} terminado" if apertura["tipo"] == "cierre" else f"{envase} abierto"
+        unidades = {"cilindro": "cilindro(s)", "caja": "caja(s)"}
+        apertura["unidad_envase"] = unidades.get(apertura["envase"], "balde(s)")
+        if envase == "Caja":
+            apertura["tipo_texto"] = "Caja terminada" if apertura["tipo"] == "cierre" else "Caja abierta"
+        else:
+            apertura["tipo_texto"] = f"{envase} terminado" if apertura["tipo"] == "cierre" else f"{envase} abierto"
         aperturas.append(apertura)
     return aperturas
 
@@ -114,13 +121,17 @@ def registrar_entrada(datos, usuario_id):
         datos.get("litros_cilindro"),
         "Los litros por cilindro",
     ) if tipo_entrada == ORIGEN_CILINDRO_CERRADO else (Decimal("0.000"), None)
+    unidades_caja, error_unidades_caja = _decimal(
+        datos.get("unidades_caja"),
+        "Las unidades por caja",
+    ) if tipo_entrada == ORIGEN_CAJA_CERRADA else (Decimal("0.000"), None)
     documento = datos.get("documento", "").strip() or None
     motivo = datos.get("motivo", "").strip() or "Entrada de almacen"
 
-    if tipo_entrada not in (ORIGEN_SUELTO, ORIGEN_BALDE_CERRADO, ORIGEN_CILINDRO_CERRADO):
+    if tipo_entrada not in (ORIGEN_SUELTO, ORIGEN_BALDE_CERRADO, ORIGEN_CILINDRO_CERRADO, ORIGEN_CAJA_CERRADA):
         return False, "Selecciona un tipo de entrada valido."
-    if error or error_litros_cilindro:
-        return False, error or error_litros_cilindro
+    if error or error_litros_cilindro or error_unidades_caja:
+        return False, error or error_litros_cilindro or error_unidades_caja
     if not producto_id:
         return False, "Selecciona un producto."
     if len(motivo) < 3:
@@ -129,6 +140,8 @@ def registrar_entrada(datos, usuario_id):
         return False, "La cantidad de baldes debe ser entera."
     if tipo_entrada == ORIGEN_CILINDRO_CERRADO and cantidad != cantidad.to_integral_value():
         return False, "La cantidad de cilindros debe ser entera."
+    if tipo_entrada == ORIGEN_CAJA_CERRADA and cantidad != cantidad.to_integral_value():
+        return False, "La cantidad de cajas debe ser entera."
 
     def operacion(cursor):
         cursor.execute(
@@ -137,6 +150,7 @@ def registrar_entrada(datos, usuario_id):
                    p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
                    p.stock_cilindro_abierto, p.cilindros_abiertos,
                    p.stock_cilindros_cerrados, p.litros_por_cilindro,
+                   p.stock_cajas_cerradas, p.unidades_por_caja,
                    u.abreviatura, u.permite_decimal
             FROM productos p
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
@@ -206,6 +220,34 @@ def registrar_entrada(datos, usuario_id):
             )
             diferencia_ajuste = Decimal("0.000")
             descripcion_movimiento = f"{producto['nombre']}: +{cantidad} balde(s) cerrados"
+        elif tipo_entrada == ORIGEN_CAJA_CERRADA:
+            if not producto["permite_decimal"] and unidades_caja != unidades_caja.to_integral_value():
+                return False, "Las unidades por caja deben ser enteras para este producto."
+            if producto["unidades_por_caja"] > 0 and producto["unidades_por_caja"] != unidades_caja:
+                return False, (
+                    f"Este producto ya usa cajas de {producto['unidades_por_caja']} "
+                    f"{producto['abreviatura']}."
+                )
+            cantidad_base = (cantidad * unidades_caja).quantize(Decimal("0.001"))
+            presentacion_nombre = "Caja cerrada"
+            factor = unidades_caja
+            stock_anterior = producto["stock_actual"]
+            stock_nuevo = stock_anterior
+            stock_cajas_nuevo = producto["stock_cajas_cerradas"] + cantidad
+            cursor.execute(
+                """
+                UPDATE productos
+                SET stock_cajas_cerradas = %s,
+                    unidades_por_caja = %s
+                WHERE id = %s
+                """,
+                (stock_cajas_nuevo, unidades_caja, producto_id),
+            )
+            diferencia_ajuste = Decimal("0.000")
+            descripcion_movimiento = (
+                f"{producto['nombre']}: +{cantidad} caja(s) cerradas "
+                f"de {unidades_caja} {producto['abreviatura']}"
+            )
         else:
             if producto["litros_por_cilindro"] > 0 and producto["litros_por_cilindro"] != litros_cilindro:
                 return False, (
@@ -263,6 +305,8 @@ def registrar_entrada(datos, usuario_id):
             detalle += f" / {cantidad} balde(s) cerrados"
         if tipo_entrada == ORIGEN_CILINDRO_CERRADO:
             detalle += f" / {cantidad} cilindro(s) de {litros_cilindro} {producto['abreviatura']}"
+        if tipo_entrada == ORIGEN_CAJA_CERRADA:
+            detalle += f" / {cantidad} caja(s) de {unidades_caja} {producto['abreviatura']}"
         cursor.execute(
             """
             INSERT INTO ajustes_stock
@@ -279,6 +323,98 @@ def registrar_entrada(datos, usuario_id):
             ("Entrada", descripcion_movimiento, usuario_id),
         )
         return True, "Entrada registrada correctamente."
+
+    return ejecutar_transaccion(operacion)
+
+
+def abrir_caja(datos, usuario_id):
+    producto_id = _entero(datos.get("producto_id"))
+    cajas = Decimal("1.000")
+
+    if not producto_id:
+        return False, "Selecciona un producto."
+
+    def operacion(cursor):
+        cursor.execute(
+            """
+            SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
+                   p.stock_cajas_cerradas, p.unidades_por_caja,
+                   u.abreviatura
+            FROM productos p
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            WHERE p.id = %s
+            FOR UPDATE
+            """,
+            (producto_id,),
+        )
+        producto = cursor.fetchone()
+        if not producto:
+            return False, "El producto seleccionado no existe."
+        if producto["stock_cajas_cerradas"] < cajas:
+            return False, "No hay cajas cerradas disponibles para abrir."
+        if producto["unidades_por_caja"] <= 0:
+            return False, "Registra primero cuantas unidades trae cada caja desde Entradas."
+
+        stock_cajas_nuevo = producto["stock_cajas_cerradas"] - cajas
+        stock_suelto_nuevo = producto["stock_suelto"] + producto["unidades_por_caja"]
+        stock_nuevo = stock_suelto_nuevo
+        cursor.execute(
+            """
+            UPDATE productos
+            SET stock_cajas_cerradas = %s,
+                stock_suelto = %s,
+                stock_actual = %s
+            WHERE id = %s
+            """,
+            (stock_cajas_nuevo, stock_suelto_nuevo, stock_nuevo, producto_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO aperturas_balde
+                (producto_id, envase, tipo, baldes_abiertos, contenido_por_balde, cantidad_base,
+                 stock_baldes_anterior, stock_baldes_nuevo,
+                 baldes_en_uso_anterior, baldes_en_uso_nuevo,
+                 stock_abierto_anterior, stock_abierto_nuevo,
+                 stock_anterior, stock_nuevo, usuario_id)
+            VALUES (%s, 'caja', 'apertura', %s, %s, %s, %s, %s, 0, 0, %s, %s, %s, %s, %s)
+            """,
+            (
+                producto_id,
+                cajas,
+                producto["unidades_por_caja"],
+                producto["unidades_por_caja"],
+                producto["stock_cajas_cerradas"],
+                stock_cajas_nuevo,
+                producto["stock_suelto"],
+                stock_suelto_nuevo,
+                producto["stock_actual"],
+                stock_nuevo,
+                usuario_id,
+            ),
+        )
+        cursor.execute(
+            """
+            INSERT INTO ajustes_stock
+                (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                producto_id,
+                producto["stock_actual"],
+                stock_nuevo,
+                producto["unidades_por_caja"],
+                "Caja abierta para pasar a stock suelto",
+                usuario_id,
+            ),
+        )
+        cursor.execute(
+            """
+            INSERT INTO movimientos (tipo, descripcion, usuario_id)
+            VALUES (%s, %s, %s)
+            """,
+            ("Apertura", f"{producto['nombre']}: 1 caja abierta", usuario_id),
+        )
+        return True, "Caja abierta. Sus unidades ya estan en stock suelto para salidas."
 
     return ejecutar_transaccion(operacion)
 

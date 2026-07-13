@@ -5,7 +5,10 @@ def obtener_resumen_dashboard():
     inventario = consultar_uno(
         """
         SELECT COUNT(*) AS productos,
-               COALESCE(SUM(stock_minimo > 0 AND stock_actual <= stock_minimo), 0) AS alertas_stock
+               COALESCE(SUM(
+                   stock_minimo > 0
+                   AND (stock_actual + (stock_cajas_cerradas * unidades_por_caja)) <= stock_minimo
+               ), 0) AS alertas_stock
         FROM productos
         """
     )

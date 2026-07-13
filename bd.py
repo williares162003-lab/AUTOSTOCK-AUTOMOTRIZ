@@ -127,6 +127,12 @@ def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
         "productos",
+        "codigo",
+        "VARCHAR(80) NULL AFTER nombre",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
         "marca",
         "VARCHAR(100) NULL AFTER categoria_id",
     )
@@ -273,6 +279,18 @@ def _aplicar_migraciones(cursor):
         "productos",
         "litros_por_cilindro",
         "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_cilindros_cerrados",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_cajas_cerradas",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER litros_por_cilindro",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "unidades_por_caja",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_cajas_cerradas",
     )
     _asegurar_columna(
         cursor,

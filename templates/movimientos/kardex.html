@@ -30,7 +30,7 @@
     <span class="material-symbols-outlined">info</span>
     <div>
       <h2>Como funciona el Kardex</h2>
-      <p>Es el historial ordenado del producto: entradas suman, salidas descuentan stock suelto o registran consumo del balde/cilindro abierto, ajustes corrigen stock y envases muestran aperturas o cierres.</p>
+      <p>Es el historial ordenado del producto: entradas suman, salidas descuentan stock suelto o registran consumo del balde/cilindro abierto, ajustes corrigen stock y envases muestran aperturas o cierres de baldes, cilindros y cajas.</p>
     </div>
   </div>
 </section>
@@ -43,7 +43,7 @@
         <option value="">Todos los productos</option>
         {% for producto in productos %}
           <option value="{{ producto.id }}" {% if filtros.producto_id|string == producto.id|string %}selected{% endif %}>
-            {{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}
+            {% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}
           </option>
         {% endfor %}
       </select>
@@ -93,6 +93,8 @@
     <div><span>Usado del cilindro</span><strong>{{ producto_seleccionado.stock_cilindro_abierto|float|round(3) }} {{ producto_seleccionado.abreviatura }}</strong></div>
     <div><span>Cilindros cerrados</span><strong>{{ producto_seleccionado.stock_cilindros_cerrados|float|round(3) }}</strong></div>
     <div><span>Litros por cilindro</span><strong>{{ producto_seleccionado.litros_por_cilindro|float|round(3) }} {{ producto_seleccionado.abreviatura }}</strong></div>
+    <div><span>Cajas cerradas</span><strong>{{ producto_seleccionado.stock_cajas_cerradas|default(0)|float|round(3) }}</strong></div>
+    <div><span>Unidades por caja</span><strong>{{ producto_seleccionado.unidades_por_caja|default(0)|float|round(3) }} {{ producto_seleccionado.abreviatura }}</strong></div>
   </div>
 </section>
 {% endif %}

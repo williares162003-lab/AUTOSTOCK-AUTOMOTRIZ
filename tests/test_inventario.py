@@ -14,7 +14,7 @@ from inventario_productosAD import (
     preparar_categorias_generales,
     resumen_productos,
 )
-from movimientos_entradasAD import abrir_balde, registrar_entrada
+from movimientos_entradasAD import abrir_balde, abrir_caja, registrar_entrada
 from movimientos_kardexAD import listar_movimientos_kardex_con_errores
 from movimientos_salidasAD import registrar_salida
 from reportesAD import normalizar_filtros_reportes
@@ -39,6 +39,7 @@ UNIDADES = [
 PRODUCTO_ACEITE = {
     "id": 1,
     "nombre": "Aceite 20W50",
+    "codigo": None,
     "marca": None,
     "descripcion": None,
     "stock_actual": Decimal("10.000"),
@@ -50,6 +51,8 @@ PRODUCTO_ACEITE = {
     "cilindros_abiertos": Decimal("0.000"),
     "stock_cilindros_cerrados": Decimal("0.000"),
     "litros_por_cilindro": Decimal("0.000"),
+    "stock_cajas_cerradas": Decimal("0.000"),
+    "unidades_por_caja": Decimal("0.000"),
     "stock_minimo": Decimal("2.000"),
     "observaciones": None,
     "tipo_id": 2,
@@ -100,6 +103,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Mecanica", response.data)
         self.assertIn(b"Disponible", response.data)
         self.assertIn(b"Usado del balde", response.data)
+        self.assertIn(b"Codigo", response.data)
         self.assertIn(b"data-view-product", response.data)
 
     @patch("app.crear_producto_ad", return_value=(True, "Producto registrado correctamente."))
@@ -170,6 +174,8 @@ class InventarioAppTests(unittest.TestCase):
             "stock_cilindro_abierto": Decimal("0"),
             "cilindros_abiertos": Decimal("0"),
             "stock_cilindros_cerrados": Decimal("0"),
+            "stock_cajas_cerradas": Decimal("0"),
+            "unidades_por_caja": Decimal("0"),
         },
     )
     def test_product_with_stock_cannot_be_deleted(self, _consultar):
@@ -190,6 +196,8 @@ class InventarioAppTests(unittest.TestCase):
             "stock_cilindro_abierto": Decimal("0"),
             "cilindros_abiertos": Decimal("0"),
             "stock_cilindros_cerrados": Decimal("0"),
+            "stock_cajas_cerradas": Decimal("0"),
+            "unidades_por_caja": Decimal("0"),
         },
     )
     def test_product_without_stock_can_be_deleted_with_history_cleanup(self, _consultar, ejecutar_transaccion):
@@ -269,6 +277,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Nueva entrada", response.data)
         self.assertIn(b"Abrir balde", response.data)
         self.assertIn(b"Abrir cilindro", response.data)
+        self.assertIn(b"Abrir caja", response.data)
         self.assertIn(b"Mecanica", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Raqueta limpia parabrisas", response.data)
@@ -299,6 +308,14 @@ class InventarioAppTests(unittest.TestCase):
 
     def test_open_bucket_requires_product(self):
         correcto, mensaje = abrir_balde(
+            {"producto_id": ""},
+            usuario_id=2,
+        )
+        self.assertFalse(correcto)
+        self.assertIn("producto", mensaje)
+
+    def test_open_box_requires_product(self):
+        correcto, mensaje = abrir_caja(
             {"producto_id": ""},
             usuario_id=2,
         )
@@ -377,6 +394,7 @@ class InventarioAppTests(unittest.TestCase):
                 "baldes_en_uso": Decimal("0.000"),
                 "cilindros_cerrados": Decimal("0.000"),
                 "cilindros_en_uso": Decimal("0.000"),
+                "cajas_cerradas": Decimal("0.000"),
                 "entradas": 2,
                 "productos_entrada": 1,
                 "salidas": 1,
@@ -534,6 +552,7 @@ class InventarioAppTests(unittest.TestCase):
                 "stock_balde_abierto": Decimal("0.000"),
                 "baldes_abiertos": Decimal("0.000"),
                 "stock_baldes_cerrados": Decimal("0.000"),
+                "stock_cajas_cerradas": Decimal("0.000"),
                 "stock_minimo": Decimal("2.000"),
             },
             {
@@ -544,6 +563,7 @@ class InventarioAppTests(unittest.TestCase):
                 "stock_balde_abierto": Decimal("0.000"),
                 "baldes_abiertos": Decimal("1.000"),
                 "stock_baldes_cerrados": Decimal("2.000"),
+                "stock_cajas_cerradas": Decimal("0.000"),
                 "stock_minimo": Decimal("2.000"),
             },
             {
@@ -554,6 +574,7 @@ class InventarioAppTests(unittest.TestCase):
                 "stock_balde_abierto": Decimal("0.000"),
                 "baldes_abiertos": Decimal("0.000"),
                 "stock_baldes_cerrados": Decimal("0.000"),
+                "stock_cajas_cerradas": Decimal("0.000"),
                 "stock_minimo": Decimal("2.000"),
             },
         ]
