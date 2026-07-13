@@ -407,6 +407,36 @@ def inicializar_base_datos(reset=False):
         conexion.close()
 
 
+def limpiar_almacen():
+    tablas = [
+        "ajustes_stock",
+        "aperturas_balde",
+        "salidas_stock_detalle",
+        "salidas_stock",
+        "vehiculos_atendidos",
+        "entradas_stock",
+        "presentaciones_producto",
+        "productos",
+        "categorias",
+        "tipos_producto",
+        "movimientos",
+    ]
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+            for tabla in tablas:
+                cursor.execute(f"DELETE FROM {tabla}")
+                cursor.execute(f"ALTER TABLE {tabla} AUTO_INCREMENT = 1")
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        conexion.commit()
+    except Exception:
+        conexion.rollback()
+        raise
+    finally:
+        conexion.close()
+
+
 def consultar_uno(sql, parametros=()):
     conexion = obtener_conexion()
     try:

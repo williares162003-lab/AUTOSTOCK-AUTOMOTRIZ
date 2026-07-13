@@ -217,38 +217,11 @@ CREATE TABLE IF NOT EXISTS ajustes_stock (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO tipos_producto (id, nombre) VALUES
-    (1, 'Repuesto'),
-    (2, 'Lubricante'),
-    (3, 'Herramienta'),
-    (4, 'Accesorio');
-
 INSERT IGNORE INTO unidades_medida (id, nombre, abreviatura, permite_decimal) VALUES
     (1, 'Unidad', 'und', 0),
     (2, 'Litro', 'L', 1),
     (3, 'Galon', 'gal', 1),
     (4, 'Juego', 'jgo', 0);
-
-INSERT IGNORE INTO categorias (id, tipo_id, nombre) VALUES
-    (1, 1, 'Sin clasificar'),
-    (2, 1, 'Motor'),
-    (3, 1, 'Frenos'),
-    (4, 1, 'Suspension'),
-    (5, 1, 'Direccion'),
-    (6, 1, 'Transmision'),
-    (7, 1, 'Sistema electrico'),
-    (8, 1, 'Filtros'),
-    (9, 1, 'Refrigeracion'),
-    (10, 1, 'Escape'),
-    (11, 1, 'Carroceria'),
-    (12, 1, 'Rodamientos y retenes'),
-    (13, 2, 'Sin clasificar'),
-    (14, 2, 'Aceite de motor'),
-    (15, 2, 'Aceite de transmision'),
-    (16, 2, 'Refrigerante'),
-    (17, 2, 'Liquido de frenos'),
-    (18, 3, 'Sin clasificar'),
-    (19, 4, 'Sin clasificar');
 
 CREATE TABLE IF NOT EXISTS movimientos (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,

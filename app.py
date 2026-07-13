@@ -18,7 +18,7 @@ from admin_usuariosAD import (
     obtener_usuario,
     resumen_usuarios,
 )
-from bd import inicializar_base_datos
+from bd import inicializar_base_datos, limpiar_almacen
 from helpers import admin_requerido, contexto_base, csrf_requerido, login_requerido
 from inventario_productosAD import (
     ajustar_stock_producto,
@@ -532,6 +532,17 @@ def ejecutar_comando():
                 print(f"  - {error['mensaje']} {error['detalle']}")
         else:
             print("Kardex sin errores.")
+        return True
+    if len(sys.argv) > 1 and sys.argv[1] == "limpiar-almacen":
+        if "--confirmar" not in sys.argv:
+            print("Este comando borra productos, categorias, movimientos, entradas y salidas.")
+            print("Conserva usuarios y unidades de medida.")
+            print("Para ejecutarlo usa: python app.py limpiar-almacen --confirmar")
+            return True
+        inicializar_base_datos(reset=False)
+        limpiar_almacen()
+        preparar_usuarios_iniciales()
+        print("Almacen limpio. Usuarios y unidades de medida conservados.")
         return True
     return False
 

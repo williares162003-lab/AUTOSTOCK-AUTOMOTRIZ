@@ -55,6 +55,18 @@ Usuarios iniciales de desarrollo:
 
 En produccion define las contrasenas con variables de entorno antes de ejecutar `init-db`.
 
+## Limpiar el almacen
+
+Para empezar el registro real desde cero sin borrar usuarios ni unidades de medida:
+
+```bash
+python app.py limpiar-almacen --confirmar
+```
+
+Este comando borra productos, tipos, categorias, entradas, salidas, kardex,
+vehiculos y movimientos. Conserva las cuentas de acceso y unidades como Unidad,
+Litro, Galon y Juego.
+
 ## Variables de entorno
 
 Configura las variables `AUTOMAN_SECRET_KEY`,

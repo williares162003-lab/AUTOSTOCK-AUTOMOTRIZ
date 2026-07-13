@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from app import app
+from app import app, ejecutar_comando
 from helpers import nav_items
 
 
@@ -125,6 +125,24 @@ class AutomanAppTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 302)
         crear_usuario.assert_not_called()
+
+    @patch("app.limpiar_almacen")
+    def test_clean_warehouse_command_requires_confirmation(self, limpiar):
+        with patch("sys.argv", ["app.py", "limpiar-almacen"]):
+            self.assertTrue(ejecutar_comando())
+        limpiar.assert_not_called()
+
+    @patch("app.preparar_usuarios_iniciales")
+    @patch("app.limpiar_almacen")
+    @patch("app.inicializar_base_datos")
+    def test_clean_warehouse_command_runs_after_confirmation(
+        self, inicializar_bd, limpiar, preparar_usuarios
+    ):
+        with patch("sys.argv", ["app.py", "limpiar-almacen", "--confirmar"]):
+            self.assertTrue(ejecutar_comando())
+        inicializar_bd.assert_called_once_with(reset=False)
+        limpiar.assert_called_once()
+        preparar_usuarios.assert_called_once()
 
 
 if __name__ == "__main__":
