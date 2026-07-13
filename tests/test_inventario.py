@@ -323,6 +323,40 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Compra", response.data)
         self.assertIn(b"/movimientos/kardex", response.data)
 
+    @patch(
+        "app.obtener_reporte_general",
+        return_value={
+            "filtros": {"fecha_inicio": "2026-07-01", "fecha_fin": "2026-07-12"},
+            "resumen": {
+                "productos": 1,
+                "con_stock": 1,
+                "sin_stock": 0,
+                "bajo_stock": 0,
+                "baldes_cerrados": Decimal("1.000"),
+                "baldes_en_uso": Decimal("0.000"),
+                "entradas": 2,
+                "productos_entrada": 1,
+                "salidas": 1,
+                "lineas_salida": 1,
+                "productos_salida": 1,
+            },
+            "stock_critico": [],
+            "movimientos_dia": [{"fecha": "2026-07-12", "entradas": 2, "salidas": 1, "entradas_pct": 100, "salidas_pct": 50}],
+            "top_salidas": [{"nombre": "Aceite 20W50", "marca": None, "categoria": "Aceite de motor", "cantidad": Decimal("1.000"), "abreviatura": "gal", "movimientos": 1}],
+            "salidas_vehiculos": [],
+            "entradas_proveedores": [],
+            "stock_tipos": [{"tipo": "Lubricante", "productos": 1, "con_stock": 1, "bajo_stock": 0, "sin_stock": 0}],
+            "ajustes_recientes": [],
+        },
+    )
+    def test_almacen_can_open_reports(self, _reporte):
+        response = self.client.get("/reportes")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Reportes", response.data)
+        self.assertIn(b"Productos mas retirados", response.data)
+        self.assertIn(b"Aceite 20W50", response.data)
+        self.assertIn(b"/reportes", response.data)
+
     @patch("movimientos_kardexAD.consultar_todos", return_value=[])
     def test_kardex_adjustment_query_escapes_literal_percent(self, consultar):
         movimientos, errores = listar_movimientos_kardex_con_errores({"tipo": "ajuste"})

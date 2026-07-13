@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario/productos.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reportes/reportes.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="inventory-stats">
+  <article class="inventory-stat neutral"><span class="material-symbols-outlined">inventory_2</span><strong>{{ resumen.productos }}</strong><p>Productos</p></article>
+  <article class="inventory-stat warning"><span class="material-symbols-outlined">notification_important</span><strong>{{ resumen.bajo_stock }}</strong><p>Bajo minimo</p></article>
+  <article class="inventory-stat green"><span class="material-symbols-outlined">move_to_inbox</span><strong>{{ resumen.entradas }}</strong><p>Entradas</p></article>
+  <article class="inventory-stat primary"><span class="material-symbols-outlined">outbox</span><strong>{{ resumen.salidas }}</strong><p>Salidas</p></article>
+</div>
+
+<section class="inventory-table report-filters-panel">
+  <form class="report-filters" method="get" action="{{ url_for('reportes') }}">
+    <label>
+      <span>Desde</span>
+      <input type="date" name="fecha_inicio" value="{{ filtros.fecha_inicio }}">
+    </label>
+    <label>
+      <span>Hasta</span>
+      <input type="date" name="fecha_fin" value="{{ filtros.fecha_fin }}">
+    </label>
+    <button class="primary-button" type="submit"><span class="material-symbols-outlined">filter_alt</span>Filtrar</button>
+    <a class="secondary-button" href="{{ url_for('reportes') }}"><span class="material-symbols-outlined">restart_alt</span>Limpiar</a>
+  </form>
+</section>
+
+<section class="report-summary-grid">
+  <article class="report-card">
+    <span class="material-symbols-outlined">check_circle</span>
+    <div><p>Con stock</p><strong>{{ resumen.con_stock }}</strong></div>
+  </article>
+  <article class="report-card">
+    <span class="material-symbols-outlined">production_quantity_limits</span>
+    <div><p>Sin stock</p><strong>{{ resumen.sin_stock }}</strong></div>
+  </article>
+  <article class="report-card">
+    <span class="material-symbols-outlined">oil_barrel</span>
+    <div><p>Baldes cerrados</p><strong>{{ resumen.baldes_cerrados|float|round(3) }}</strong></div>
+  </article>
+  <article class="report-card">
+    <span class="material-symbols-outlined">inventory</span>
+    <div><p>Lineas de salida</p><strong>{{ resumen.lineas_salida }}</strong></div>
+  </article>
+</section>
+
+<section class="report-grid two-columns">
+  <article class="inventory-table">
+    <div class="inventory-toolbar"><div><h2>Movimientos por dia</h2><p>{{ filtros.fecha_inicio }} a {{ filtros.fecha_fin }}</p></div></div>
+    <div class="report-bars">
+      {% for dia in movimientos_dia %}
+      <div class="report-bar-row">
+        <span>{{ dia.fecha }}</span>
+        <div class="report-bar-track"><i class="entry" style="width: {{ dia.entradas_pct }}%"></i><i class="exit" style="width: {{ dia.salidas_pct }}%"></i></div>
+        <strong>{{ dia.entradas }} / {{ dia.salidas }}</strong>
+      </div>
+      {% else %}
+      <div class="empty-report">Sin movimientos en el periodo.</div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="inventory-table">
+    <div class="inventory-toolbar"><div><h2>Stock por tipo</h2><p>Estado general del almacen</p></div></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Tipo</th><th>Productos</th><th>Con stock</th><th>Bajo</th><th>Sin stock</th></tr></thead>
+        <tbody>
+          {% for tipo in stock_tipos %}
+          <tr>
+            <td><strong>{{ tipo.tipo }}</strong></td>
+            <td>{{ tipo.productos }}</td>
+            <td>{{ tipo.con_stock }}</td>
+            <td>{{ tipo.bajo_stock }}</td>
+            <td>{{ tipo.sin_stock }}</td>
+          </tr>
+          {% else %}
+          <tr><td class="empty-row" colspan="5">Sin tipos registrados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="inventory-table report-section">
+  <div class="inventory-toolbar"><div><h2>Productos que requieren atencion</h2><p>{{ stock_critico|length }} productos mostrados</p></div></div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Disponible</th><th>Minimo</th><th>Baldes</th></tr></thead>
+      <tbody>
+        {% for producto in stock_critico %}
+        {% set sin_stock = producto.stock_actual <= 0 and producto.baldes_abiertos <= 0 and producto.stock_baldes_cerrados <= 0 %}
+        <tr>
+          <td><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></td>
+          <td><strong>{{ producto.tipo }}</strong><small>{{ producto.categoria }}</small></td>
+          <td><span class="report-stock {{ 'empty' if sin_stock else 'low' }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</span></td>
+          <td>{{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</td>
+          <td>Cerrados {{ producto.stock_baldes_cerrados|float|round(3) }} / En uso {{ producto.baldes_abiertos|float|round(3) }}</td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-row" colspan="5">No hay productos criticos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="report-grid two-columns">
+  <article class="inventory-table">
+    <div class="inventory-toolbar"><div><h2>Productos mas retirados</h2><p>Segun salidas del periodo</p></div></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Producto</th><th>Categoria</th><th>Cantidad</th><th>Mov.</th></tr></thead>
+        <tbody>
+          {% for producto in top_salidas %}
+          <tr>
+            <td><strong>{{ producto.nombre }}</strong><small>{{ producto.marca or "Sin marca" }}</small></td>
+            <td>{{ producto.categoria }}</td>
+            <td><strong>{{ producto.cantidad|float|round(3) }} {{ producto.abreviatura }}</strong></td>
+            <td>{{ producto.movimientos }}</td>
+          </tr>
+          {% else %}
+          <tr><td class="empty-row" colspan="4">Sin salidas en el periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="inventory-table">
+    <div class="inventory-toolbar"><div><h2>Salidas por vehiculo</h2><p>Placa y trabajador</p></div></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Placa</th><th>Modelo</th><th>Trabajador</th><th>Items</th></tr></thead>
+        <tbody>
+          {% for salida in salidas_vehiculos %}
+          <tr>
+            <td><strong>{{ salida.placa }}</strong><small>{{ salida.salidas }} salida(s)</small></td>
+            <td>{{ salida.modelo }}</td>
+            <td>{{ salida.trabajador }}</td>
+            <td>{{ salida.productos }}</td>
+          </tr>
+          {% else %}
+          <tr><td class="empty-row" colspan="4">Sin salidas en el periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="report-grid two-columns">
+  <article class="inventory-table">
+    <div class="inventory-toolbar"><div><h2>Entradas por proveedor</h2><p>Compras y reposiciones</p></div></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Proveedor</th><th>Entradas</th><th>Productos</th><th>Ultima entrada</th></tr></thead>
+        <tbody>
+          {% for proveedor in entradas_proveedores %}
+          <tr>
+            <td><strong>{{ proveedor.proveedor }}</strong></td>
+            <td>{{ proveedor.entradas }}</td>
+            <td>{{ proveedor.productos }}</td>
+            <td>{{ proveedor.ultima_entrada }}</td>
+          </tr>
+          {% else %}
+          <tr><td class="empty-row" colspan="4">Sin entradas en el periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="inventory-table">
+    <div class="inventory-toolbar"><div><h2>Ajustes recientes</h2><p>Correcciones de stock</p></div></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Fecha</th><th>Producto</th><th>Cambio</th><th>Motivo</th></tr></thead>
+        <tbody>
+          {% for ajuste in ajustes_recientes %}
+          <tr>
+            <td>{{ ajuste.creado_en }}</td>
+            <td><strong>{{ ajuste.producto }}</strong><small>{{ ajuste.marca or "Sin marca" }}</small></td>
+            <td><strong class="{{ 'report-positive' if ajuste.diferencia > 0 else 'report-negative' }}">{{ '+' if ajuste.diferencia > 0 else '' }}{{ ajuste.diferencia|float|round(3) }} {{ ajuste.abreviatura }}</strong></td>
+            <td>{{ ajuste.motivo }}</td>
+          </tr>
+          {% else %}
+          <tr><td class="empty-row" colspan="4">Sin ajustes en el periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}

@@ -58,6 +58,7 @@ from movimientos_salidasAD import (
     registrar_salida,
     resumen_salidas,
 )
+from reportesAD import obtener_reporte_general
 
 
 app = Flask(__name__)
@@ -349,6 +350,26 @@ def categorias():
         }
     )
     return render_template("inventario/categorias.html", **contexto)
+
+
+@app.get("/reportes")
+@login_requerido
+def reportes():
+    reporte = obtener_reporte_general(
+        {
+            "fecha_inicio": request.args.get("fecha_inicio", ""),
+            "fecha_fin": request.args.get("fecha_fin", ""),
+        }
+    )
+    contexto = contexto_base("reportes")
+    contexto.update(
+        {
+            "page_title": "Reportes",
+            "page_subtitle": "Analiza stock, entradas, salidas y actividad del almacen.",
+            **reporte,
+        }
+    )
+    return render_template("reportes/general.html", **contexto)
 
 
 @app.post("/inventario/tipos/crear")

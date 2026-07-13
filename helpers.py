@@ -77,7 +77,7 @@ def nav_items(usuario):
             ],
         },
         {"label": "Proveedores", "icon": "local_shipping", "endpoint": None},
-        {"label": "Reportes", "icon": "monitoring", "endpoint": None},
+        {"label": "Reportes", "icon": "monitoring", "endpoint": "reportes"},
     ]
 
     if usuario and usuario.get("rol") == "ADMIN":
