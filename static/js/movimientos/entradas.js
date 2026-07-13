@@ -117,6 +117,12 @@ function syncProductPicker(typeSelect, categorySelect, select) {
   filterProductsBySelection(typeSelect, categorySelect, select);
 }
 
+function toggleField(field, isHidden) {
+  if (!field) return;
+  field.hidden = isHidden;
+  field.style.display = isHidden ? "none" : "";
+}
+
 function selectedProduct() {
   const option = productSelect.options[productSelect.selectedIndex] || null;
   return option?.value ? option : null;
@@ -166,9 +172,9 @@ function rebuildPresentations() {
 function syncEntryMode() {
   const isBucket = entryType.value === "balde_cerrado";
   const isCylinder = entryType.value === "cilindro_cerrado";
-  presentationField.hidden = isBucket || isCylinder;
+  toggleField(presentationField, isBucket || isCylinder);
   presentationSelect.disabled = isBucket || isCylinder;
-  cylinderLitersField.hidden = !isCylinder;
+  toggleField(cylinderLitersField, !isCylinder);
   cylinderLitersInput.disabled = !isCylinder;
   quantityInput.step = isBucket || isCylinder ? "1" : "0.001";
   quantityInput.min = isBucket || isCylinder ? "1" : "0.001";
