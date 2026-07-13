@@ -67,6 +67,16 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("AUTOMAN_SECRET_KEY", "automan-dev-secret-key")
 
 
+def tipos_desde_productos(productos):
+    tipos = {}
+    for producto in productos:
+        tipo_id = producto.get("tipo_id")
+        tipo = producto.get("tipo")
+        if tipo_id and tipo and tipo_id not in tipos:
+            tipos[tipo_id] = {"id": tipo_id, "nombre": tipo}
+    return sorted(tipos.values(), key=lambda item: item["nombre"])
+
+
 def inicializar_sistema(reset=False):
     inicializar_base_datos(reset=reset)
     preparar_categorias_generales()
@@ -198,12 +208,14 @@ def eliminar_producto(producto_id):
 @app.get("/movimientos/entradas")
 @login_requerido
 def entradas():
+    productos_registrados = listar_productos()
     contexto = contexto_base("entradas")
     contexto.update(
         {
             "page_title": "Entradas",
             "page_subtitle": "Registra compras y reposiciones para aumentar el stock del almacen.",
-            "productos": listar_productos(),
+            "tipos": tipos_desde_productos(productos_registrados),
+            "productos": productos_registrados,
             "entradas": listar_entradas(),
             "aperturas": listar_aperturas_balde(),
             "resumen": resumen_entradas(),
@@ -260,12 +272,14 @@ def cerrar_cilindro_entrada():
 @app.get("/movimientos/salidas")
 @login_requerido
 def salidas():
+    productos_registrados = listar_productos()
     contexto = contexto_base("salidas")
     contexto.update(
         {
             "page_title": "Salidas",
             "page_subtitle": "Registra entregas internas por placa y trabajador.",
-            "productos": listar_productos(),
+            "tipos": tipos_desde_productos(productos_registrados),
+            "productos": productos_registrados,
             "vehiculos": listar_vehiculos(),
             "salidas": listar_salidas(),
             "resumen": resumen_salidas(),

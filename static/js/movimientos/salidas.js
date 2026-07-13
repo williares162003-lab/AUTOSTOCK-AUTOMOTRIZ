@@ -17,6 +17,37 @@ function formatQuantity(value) {
   });
 }
 
+function filterProductsByType(typeSelect, productSelect) {
+  if (!typeSelect || !productSelect) return;
+
+  const selectedType = typeSelect.value;
+  let firstVisible = null;
+  Array.from(productSelect.options).forEach((option) => {
+    if (!option.value) {
+      option.hidden = false;
+      option.disabled = true;
+      return;
+    }
+
+    const visible = selectedType && option.dataset.type === selectedType;
+    option.hidden = !visible;
+    option.disabled = !visible;
+    if (visible && !firstVisible) firstVisible = option;
+  });
+
+  const current = productSelect.options[productSelect.selectedIndex] || null;
+  if (!selectedType || !firstVisible) {
+    productSelect.value = "";
+    productSelect.disabled = true;
+    return;
+  }
+
+  productSelect.disabled = false;
+  if (!current?.value || current.hidden || current.disabled) {
+    productSelect.value = firstVisible.value;
+  }
+}
+
 function syncVehicleModel() {
   const plate = vehiclePlate.value.trim().toUpperCase();
   vehiclePlate.value = plate;
@@ -75,12 +106,19 @@ function updateLine(row) {
 function addLine() {
   const fragment = lineTemplate.content.cloneNode(true);
   const row = fragment.querySelector("[data-output-line]");
-  row.querySelector("[data-line-product]").addEventListener("change", () => updateLine(row));
+  const typeSelect = row.querySelector("[data-line-type]");
+  const productSelect = row.querySelector("[data-line-product]");
+  typeSelect.addEventListener("change", () => {
+    filterProductsByType(typeSelect, productSelect);
+    updateLine(row);
+  });
+  productSelect.addEventListener("change", () => updateLine(row));
   row.querySelector("[data-line-origin]").addEventListener("change", () => updateLine(row));
   row.querySelector("[data-remove-line]").addEventListener("click", () => {
     if (linesContainer.children.length > 1) row.remove();
   });
   linesContainer.appendChild(row);
+  filterProductsByType(typeSelect, productSelect);
   updateLine(row);
 }
 

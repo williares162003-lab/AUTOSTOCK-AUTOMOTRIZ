@@ -29,12 +29,23 @@
             <option value="cilindro_cerrado">Cilindros cerrados</option>
           </select>
         </label>
-        <label class="span-two">
+        <label>
+          <span>Tipo de producto</span>
+          <select required data-entry-product-type>
+            <option value="">Selecciona un tipo</option>
+            {% for tipo in tipos %}
+              <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
           <span>Producto</span>
-          <select name="producto_id" required data-product-select>
+          <select name="producto_id" required data-product-select disabled>
+            <option value="">Primero selecciona un tipo</option>
             {% for producto in productos %}
               <option
                 value="{{ producto.id }}"
+                data-type="{{ producto.tipo_id }}"
                 data-stock="{{ producto.stock_actual }}"
                 data-stock-suelto="{{ producto.stock_suelto }}"
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
@@ -101,12 +112,23 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="baldes_abiertos" value="1">
     <div class="product-form-grid">
-      <label class="span-two">
+      <label>
+        <span>Tipo de producto</span>
+        <select required data-bucket-product-type>
+          <option value="">Selecciona un tipo</option>
+          {% for tipo in tipos %}
+            <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
         <span>Producto</span>
-        <select name="producto_id" required data-bucket-product>
+        <select name="producto_id" required data-bucket-product disabled>
+          <option value="">Primero selecciona un tipo</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
+              data-type="{{ producto.tipo_id }}"
               data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
               data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
               data-baldes-abiertos="{{ producto.baldes_abiertos }}"
@@ -128,12 +150,23 @@
   <form method="post" action="{{ url_for('cerrar_balde_entrada') }}" class="entry-form bucket-close-form" data-bucket-close-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="product-form-grid">
-      <label class="span-two">
+      <label>
+        <span>Tipo de producto</span>
+        <select required data-bucket-close-product-type>
+          <option value="">Selecciona un tipo</option>
+          {% for tipo in tipos %}
+            <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
         <span>Producto con balde abierto</span>
-        <select name="producto_id" required data-bucket-close-product>
+        <select name="producto_id" required data-bucket-close-product disabled>
+          <option value="">Primero selecciona un tipo</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
+              data-type="{{ producto.tipo_id }}"
               data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
               data-baldes-abiertos="{{ producto.baldes_abiertos }}"
               data-abreviatura="{{ producto.abreviatura|e }}"
@@ -154,12 +187,23 @@
   <form method="post" action="{{ url_for('abrir_cilindro_entrada') }}" class="entry-form bucket-form" data-cylinder-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="product-form-grid">
-      <label class="span-two">
+      <label>
+        <span>Tipo de producto</span>
+        <select required data-cylinder-product-type>
+          <option value="">Selecciona un tipo</option>
+          {% for tipo in tipos %}
+            <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
         <span>Producto con cilindro cerrado</span>
-        <select name="producto_id" required data-cylinder-product>
+        <select name="producto_id" required data-cylinder-product disabled>
+          <option value="">Primero selecciona un tipo</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
+              data-type="{{ producto.tipo_id }}"
               data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
               data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
               data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
@@ -183,12 +227,23 @@
   <form method="post" action="{{ url_for('cerrar_cilindro_entrada') }}" class="entry-form bucket-close-form" data-cylinder-close-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="product-form-grid">
-      <label class="span-two">
+      <label>
+        <span>Tipo de producto</span>
+        <select required data-cylinder-close-product-type>
+          <option value="">Selecciona un tipo</option>
+          {% for tipo in tipos %}
+            <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
         <span>Producto con cilindro abierto</span>
-        <select name="producto_id" required data-cylinder-close-product>
+        <select name="producto_id" required data-cylinder-close-product disabled>
+          <option value="">Primero selecciona un tipo</option>
           {% for producto in productos %}
             <option
               value="{{ producto.id }}"
+              data-type="{{ producto.tipo_id }}"
               data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
               data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
               data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
