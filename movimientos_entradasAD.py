@@ -58,8 +58,9 @@ def listar_entradas(limite=30):
 def listar_aperturas_balde(limite=12):
     filas = consultar_todos(
         """
-        SELECT a.id, a.baldes_abiertos, a.contenido_por_balde, a.cantidad_base,
+        SELECT a.id, a.tipo, a.baldes_abiertos, a.contenido_por_balde, a.cantidad_base,
                a.stock_baldes_anterior, a.stock_baldes_nuevo,
+               a.baldes_en_uso_anterior, a.baldes_en_uso_nuevo,
                a.stock_abierto_anterior, a.stock_abierto_nuevo,
                a.creado_en, p.nombre AS producto, p.marca, u.abreviatura,
                COALESCE(us.nombre, 'Usuario eliminado') AS usuario
@@ -72,7 +73,12 @@ def listar_aperturas_balde(limite=12):
         """,
         (limite,),
     )
-    return [dict(fila) for fila in filas]
+    aperturas = []
+    for fila in filas:
+        apertura = dict(fila)
+        apertura["tipo_texto"] = "Terminado" if apertura["tipo"] == "cierre" else "Abierto"
+        aperturas.append(apertura)
+    return aperturas
 
 
 def resumen_entradas():
@@ -118,7 +124,7 @@ def registrar_entrada(datos, usuario_id):
         cursor.execute(
             """
             SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
-                   p.stock_balde_abierto, p.stock_baldes_cerrados,
+                   p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
                    u.abreviatura, u.permite_decimal
             FROM productos p
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
@@ -161,7 +167,7 @@ def registrar_entrada(datos, usuario_id):
 
             stock_anterior = producto["stock_actual"]
             stock_suelto_nuevo = producto["stock_suelto"] + cantidad_base
-            stock_nuevo = stock_suelto_nuevo + producto["stock_balde_abierto"]
+            stock_nuevo = stock_suelto_nuevo
             cursor.execute(
                 """
                 UPDATE productos
@@ -242,24 +248,17 @@ def registrar_entrada(datos, usuario_id):
 
 def abrir_balde(datos, usuario_id):
     producto_id = _entero(datos.get("producto_id"))
-    baldes, error_baldes = _decimal(datos.get("baldes_abiertos"), "Los baldes a abrir")
-    contenido, error_contenido = _decimal(datos.get("contenido_por_balde"), "El contenido por balde")
+    baldes = Decimal("1.000")
 
     if not producto_id:
         return False, "Selecciona un producto."
-    if error_baldes:
-        return False, error_baldes
-    if error_contenido:
-        return False, error_contenido
-    if baldes != baldes.to_integral_value():
-        return False, "Los baldes a abrir deben ser enteros."
 
     def operacion(cursor):
         cursor.execute(
             """
             SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
-                   p.stock_balde_abierto, p.stock_baldes_cerrados,
-                   u.abreviatura, u.permite_decimal
+                   p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
+                   u.abreviatura
             FROM productos p
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
             WHERE p.id = %s
@@ -270,70 +269,146 @@ def abrir_balde(datos, usuario_id):
         producto = cursor.fetchone()
         if not producto:
             return False, "El producto seleccionado no existe."
-        if baldes > producto["stock_baldes_cerrados"]:
-            return False, f"Solo hay {producto['stock_baldes_cerrados']} balde(s) cerrados."
+        if producto["baldes_abiertos"] > 0:
+            return False, "Primero marca como terminado el balde abierto de este producto."
+        if producto["stock_baldes_cerrados"] < baldes:
+            return False, "No hay baldes cerrados disponibles para abrir."
 
-        cantidad_base = (baldes * contenido).quantize(Decimal("0.001"))
-        if not producto["permite_decimal"] and cantidad_base != cantidad_base.to_integral_value():
-            return False, "El contenido abierto debe resultar en una cantidad entera."
-
-        stock_anterior = producto["stock_actual"]
         stock_baldes_nuevo = producto["stock_baldes_cerrados"] - baldes
-        stock_abierto_nuevo = producto["stock_balde_abierto"] + cantidad_base
-        stock_nuevo = producto["stock_suelto"] + stock_abierto_nuevo
+        baldes_en_uso_nuevo = producto["baldes_abiertos"] + baldes
         cursor.execute(
             """
             UPDATE productos
             SET stock_baldes_cerrados = %s,
-                stock_balde_abierto = %s,
-                stock_actual = %s
+                baldes_abiertos = %s,
+                stock_balde_abierto = 0,
+                stock_actual = stock_suelto
             WHERE id = %s
             """,
-            (stock_baldes_nuevo, stock_abierto_nuevo, stock_nuevo, producto_id),
+            (stock_baldes_nuevo, baldes_en_uso_nuevo, producto_id),
         )
         cursor.execute(
             """
             INSERT INTO aperturas_balde
-                (producto_id, baldes_abiertos, contenido_por_balde, cantidad_base,
+                (producto_id, tipo, baldes_abiertos, contenido_por_balde, cantidad_base,
                  stock_baldes_anterior, stock_baldes_nuevo,
+                 baldes_en_uso_anterior, baldes_en_uso_nuevo,
                  stock_abierto_anterior, stock_abierto_nuevo,
                  stock_anterior, stock_nuevo, usuario_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, 'apertura', %s, 0, 0, %s, %s, %s, %s, %s, 0, %s, %s, %s)
             """,
             (
                 producto_id,
                 baldes,
-                contenido,
-                cantidad_base,
                 producto["stock_baldes_cerrados"],
                 stock_baldes_nuevo,
+                producto["baldes_abiertos"],
+                baldes_en_uso_nuevo,
                 producto["stock_balde_abierto"],
-                stock_abierto_nuevo,
-                stock_anterior,
-                stock_nuevo,
+                producto["stock_actual"],
+                producto["stock_suelto"],
                 usuario_id,
             ),
         )
-        motivo = f"Apertura de {baldes} balde(s), {contenido} {producto['abreviatura']} por balde"
         cursor.execute(
             """
             INSERT INTO ajustes_stock
                 (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, 0, %s, %s)
             """,
-            (producto_id, stock_anterior, stock_nuevo, cantidad_base, motivo, usuario_id),
+            (
+                producto_id,
+                producto["stock_actual"],
+                producto["stock_suelto"],
+                "Balde abierto para consumo por salidas",
+                usuario_id,
+            ),
         )
         cursor.execute(
             """
             INSERT INTO movimientos (tipo, descripcion, usuario_id)
             VALUES (%s, %s, %s)
             """,
+            ("Apertura", f"{producto['nombre']}: 1 balde abierto", usuario_id),
+        )
+        return True, "Balde abierto. Ahora registra las salidas reales desde ese balde."
+
+    return ejecutar_transaccion(operacion)
+
+
+def cerrar_balde(datos, usuario_id):
+    producto_id = _entero(datos.get("producto_id"))
+    if not producto_id:
+        return False, "Selecciona un producto."
+
+    def operacion(cursor):
+        cursor.execute(
+            """
+            SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
+                   p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
+                   u.abreviatura
+            FROM productos p
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            WHERE p.id = %s
+            FOR UPDATE
+            """,
+            (producto_id,),
+        )
+        producto = cursor.fetchone()
+        if not producto:
+            return False, "El producto seleccionado no existe."
+        if producto["baldes_abiertos"] <= 0:
+            return False, "Este producto no tiene balde abierto en uso."
+
+        baldes_en_uso_nuevo = producto["baldes_abiertos"] - Decimal("1.000")
+        cursor.execute(
+            """
+            UPDATE productos
+            SET baldes_abiertos = %s,
+                stock_balde_abierto = 0,
+                stock_actual = stock_suelto
+            WHERE id = %s
+            """,
+            (baldes_en_uso_nuevo, producto_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO aperturas_balde
+                (producto_id, tipo, baldes_abiertos, contenido_por_balde, cantidad_base,
+                 stock_baldes_anterior, stock_baldes_nuevo,
+                 baldes_en_uso_anterior, baldes_en_uso_nuevo,
+                 stock_abierto_anterior, stock_abierto_nuevo,
+                 stock_anterior, stock_nuevo, usuario_id)
+            VALUES (%s, 'cierre', 1, 0, 0, %s, %s, %s, %s, %s, 0, %s, %s, %s)
+            """,
             (
-                "Apertura",
-                f"{producto['nombre']}: {baldes} balde(s) -> +{cantidad_base} {producto['abreviatura']}",
+                producto_id,
+                producto["stock_baldes_cerrados"],
+                producto["stock_baldes_cerrados"],
+                producto["baldes_abiertos"],
+                baldes_en_uso_nuevo,
+                producto["stock_balde_abierto"],
+                producto["stock_actual"],
+                producto["stock_suelto"],
                 usuario_id,
             ),
         )
-        return True, "Balde abierto y stock actualizado correctamente."
+        motivo = f"Balde terminado. Consumo registrado: {producto['stock_balde_abierto']} {producto['abreviatura']}"
+        cursor.execute(
+            """
+            INSERT INTO ajustes_stock
+                (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+            VALUES (%s, %s, %s, 0, %s, %s)
+            """,
+            (producto_id, producto["stock_actual"], producto["stock_suelto"], motivo, usuario_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO movimientos (tipo, descripcion, usuario_id)
+            VALUES (%s, %s, %s)
+            """,
+            ("Cierre", f"{producto['nombre']}: balde terminado", usuario_id),
+        )
+        return True, "Balde marcado como terminado."
 
     return ejecutar_transaccion(operacion)

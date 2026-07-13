@@ -37,6 +37,7 @@
                 data-stock="{{ producto.stock_actual }}"
                 data-stock-suelto="{{ producto.stock_suelto }}"
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+                data-baldes-abiertos="{{ producto.baldes_abiertos }}"
                 data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
                 data-unidad="{{ producto.unidad|e }}"
                 data-abreviatura="{{ producto.abreviatura|e }}"
@@ -81,17 +82,18 @@
   <aside class="entry-help">
     <span class="material-symbols-outlined">info</span>
     <h2>Como suma el stock</h2>
-    <p>El stock suelto queda disponible para entregar. Los baldes cerrados se guardan aparte hasta que los abras.</p>
-    <div><strong>Orden</strong><span>Baldes cerrados no se mezclan con galones o litros sueltos.</span></div>
+    <p>El stock suelto queda disponible para entregar. Los baldes cerrados se guardan aparte hasta que abras uno.</p>
+    <div><strong>Cajas</strong><span>Para cajas con piezas, usa Presentaciones: Caja = 24 und, por ejemplo.</span></div>
   </aside>
 </section>
 
 <section class="inventory-table bucket-panel">
   <div class="inventory-toolbar">
-    <div><h2>Abrir balde</h2><p>Pasa un balde cerrado a stock de balde abierto cuando ya sepas su rendimiento.</p></div>
+    <div><h2>Control de balde</h2><p>Abre un balde, registra las salidas reales y marcalo terminado cuando se acabe.</p></div>
   </div>
   <form method="post" action="{{ url_for('abrir_balde_entrada') }}" class="entry-form bucket-form" data-bucket-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="baldes_abiertos" value="1">
     <div class="product-form-grid">
       <label class="span-two">
         <span>Producto</span>
@@ -101,41 +103,61 @@
               value="{{ producto.id }}"
               data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
               data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+              data-baldes-abiertos="{{ producto.baldes_abiertos }}"
               data-abreviatura="{{ producto.abreviatura|e }}"
             >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
-      <label>
-        <span>Baldes a abrir</span>
-        <input name="baldes_abiertos" type="number" min="1" step="1" required data-bucket-count>
-      </label>
-      <label>
-        <span>Contenido por balde</span>
-        <input name="contenido_por_balde" type="number" min="0.001" step="0.001" required data-bucket-content>
-      </label>
     </div>
     <div class="entry-preview">
       <div><span>Baldes cerrados</span><strong data-bucket-closed>-</strong></div>
-      <div><span>Agrega a balde abierto</span><strong data-bucket-added>-</strong></div>
-      <div><span>Balde abierto estimado</span><strong data-bucket-open>-</strong></div>
+      <div><span>Balde en uso</span><strong data-bucket-open>-</strong></div>
+      <div><span>Consumido del abierto</span><strong data-bucket-used>-</strong></div>
     </div>
     <div class="dialog-actions">
       <button class="primary-button" type="submit"><span class="material-symbols-outlined">oil_barrel</span>Abrir balde</button>
     </div>
   </form>
+  <form method="post" action="{{ url_for('cerrar_balde_entrada') }}" class="entry-form bucket-close-form" data-bucket-close-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="product-form-grid">
+      <label class="span-two">
+        <span>Producto con balde abierto</span>
+        <select name="producto_id" required data-bucket-close-product>
+          {% for producto in productos %}
+            <option
+              value="{{ producto.id }}"
+              data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+              data-baldes-abiertos="{{ producto.baldes_abiertos }}"
+              data-abreviatura="{{ producto.abreviatura|e }}"
+            >{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="entry-preview">
+      <div><span>Balde en uso</span><strong data-close-open>-</strong></div>
+      <div><span>Consumo registrado</span><strong data-close-used>-</strong></div>
+      <div><span>Al terminar</span><strong>0 balde(s) en uso</strong></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="secondary-button" type="submit"><span class="material-symbols-outlined">done_all</span>Marcar terminado</button>
+    </div>
+  </form>
   {% if aperturas %}
   <div class="table-scroll bucket-history">
     <table>
-      <thead><tr><th>Fecha</th><th>Producto</th><th>Baldes</th><th>Contenido</th><th>Balde abierto</th><th>Usuario</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Producto</th><th>Accion</th><th>Cerrados</th><th>En uso</th><th>Consumo</th><th>Usuario</th></tr></thead>
       <tbody>
         {% for apertura in aperturas %}
         <tr>
           <td>{{ apertura.creado_en }}</td>
           <td><strong>{{ apertura.producto }}</strong><small>{{ apertura.marca or "Sin marca" }}</small></td>
+          <td>{{ apertura.tipo_texto }}</td>
           <td>{{ apertura.stock_baldes_anterior|float|round(3) }} -> <strong>{{ apertura.stock_baldes_nuevo|float|round(3) }}</strong></td>
-          <td>+{{ apertura.cantidad_base|float|round(3) }} {{ apertura.abreviatura }}<small>{{ apertura.baldes_abiertos|float|round(3) }} x {{ apertura.contenido_por_balde|float|round(3) }}</small></td>
-          <td>{{ apertura.stock_abierto_anterior|float|round(3) }} -> <strong>{{ apertura.stock_abierto_nuevo|float|round(3) }}</strong></td>
+          <td>{{ apertura.baldes_en_uso_anterior|float|round(3) }} -> <strong>{{ apertura.baldes_en_uso_nuevo|float|round(3) }}</strong></td>
+          <td>{{ apertura.stock_abierto_anterior|float|round(3) }} -> <strong>{{ apertura.stock_abierto_nuevo|float|round(3) }} {{ apertura.abreviatura }}</strong></td>
           <td>{{ apertura.usuario }}</td>
         </tr>
         {% endfor %}

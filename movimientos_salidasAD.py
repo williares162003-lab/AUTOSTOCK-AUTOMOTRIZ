@@ -199,7 +199,7 @@ def registrar_salida(datos, usuario_id):
             cursor.execute(
                 """
                 SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
-                       p.stock_balde_abierto, p.stock_baldes_cerrados,
+                       p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
                        u.abreviatura, u.permite_decimal
                 FROM productos p
                 INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
@@ -214,22 +214,20 @@ def registrar_salida(datos, usuario_id):
             if not producto["permite_decimal"] and cantidad != cantidad.to_integral_value():
                 return False, f"{producto['nombre']} debe salir en cantidades enteras."
 
-            disponible = (
-                producto["stock_balde_abierto"]
-                if origen == ORIGEN_BALDE_ABIERTO
-                else producto["stock_suelto"]
-            )
-            if cantidad > disponible:
+            disponible = producto["stock_suelto"]
+            if origen == ORIGEN_BALDE_ABIERTO and producto["baldes_abiertos"] <= 0:
+                return False, f"No hay balde abierto en uso para {producto['nombre']}."
+            if origen == ORIGEN_SUELTO and cantidad > disponible:
                 return False, f"No hay stock suficiente de {producto['nombre']} en {_origen_texto(origen).lower()}."
 
             stock_anterior = producto["stock_actual"]
             stock_suelto_nuevo = producto["stock_suelto"]
             stock_balde_abierto_nuevo = producto["stock_balde_abierto"]
             if origen == ORIGEN_BALDE_ABIERTO:
-                stock_balde_abierto_nuevo -= cantidad
+                stock_balde_abierto_nuevo += cantidad
             else:
                 stock_suelto_nuevo -= cantidad
-            stock_nuevo = stock_suelto_nuevo + stock_balde_abierto_nuevo
+            stock_nuevo = stock_suelto_nuevo
             cursor.execute(
                 """
                 UPDATE productos
@@ -249,13 +247,14 @@ def registrar_salida(datos, usuario_id):
                 (salida_id, producto_id, cantidad, origen, stock_anterior, stock_nuevo),
             )
             motivo = f"Salida {placa} / trabajador: {trabajador} / {_origen_texto(origen)}"
+            diferencia = Decimal("0.000") if origen == ORIGEN_BALDE_ABIERTO else -cantidad
             cursor.execute(
                 """
                 INSERT INTO ajustes_stock
                     (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
-                (producto_id, stock_anterior, stock_nuevo, -cantidad, motivo, usuario_id),
+                (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id),
             )
             nombres.append(
                 f"{producto['nombre']} -{cantidad} {producto['abreviatura']} ({_origen_texto(origen)})"

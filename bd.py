@@ -92,6 +92,12 @@ def _aplicar_migraciones(cursor):
     )
     _asegurar_columna(
         cursor,
+        "productos",
+        "baldes_abiertos",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_balde_abierto",
+    )
+    _asegurar_columna(
+        cursor,
         "entradas_stock",
         "origen_stock",
         "VARCHAR(30) NOT NULL DEFAULT 'suelto' AFTER cantidad_base",
@@ -101,6 +107,24 @@ def _aplicar_migraciones(cursor):
         "salidas_stock_detalle",
         "origen_stock",
         "VARCHAR(30) NOT NULL DEFAULT 'suelto' AFTER cantidad_base",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "tipo",
+        "VARCHAR(20) NOT NULL DEFAULT 'apertura' AFTER producto_id",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "baldes_en_uso_anterior",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER stock_baldes_nuevo",
+    )
+    _asegurar_columna(
+        cursor,
+        "aperturas_balde",
+        "baldes_en_uso_nuevo",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER baldes_en_uso_anterior",
     )
     cursor.execute(
         """
@@ -112,6 +136,7 @@ def _aplicar_migraciones(cursor):
           AND stock_baldes_cerrados = 0
         """
     )
+    cursor.execute("UPDATE productos SET stock_actual = stock_suelto WHERE stock_actual <> stock_suelto")
 
 
 def inicializar_base_datos(reset=False):

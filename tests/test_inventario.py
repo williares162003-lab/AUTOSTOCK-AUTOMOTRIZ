@@ -36,6 +36,7 @@ PRODUCTO_ACEITE = {
     "stock_actual": Decimal("10.000"),
     "stock_suelto": Decimal("8.000"),
     "stock_balde_abierto": Decimal("2.000"),
+    "baldes_abiertos": Decimal("1.000"),
     "stock_baldes_cerrados": Decimal("1.000"),
     "stock_minimo": Decimal("2.000"),
     "observaciones": None,
@@ -82,7 +83,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Balde", response.data)
         self.assertIn(b"Con stock", response.data)
         self.assertIn(b"Disponible", response.data)
-        self.assertIn(b"Balde abierto", response.data)
+        self.assertIn(b"Usado del balde", response.data)
         self.assertIn(b"data-view-product", response.data)
 
     @patch("app.crear_producto_ad", return_value=(True, "Producto registrado correctamente."))
@@ -148,6 +149,7 @@ class InventarioAppTests(unittest.TestCase):
             "stock_actual": Decimal("3"),
             "stock_suelto": Decimal("3"),
             "stock_balde_abierto": Decimal("0"),
+            "baldes_abiertos": Decimal("0"),
             "stock_baldes_cerrados": Decimal("0"),
         },
     )
@@ -164,6 +166,7 @@ class InventarioAppTests(unittest.TestCase):
             "stock_actual": Decimal("0"),
             "stock_suelto": Decimal("0"),
             "stock_balde_abierto": Decimal("0"),
+            "baldes_abiertos": Decimal("0"),
             "stock_baldes_cerrados": Decimal("0"),
         },
     )
@@ -264,13 +267,13 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("mayor que cero", mensaje)
 
-    def test_open_bucket_rejects_invalid_quantity(self):
+    def test_open_bucket_requires_product(self):
         correcto, mensaje = abrir_balde(
-            {"producto_id": "1", "baldes_abiertos": "0", "contenido_por_balde": "5"},
+            {"producto_id": ""},
             usuario_id=2,
         )
         self.assertFalse(correcto)
-        self.assertIn("mayor que cero", mensaje)
+        self.assertIn("producto", mensaje)
 
     @patch("app.resumen_salidas", return_value={"total": 0, "hoy": 0, "mes": 0, "vehiculos": 0})
     @patch("app.listar_salidas", return_value=[])
@@ -325,6 +328,7 @@ class InventarioAppTests(unittest.TestCase):
                 "stock_actual": Decimal("0.000"),
                 "stock_suelto": Decimal("0.000"),
                 "stock_balde_abierto": Decimal("0.000"),
+                "baldes_abiertos": Decimal("0.000"),
                 "stock_baldes_cerrados": Decimal("0.000"),
                 "stock_minimo": Decimal("2.000"),
             },
@@ -334,6 +338,7 @@ class InventarioAppTests(unittest.TestCase):
                 "stock_actual": Decimal("0.000"),
                 "stock_suelto": Decimal("0.000"),
                 "stock_balde_abierto": Decimal("0.000"),
+                "baldes_abiertos": Decimal("1.000"),
                 "stock_baldes_cerrados": Decimal("2.000"),
                 "stock_minimo": Decimal("2.000"),
             },
@@ -343,6 +348,7 @@ class InventarioAppTests(unittest.TestCase):
                 "stock_actual": Decimal("1.000"),
                 "stock_suelto": Decimal("1.000"),
                 "stock_balde_abierto": Decimal("0.000"),
+                "baldes_abiertos": Decimal("0.000"),
                 "stock_baldes_cerrados": Decimal("0.000"),
                 "stock_minimo": Decimal("2.000"),
             },

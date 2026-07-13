@@ -12,11 +12,12 @@ const baseQuantity = document.querySelector("[data-base-quantity]");
 const estimatedStock = document.querySelector("[data-estimated-stock]");
 
 const bucketProduct = document.querySelector("[data-bucket-product]");
-const bucketCount = document.querySelector("[data-bucket-count]");
-const bucketContent = document.querySelector("[data-bucket-content]");
+const bucketCloseProduct = document.querySelector("[data-bucket-close-product]");
 const bucketClosed = document.querySelector("[data-bucket-closed]");
-const bucketAdded = document.querySelector("[data-bucket-added]");
 const bucketOpen = document.querySelector("[data-bucket-open]");
+const bucketUsed = document.querySelector("[data-bucket-used]");
+const closeOpen = document.querySelector("[data-close-open]");
+const closeUsed = document.querySelector("[data-close-used]");
 
 function toNumber(value) {
   const number = Number.parseFloat(String(value || "0").replace(",", "."));
@@ -37,6 +38,11 @@ function selectedProduct() {
 
 function selectedBucketProduct() {
   const option = bucketProduct?.options[bucketProduct.selectedIndex] || null;
+  return option?.value ? option : null;
+}
+
+function selectedBucketCloseProduct() {
+  const option = bucketCloseProduct?.options[bucketCloseProduct.selectedIndex] || null;
   return option?.value ? option : null;
 }
 
@@ -107,22 +113,30 @@ function updateBucketPreview() {
   const product = selectedBucketProduct();
   if (!product) {
     bucketClosed.textContent = "-";
-    bucketAdded.textContent = "-";
     bucketOpen.textContent = "-";
+    bucketUsed.textContent = "-";
     return;
   }
 
   const abbreviation = product.dataset.abreviatura;
   const closed = toNumber(product.dataset.stockBaldesCerrados);
-  const opened = toNumber(product.dataset.stockBaldeAbierto);
-  const count = toNumber(bucketCount.value);
-  const content = toNumber(bucketContent.value);
-  const added = count * content;
-
-  bucketCount.max = String(closed);
+  const inUse = toNumber(product.dataset.baldesAbiertos);
+  const used = toNumber(product.dataset.stockBaldeAbierto);
   bucketClosed.textContent = `${formatQuantity(closed)} balde(s)`;
-  bucketAdded.textContent = added > 0 ? `${formatQuantity(added)} ${abbreviation}` : "-";
-  bucketOpen.textContent = added > 0 ? `${formatQuantity(opened + added)} ${abbreviation}` : `${formatQuantity(opened)} ${abbreviation}`;
+  bucketOpen.textContent = `${formatQuantity(inUse)} balde(s)`;
+  bucketUsed.textContent = `${formatQuantity(used)} ${abbreviation}`;
+}
+
+function updateClosePreview() {
+  const product = selectedBucketCloseProduct();
+  if (!product) {
+    closeOpen.textContent = "-";
+    closeUsed.textContent = "-";
+    return;
+  }
+
+  closeOpen.textContent = `${formatQuantity(product.dataset.baldesAbiertos)} balde(s)`;
+  closeUsed.textContent = `${formatQuantity(product.dataset.stockBaldeAbierto)} ${product.dataset.abreviatura}`;
 }
 
 function refreshEntry() {
@@ -140,9 +154,12 @@ quantityInput.addEventListener("input", updatePreview);
 
 if (bucketProduct) {
   bucketProduct.addEventListener("change", updateBucketPreview);
-  bucketCount.addEventListener("input", updateBucketPreview);
-  bucketContent.addEventListener("input", updateBucketPreview);
   updateBucketPreview();
+}
+
+if (bucketCloseProduct) {
+  bucketCloseProduct.addEventListener("change", updateClosePreview);
+  updateClosePreview();
 }
 
 rebuildPresentations();

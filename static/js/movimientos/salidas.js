@@ -43,11 +43,19 @@ function updateLine(row) {
   }
 
   const originValue = origin.value;
-  const available = originValue === "balde_abierto"
-    ? toNumber(product.dataset.stockBaldeAbierto)
-    : toNumber(product.dataset.stockSuelto);
   const abbreviation = product.dataset.abreviatura;
   quantity.step = product.dataset.decimal === "1" ? "0.001" : "1";
+  if (originValue === "balde_abierto") {
+    const openBuckets = toNumber(product.dataset.baldesAbiertos);
+    const used = toNumber(product.dataset.stockBaldeAbierto);
+    quantity.removeAttribute("max");
+    stock.textContent = openBuckets > 0
+      ? `${formatQuantity(openBuckets)} balde(s) / usado ${formatQuantity(used)} ${abbreviation}`
+      : "Sin balde abierto";
+    return;
+  }
+
+  const available = toNumber(product.dataset.stockSuelto);
   quantity.max = String(available);
   stock.textContent = `${formatQuantity(available)} ${abbreviation}`;
 }

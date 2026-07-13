@@ -59,7 +59,7 @@
     <span class="material-symbols-outlined">fact_check</span>
     <h2>Salida por placa</h2>
     <p>Si la placa ya fue usada, seleccionala y se completa el modelo. Cada pedido nuevo se guarda como otra salida.</p>
-    <div><strong>Aceites</strong><span>Pueden salir de stock suelto o de un balde abierto, pero nunca de baldes cerrados.</span></div>
+    <div><strong>Aceites</strong><span>Si sale del balde abierto, registra solo lo real: 2 galones, 1 litro, etc.</span></div>
   </aside>
 </section>
 
@@ -106,6 +106,7 @@
             data-stock="{{ producto.stock_actual }}"
             data-stock-suelto="{{ producto.stock_suelto }}"
             data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+            data-baldes-abiertos="{{ producto.baldes_abiertos }}"
             data-unidad="{{ producto.unidad|e }}"
             data-abreviatura="{{ producto.abreviatura|e }}"
             data-decimal="{{ 1 if producto.permite_decimal else 0 }}"

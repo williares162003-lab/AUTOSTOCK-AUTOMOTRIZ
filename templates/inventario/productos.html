@@ -29,8 +29,8 @@
       <thead><tr><th>Producto</th><th>Tipo y categoria</th><th>Existencia</th><th>Estado</th><th>Presentaciones</th><th class="action-heading">Accion</th></tr></thead>
       <tbody>
         {% for producto in productos %}
-        {% set solo_baldes = producto.stock_actual <= 0 and producto.stock_baldes_cerrados > 0 %}
-        {% set sin_stock = producto.stock_actual <= 0 and producto.stock_baldes_cerrados <= 0 %}
+        {% set solo_baldes = producto.stock_actual <= 0 and (producto.stock_baldes_cerrados > 0 or producto.baldes_abiertos > 0) %}
+        {% set sin_stock = producto.stock_actual <= 0 and producto.stock_baldes_cerrados <= 0 and producto.baldes_abiertos <= 0 %}
         {% set bajo_stock = producto.stock_actual > 0 and producto.stock_minimo > 0 and producto.stock_actual <= producto.stock_minimo %}
         {% set estado_stock = 'baldes' if solo_baldes else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
         {% set estado_texto = 'Solo baldes' if solo_baldes else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
@@ -42,7 +42,8 @@
             <small>Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</small>
             <div class="stock-breakdown">
               <span>Suelto: {{ producto.stock_suelto|float|round(3) }}</span>
-              <span>Balde abierto: {{ producto.stock_balde_abierto|float|round(3) }}</span>
+              <span>En uso: {{ producto.baldes_abiertos|float|round(3) }} balde(s)</span>
+              <span>Usado del balde: {{ producto.stock_balde_abierto|float|round(3) }}</span>
               <span>Cerrados: {{ producto.stock_baldes_cerrados|float|round(3) }}</span>
             </div>
           </td>
@@ -68,6 +69,7 @@
                 data-stock="{{ producto.stock_actual }}"
                 data-stock-suelto="{{ producto.stock_suelto }}"
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+                data-baldes-abiertos="{{ producto.baldes_abiertos }}"
                 data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
                 data-minimo="{{ producto.stock_minimo }}"
                 data-estado="{{ estado_texto }}"
@@ -101,6 +103,7 @@
                 data-stock="{{ producto.stock_actual }}"
                 data-stock-suelto="{{ producto.stock_suelto }}"
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
+                data-baldes-abiertos="{{ producto.baldes_abiertos }}"
                 data-stock-baldes-cerrados="{{ producto.stock_baldes_cerrados }}"
                 data-unidad="{{ producto.abreviatura }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
@@ -153,7 +156,8 @@
   <div class="detail-stock-summary">
     <div><span>Disponible</span><strong data-detail-stock></strong></div>
     <div><span>Stock suelto</span><strong data-detail-stock-loose></strong></div>
-    <div><span>Balde abierto</span><strong data-detail-stock-open-bucket></strong></div>
+    <div><span>Baldes en uso</span><strong data-detail-open-buckets></strong></div>
+    <div><span>Usado del balde</span><strong data-detail-stock-open-bucket></strong></div>
     <div><span>Baldes cerrados</span><strong data-detail-stock-closed-buckets></strong></div>
     <div><span>Stock minimo</span><strong data-detail-minimum></strong></div>
     <div><span>Estado</span><strong data-detail-status></strong></div>
@@ -205,7 +209,8 @@
     <div class="current-stock"><span>Stock disponible actual</span><strong data-current-stock></strong></div>
     <div class="product-form-grid single-column">
       <label><span>Stock suelto</span><input name="stock_suelto_nuevo" type="number" min="0" required data-new-stock-loose></label>
-      <label><span>Balde abierto</span><input name="stock_balde_abierto_nuevo" type="number" min="0" required data-new-stock-open-bucket></label>
+      <label><span>Baldes en uso</span><input name="baldes_abiertos_nuevo" type="number" min="0" step="1" required data-new-open-buckets></label>
+      <label><span>Usado del balde abierto</span><input name="stock_balde_abierto_nuevo" type="number" min="0" required data-new-stock-open-bucket></label>
       <label><span>Baldes cerrados</span><input name="stock_baldes_cerrados_nuevo" type="number" min="0" step="1" required data-new-stock-closed-buckets></label>
       <label><span>Motivo</span><textarea name="motivo" rows="3" required minlength="3" maxlength="255"></textarea></label>
     </div>
