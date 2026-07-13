@@ -47,6 +47,7 @@ function filterProductsBySelection(typeSelect, categorySelect, productSelect) {
 
   const selectedType = typeSelect.value;
   const selectedCategory = categorySelect.value;
+  const placeholder = Array.from(productSelect.options).find((option) => !option.value);
   let firstVisible = null;
   Array.from(productSelect.options).forEach((option) => {
     if (!option.value) {
@@ -66,11 +67,19 @@ function filterProductsBySelection(typeSelect, categorySelect, productSelect) {
 
   const current = productSelect.options[productSelect.selectedIndex] || null;
   if (!selectedType || !selectedCategory || !firstVisible) {
+    if (placeholder) {
+      placeholder.textContent = !selectedType
+        ? "Primero el tipo"
+        : (!selectedCategory ? "Primero categoria" : "No hay productos en esta categoria");
+    }
     productSelect.value = "";
     productSelect.disabled = true;
     return;
   }
 
+  if (placeholder) {
+    placeholder.textContent = "Selecciona producto";
+  }
   productSelect.disabled = false;
   if (!current?.value || current.hidden || current.disabled) {
     productSelect.value = firstVisible.value;

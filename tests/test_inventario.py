@@ -24,6 +24,8 @@ from tests.test_app import USUARIO_ALMACEN
 TIPOS = [{"id": 1, "nombre": "Repuesto"}, {"id": 2, "nombre": "Lubricante"}]
 CATEGORIAS = [
     {"id": 1, "nombre": "Sin clasificar", "tipo_id": 1, "tipo": "Repuesto"},
+    {"id": 2, "nombre": "Amortiguador", "tipo_id": 1, "tipo": "Repuesto"},
+    {"id": 3, "nombre": "Raqueta limpia parabrisas", "tipo_id": 1, "tipo": "Repuesto"},
     {"id": 14, "nombre": "Aceite de motor", "tipo_id": 2, "tipo": "Lubricante"},
 ]
 UNIDADES = [
@@ -247,14 +249,16 @@ class InventarioAppTests(unittest.TestCase):
     @patch("app.resumen_entradas", return_value={"total": 0, "hoy": 0, "mes": 0, "productos": 0})
     @patch("app.listar_aperturas_balde", return_value=[])
     @patch("app.listar_entradas", return_value=[])
+    @patch("app.listar_categorias", return_value=CATEGORIAS)
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_entries(self, _productos, _entradas, _aperturas, _resumen):
+    def test_almacen_can_open_entries(self, _productos, _categorias, _entradas, _aperturas, _resumen):
         response = self.client.get("/movimientos/entradas")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nueva entrada", response.data)
         self.assertIn(b"Abrir balde", response.data)
         self.assertIn(b"Abrir cilindro", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
+        self.assertIn(b"Raqueta limpia parabrisas", response.data)
 
     @patch("app.registrar_entrada", return_value=(True, "Entrada registrada correctamente."))
     def test_almacen_can_submit_entry(self, registrar):
@@ -291,8 +295,9 @@ class InventarioAppTests(unittest.TestCase):
     @patch("app.resumen_salidas", return_value={"total": 0, "hoy": 0, "mes": 0, "vehiculos": 0})
     @patch("app.listar_salidas", return_value=[])
     @patch("app.listar_vehiculos", return_value=[{"id": 1, "placa": "ABC-123", "modelo": "Toyota Yaris"}])
+    @patch("app.listar_categorias", return_value=CATEGORIAS)
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_outputs(self, _productos, _vehiculos, _salidas, _resumen):
+    def test_almacen_can_open_outputs(self, _productos, _categorias, _vehiculos, _salidas, _resumen):
         response = self.client.get("/movimientos/salidas")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nueva salida", response.data)
