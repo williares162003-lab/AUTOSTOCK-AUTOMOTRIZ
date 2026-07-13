@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from app import app
+from helpers import nav_items
 
 
 USUARIO_PRUEBA = {
@@ -70,6 +71,15 @@ class AutomanAppTests(unittest.TestCase):
         response = self.client.get("/sistema/usuarios")
         self.assertEqual(response.status_code, 302)
         self.assertIn("/dashboard", response.location)
+
+    def test_almacen_nav_keeps_operational_sections_only(self):
+        labels = [item["label"] for item in nav_items(USUARIO_ALMACEN)]
+        self.assertEqual(labels, ["Dashboard", "Inventario", "Movimientos", "Reportes"])
+
+    def test_admin_nav_has_users_without_permissions_screen(self):
+        sistema = nav_items(USUARIO_PRUEBA)[-1]
+        self.assertEqual(sistema["label"], "Sistema")
+        self.assertEqual([item["label"] for item in sistema["children"]], ["Usuarios"])
 
     @patch("app.resumen_usuarios", return_value=RESUMEN_USUARIOS)
     @patch("app.listar_usuarios", return_value=[USUARIO_PRUEBA, USUARIO_ALMACEN])

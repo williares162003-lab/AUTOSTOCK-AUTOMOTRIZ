@@ -25,7 +25,7 @@ def admin_requerido(vista):
         if not usuario:
             return redirect(url_for("login"))
         if usuario.get("rol") != "ADMIN":
-            flash("No tienes permisos para acceder a esta seccion.", "error")
+            flash("No puedes acceder a esta seccion.", "error")
             return redirect(url_for("dashboard"))
         return vista(*args, **kwargs)
 
@@ -82,14 +82,13 @@ def nav_items(usuario):
     if usuario and usuario.get("rol") == "ADMIN":
         items.append(
             {
-            "label": "Sistema",
-            "icon": "settings",
-            "endpoint": None,
-            "active_prefix": "usuarios",
-            "children": [
-                {"label": "Usuarios", "icon": "group", "endpoint": "usuarios"},
-                {"label": "Permisos", "icon": "lock", "endpoint": None},
-            ],
+                "label": "Sistema",
+                "icon": "settings",
+                "endpoint": None,
+                "active_prefix": "usuarios",
+                "children": [
+                    {"label": "Usuarios", "icon": "group", "endpoint": "usuarios"},
+                ],
             }
         )
 
