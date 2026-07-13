@@ -1,7 +1,7 @@
 import os
 import sys
 
-from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 from admin_dashboardAD import (
     obtener_alertas_dashboard,
@@ -58,7 +58,7 @@ from movimientos_salidasAD import (
     registrar_salida,
     resumen_salidas,
 )
-from reportesAD import obtener_reporte_general
+from reportesAD import generar_reporte_csv, obtener_reporte_general
 
 
 app = Flask(__name__)
@@ -370,6 +370,20 @@ def reportes():
         }
     )
     return render_template("reportes/general.html", **contexto)
+
+
+@app.get("/reportes/exportar")
+@login_requerido
+def exportar_reportes():
+    nombre_archivo, contenido = generar_reporte_csv(
+        {
+            "fecha_inicio": request.args.get("fecha_inicio", ""),
+            "fecha_fin": request.args.get("fecha_fin", ""),
+        }
+    )
+    respuesta = Response("\ufeff" + contenido, mimetype="text/csv; charset=utf-8")
+    respuesta.headers["Content-Disposition"] = f"attachment; filename={nombre_archivo}"
+    return respuesta
 
 
 @app.post("/inventario/tipos/crear")

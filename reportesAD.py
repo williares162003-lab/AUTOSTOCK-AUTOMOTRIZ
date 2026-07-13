@@ -1,3 +1,5 @@
+import csv
+from io import StringIO
 from datetime import date, datetime, timedelta
 
 from bd import consultar_todos, consultar_uno
@@ -52,11 +54,120 @@ def obtener_reporte_general(filtros):
 def _atajos_fecha():
     hoy = date.today()
     ayer = hoy - timedelta(days=1)
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
     return {
         "hoy": {"inicio": hoy.isoformat(), "fin": hoy.isoformat()},
         "ayer": {"inicio": ayer.isoformat(), "fin": ayer.isoformat()},
+        "semana": {"inicio": inicio_semana.isoformat(), "fin": hoy.isoformat()},
         "mes": {"inicio": hoy.replace(day=1).isoformat(), "fin": hoy.isoformat()},
     }
+
+
+def generar_reporte_csv(filtros):
+    reporte = obtener_reporte_general(filtros)
+    contenido = StringIO()
+    escritor = csv.writer(contenido)
+    filtros = reporte["filtros"]
+
+    escritor.writerow(["AUTOMAN Chiclayo E.I.R.L."])
+    escritor.writerow(["Reporte de almacen"])
+    escritor.writerow(["Desde", filtros["fecha_inicio"], "Hasta", filtros["fecha_fin"]])
+    escritor.writerow([])
+
+    escritor.writerow(["Resumen"])
+    resumen = reporte["resumen"]
+    escritor.writerow(["Productos", resumen["productos"]])
+    escritor.writerow(["Con stock", resumen["con_stock"]])
+    escritor.writerow(["Sin stock", resumen["sin_stock"]])
+    escritor.writerow(["Bajo minimo", resumen["bajo_stock"]])
+    escritor.writerow(["Entradas", resumen["entradas"]])
+    escritor.writerow(["Salidas", resumen["salidas"]])
+    escritor.writerow(["Lineas de salida", resumen["lineas_salida"]])
+    escritor.writerow(["Baldes cerrados", resumen["baldes_cerrados"]])
+    escritor.writerow(["Baldes en uso", resumen["baldes_en_uso"]])
+    escritor.writerow([])
+
+    escritor.writerow(["Actividad"])
+    escritor.writerow(["Fecha", "Movimiento", "Producto", "Marca", "Origen", "Detalle", "Entrada", "Salida", "Unidad", "Usuario"])
+    for movimiento in reporte["actividad"]:
+        escritor.writerow(
+            [
+                movimiento["fecha"],
+                movimiento["tipo"],
+                movimiento["producto"],
+                movimiento["marca"] or "Sin marca",
+                movimiento["origen"],
+                movimiento["detalle"],
+                movimiento["entrada"] or "",
+                movimiento["salida"] or "",
+                movimiento["unidad"],
+                movimiento["usuario"],
+            ]
+        )
+    escritor.writerow([])
+
+    escritor.writerow(["Productos mas retirados"])
+    escritor.writerow(["Producto", "Marca", "Categoria", "Cantidad", "Unidad", "Movimientos"])
+    for producto in reporte["top_salidas"]:
+        escritor.writerow(
+            [
+                producto["nombre"],
+                producto["marca"] or "Sin marca",
+                producto["categoria"],
+                producto["cantidad"],
+                producto["abreviatura"],
+                producto["movimientos"],
+            ]
+        )
+    escritor.writerow([])
+
+    escritor.writerow(["Salidas por vehiculo"])
+    escritor.writerow(["Placa", "Modelo", "Trabajador", "Salidas", "Items", "Ultimo movimiento"])
+    for salida in reporte["salidas_vehiculos"]:
+        escritor.writerow(
+            [
+                salida["placa"],
+                salida["modelo"],
+                salida["trabajador"],
+                salida["salidas"],
+                salida["productos"],
+                salida["ultimo_movimiento"],
+            ]
+        )
+    escritor.writerow([])
+
+    escritor.writerow(["Entradas por proveedor"])
+    escritor.writerow(["Proveedor", "Entradas", "Productos", "Ultima entrada"])
+    for proveedor in reporte["entradas_proveedores"]:
+        escritor.writerow(
+            [
+                proveedor["proveedor"],
+                proveedor["entradas"],
+                proveedor["productos"],
+                proveedor["ultima_entrada"],
+            ]
+        )
+    escritor.writerow([])
+
+    escritor.writerow(["Productos que requieren atencion"])
+    escritor.writerow(["Producto", "Marca", "Tipo", "Categoria", "Disponible", "Minimo", "Unidad", "Baldes cerrados", "Baldes en uso"])
+    for producto in reporte["stock_critico"]:
+        escritor.writerow(
+            [
+                producto["nombre"],
+                producto["marca"] or "Sin marca",
+                producto["tipo"],
+                producto["categoria"],
+                producto["stock_actual"],
+                producto["stock_minimo"],
+                producto["abreviatura"],
+                producto["stock_baldes_cerrados"],
+                producto["baldes_abiertos"],
+            ]
+        )
+
+    nombre = f"reporte-automan-{filtros['fecha_inicio']}-a-{filtros['fecha_fin']}.csv"
+    return nombre, contenido.getvalue()
 
 
 def _actividad_periodo(filtros):

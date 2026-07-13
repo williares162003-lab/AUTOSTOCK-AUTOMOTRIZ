@@ -28,8 +28,10 @@
     <div class="report-quick-filters" aria-label="Filtros rapidos">
       <a href="{{ url_for('reportes', fecha_inicio=atajos.hoy.inicio, fecha_fin=atajos.hoy.fin) }}">Hoy</a>
       <a href="{{ url_for('reportes', fecha_inicio=atajos.ayer.inicio, fecha_fin=atajos.ayer.fin) }}">Ayer</a>
+      <a href="{{ url_for('reportes', fecha_inicio=atajos.semana.inicio, fecha_fin=atajos.semana.fin) }}">Semana</a>
       <a href="{{ url_for('reportes', fecha_inicio=atajos.mes.inicio, fecha_fin=atajos.mes.fin) }}">Mes</a>
     </div>
+    <a class="report-export-button" href="{{ url_for('exportar_reportes', fecha_inicio=filtros.fecha_inicio, fecha_fin=filtros.fecha_fin) }}"><span class="material-symbols-outlined">download</span>Exportar CSV</a>
   </form>
 </section>
 

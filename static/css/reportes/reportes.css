@@ -54,6 +54,21 @@
   font-weight: 800;
 }
 
+.report-export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  color: #15803d;
+  background: #e8f7ee;
+  border: 1px solid #86cfa1;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .report-warning {
   display: flex;
   align-items: flex-start;
@@ -241,6 +256,7 @@
   .report-filters,
   .report-filters label,
   .report-quick-filters,
+  .report-export-button,
   .report-filters .primary-button,
   .report-filters .secondary-button {
     width: 100%;

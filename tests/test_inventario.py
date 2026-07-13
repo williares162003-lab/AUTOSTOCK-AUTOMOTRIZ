@@ -331,6 +331,7 @@ class InventarioAppTests(unittest.TestCase):
             "atajos": {
                 "hoy": {"inicio": "2026-07-12", "fin": "2026-07-12"},
                 "ayer": {"inicio": "2026-07-11", "fin": "2026-07-11"},
+                "semana": {"inicio": "2026-07-06", "fin": "2026-07-12"},
                 "mes": {"inicio": "2026-07-01", "fin": "2026-07-12"},
             },
             "periodo_es_dia": False,
@@ -378,9 +379,20 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Reportes", response.data)
         self.assertIn(b"Actividad del periodo", response.data)
         self.assertIn(b"Hoy", response.data)
+        self.assertIn(b"Semana", response.data)
+        self.assertIn(b"Exportar CSV", response.data)
         self.assertIn(b"Productos mas retirados", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"/reportes", response.data)
+
+    @patch("app.generar_reporte_csv", return_value=("reporte-automan.csv", "columna\nvalor\n"))
+    def test_almacen_can_export_reports_csv(self, generar_csv):
+        response = self.client.get("/reportes/exportar?fecha_inicio=2026-07-12&fecha_fin=2026-07-12")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response.content_type)
+        self.assertIn("attachment; filename=reporte-automan.csv", response.headers["Content-Disposition"])
+        self.assertIn("columna", response.get_data(as_text=True))
+        generar_csv.assert_called_once()
 
     def test_reports_default_to_current_day(self):
         filtros = normalizar_filtros_reportes({})
