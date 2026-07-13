@@ -1,0 +1,172 @@
+.kardex-guide,
+.kardex-filters-panel,
+.kardex-product-summary {
+  margin-bottom: 18px;
+}
+
+.kardex-guide-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 22px;
+}
+
+.kardex-guide-content > .material-symbols-outlined {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--primario);
+  background: var(--primario-suave);
+  border-radius: 8px;
+}
+
+.kardex-guide h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.kardex-guide p {
+  margin: 0;
+  max-width: 920px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.kardex-filters {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(140px, 0.3fr)) auto auto;
+  align-items: end;
+  gap: 10px;
+  padding: 18px 22px;
+}
+
+.kardex-filters label,
+.kardex-filters label > span {
+  display: block;
+}
+
+.kardex-filters label > span {
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kardex-filters select,
+.kardex-filters input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  color: #263447;
+  background: #ffffff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  outline: 0;
+}
+
+.kardex-filters select:focus,
+.kardex-filters input:focus {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px rgba(78, 115, 152, 0.12);
+}
+
+.kardex-stock-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 22px 22px;
+}
+
+.kardex-stock-grid div {
+  min-height: 72px;
+  padding: 12px;
+  background: #f7f9fb;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.kardex-stock-grid span {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kardex-stock-grid strong {
+  color: #263447;
+  font-size: 14px;
+}
+
+.kardex-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.kardex-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kardex-badge.entrada {
+  color: #15803d;
+  background: #e8f7ee;
+}
+
+.kardex-badge.salida {
+  color: #92400e;
+  background: #fff8db;
+}
+
+.kardex-badge.ajuste {
+  color: #475569;
+  background: #f4f6f8;
+}
+
+.kardex-badge.balde {
+  color: var(--primario-oscuro);
+  background: var(--primario-suave);
+}
+
+.kardex-entry {
+  color: #15803d;
+}
+
+.kardex-exit {
+  color: #b91c1c;
+}
+
+@media (max-width: 1100px) {
+  .kardex-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kardex-stock-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .kardex-guide-content {
+    flex-direction: column;
+  }
+
+  .kardex-filters,
+  .kardex-stock-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kardex-filters .primary-button,
+  .kardex-filters .secondary-button {
+    width: 100%;
+  }
+}

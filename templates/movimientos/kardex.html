@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario/productos.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/movimientos/kardex.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="inventory-stats">
+  <article class="inventory-stat neutral"><span class="material-symbols-outlined">fact_check</span><strong>{{ resumen.total }}</strong><p>Movimientos</p></article>
+  <article class="inventory-stat green"><span class="material-symbols-outlined">move_to_inbox</span><strong>{{ resumen.entradas }}</strong><p>Entradas</p></article>
+  <article class="inventory-stat warning"><span class="material-symbols-outlined">outbox</span><strong>{{ resumen.salidas }}</strong><p>Salidas</p></article>
+  <article class="inventory-stat primary"><span class="material-symbols-outlined">oil_barrel</span><strong>{{ resumen.baldes }}</strong><p>Baldes</p></article>
+</div>
+
+<section class="inventory-table kardex-guide">
+  <div class="kardex-guide-content">
+    <span class="material-symbols-outlined">info</span>
+    <div>
+      <h2>Como funciona el Kardex</h2>
+      <p>Es el historial ordenado del producto: entradas suman, salidas descuentan stock suelto o registran consumo del balde abierto, ajustes corrigen stock y baldes muestran aperturas o cierres.</p>
+    </div>
+  </div>
+</section>
+
+<section class="inventory-table kardex-filters-panel">
+  <form method="get" action="{{ url_for('kardex') }}" class="kardex-filters">
+    <label>
+      <span>Producto</span>
+      <select name="producto_id">
+        <option value="">Todos los productos</option>
+        {% for producto in productos %}
+          <option value="{{ producto.id }}" {% if filtros.producto_id|string == producto.id|string %}selected{% endif %}>
+            {{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Desde</span>
+      <input name="fecha_inicio" type="date" value="{{ filtros.fecha_inicio }}">
+    </label>
+    <label>
+      <span>Hasta</span>
+      <input name="fecha_fin" type="date" value="{{ filtros.fecha_fin }}">
+    </label>
+    <label>
+      <span>Movimiento</span>
+      <select name="tipo">
+        <option value="" {% if not filtros.tipo %}selected{% endif %}>Todos</option>
+        <option value="entrada" {% if filtros.tipo == "entrada" %}selected{% endif %}>Entradas</option>
+        <option value="salida" {% if filtros.tipo == "salida" %}selected{% endif %}>Salidas</option>
+        <option value="ajuste" {% if filtros.tipo == "ajuste" %}selected{% endif %}>Ajustes</option>
+        <option value="balde" {% if filtros.tipo == "balde" %}selected{% endif %}>Baldes</option>
+      </select>
+    </label>
+    <button class="primary-button" type="submit"><span class="material-symbols-outlined">filter_alt</span>Filtrar</button>
+    <a class="secondary-button" href="{{ url_for('kardex') }}"><span class="material-symbols-outlined">restart_alt</span>Limpiar</a>
+  </form>
+</section>
+
+{% if producto_seleccionado %}
+<section class="inventory-table kardex-product-summary">
+  <div class="inventory-toolbar">
+    <div>
+      <h2>{{ producto_seleccionado.nombre }}</h2>
+      <p>{{ producto_seleccionado.tipo }} / {{ producto_seleccionado.categoria }}{% if producto_seleccionado.marca %} / {{ producto_seleccionado.marca }}{% endif %}</p>
+    </div>
+  </div>
+  <div class="kardex-stock-grid">
+    <div><span>Disponible</span><strong>{{ producto_seleccionado.stock_actual|float|round(3) }} {{ producto_seleccionado.abreviatura }}</strong></div>
+    <div><span>Suelto</span><strong>{{ producto_seleccionado.stock_suelto|float|round(3) }} {{ producto_seleccionado.abreviatura }}</strong></div>
+    <div><span>Baldes en uso</span><strong>{{ producto_seleccionado.baldes_abiertos|float|round(3) }}</strong></div>
+    <div><span>Usado del balde</span><strong>{{ producto_seleccionado.stock_balde_abierto|float|round(3) }} {{ producto_seleccionado.abreviatura }}</strong></div>
+    <div><span>Baldes cerrados</span><strong>{{ producto_seleccionado.stock_baldes_cerrados|float|round(3) }}</strong></div>
+  </div>
+</section>
+{% endif %}
+
+<section class="inventory-table">
+  <div class="inventory-toolbar">
+    <div><h2>Historial de movimientos</h2><p>{{ movimientos|length }} registros encontrados</p></div>
+  </div>
+  <div class="table-scroll">
+    <table class="kardex-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Producto</th>
+          <th>Movimiento</th>
+          <th>Detalle</th>
+          <th>Entrada</th>
+          <th>Salida</th>
+          <th>Stock</th>
+          <th>Referencia</th>
+          <th>Usuario</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for movimiento in movimientos %}
+        <tr>
+          <td>{{ movimiento.fecha }}</td>
+          <td><strong>{{ movimiento.producto }}</strong><small>{{ movimiento.marca or "Sin marca" }}</small></td>
+          <td><span class="kardex-badge {{ movimiento.tipo_clase }}">{{ movimiento.tipo }}</span><small>{{ movimiento.origen }}</small></td>
+          <td>{{ movimiento.detalle }}</td>
+          <td>{% if movimiento.entrada %}<strong class="kardex-entry">+{{ movimiento.entrada|float|round(3) }} {{ movimiento.unidad }}</strong>{% else %}-{% endif %}</td>
+          <td>{% if movimiento.salida %}<strong class="kardex-exit">-{{ movimiento.salida|float|round(3) }} {{ movimiento.unidad }}</strong>{% else %}-{% endif %}</td>
+          <td>{{ movimiento.stock_anterior|float|round(3) }} -> <strong>{{ movimiento.stock_nuevo|float|round(3) }}</strong></td>
+          <td>{{ movimiento.referencia }}</td>
+          <td>{{ movimiento.usuario }}</td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-row" colspan="9">Todavia no hay movimientos para los filtros seleccionados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -287,6 +287,38 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Sale de", response.data)
 
+    @patch("app.resumen_kardex", return_value={"total": 1, "entradas": 1, "salidas": 0, "ajustes": 0, "baldes": 0})
+    @patch("app.obtener_producto_kardex", return_value=PRODUCTO_ACEITE)
+    @patch(
+        "app.listar_movimientos_kardex",
+        return_value=[
+            {
+                "fecha": "2026-07-12 10:00:00",
+                "producto": "Aceite 20W50",
+                "marca": None,
+                "tipo": "Entrada",
+                "tipo_clase": "entrada",
+                "origen": "Stock suelto",
+                "detalle": "Compra",
+                "referencia": "Factura 1",
+                "entrada": Decimal("2.000"),
+                "salida": None,
+                "unidad": "gal",
+                "stock_anterior": Decimal("8.000"),
+                "stock_nuevo": Decimal("10.000"),
+                "usuario": "William",
+            }
+        ],
+    )
+    @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
+    def test_almacen_can_open_kardex(self, _productos, _movimientos, _producto, _resumen):
+        response = self.client.get("/movimientos/kardex?producto_id=1")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Kardex", response.data)
+        self.assertIn(b"Aceite 20W50", response.data)
+        self.assertIn(b"Compra", response.data)
+        self.assertIn(b"/movimientos/kardex", response.data)
+
     @patch("app.registrar_salida", return_value=(True, "Salida registrada correctamente."))
     def test_almacen_can_submit_output(self, registrar):
         response = self.client.post(

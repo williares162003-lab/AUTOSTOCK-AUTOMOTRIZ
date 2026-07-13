@@ -47,6 +47,11 @@ from movimientos_entradasAD import (
     registrar_entrada,
     resumen_entradas,
 )
+from movimientos_kardexAD import (
+    listar_movimientos_kardex,
+    obtener_producto_kardex,
+    resumen_kardex,
+)
 from movimientos_salidasAD import (
     listar_salidas,
     listar_vehiculos,
@@ -255,6 +260,32 @@ def crear_salida():
     correcto, mensaje = registrar_salida(request.form, session["usuario"]["id"])
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("salidas"))
+
+
+@app.get("/movimientos/kardex")
+@login_requerido
+def kardex():
+    filtros = {
+        "producto_id": request.args.get("producto_id", ""),
+        "fecha_inicio": request.args.get("fecha_inicio", ""),
+        "fecha_fin": request.args.get("fecha_fin", ""),
+        "tipo": request.args.get("tipo", ""),
+    }
+    movimientos = listar_movimientos_kardex(filtros)
+    producto_id = request.args.get("producto_id", type=int)
+    contexto = contexto_base("kardex")
+    contexto.update(
+        {
+            "page_title": "Kardex",
+            "page_subtitle": "Consulta el historial de entradas, salidas, ajustes y control de baldes.",
+            "productos": listar_productos(),
+            "producto_seleccionado": obtener_producto_kardex(producto_id),
+            "movimientos": movimientos,
+            "resumen": resumen_kardex(movimientos),
+            "filtros": filtros,
+        }
+    )
+    return render_template("movimientos/kardex.html", **contexto)
 
 
 @app.get("/inventario/categorias")
