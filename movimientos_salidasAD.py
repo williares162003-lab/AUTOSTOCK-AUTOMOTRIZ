@@ -39,13 +39,21 @@ def _origen_texto(origen):
     }.get(origen, "Suelto")
 
 
-def listar_vehiculos():
+def listar_vehiculos(dias_recientes=3):
+    dias_recientes = max(int(dias_recientes or 3), 1)
     filas = consultar_todos(
         """
         SELECT id, placa, modelo, ultimo_uso
         FROM vehiculos_atendidos
-        ORDER BY ultimo_uso DESC, placa
-        """
+        WHERE UPPER(placa) LIKE 'TRABAJADORES %%'
+           OR UPPER(placa) = 'PARA TRABAJADORES'
+           OR DATE(ultimo_uso) >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        ORDER BY
+          (UPPER(placa) LIKE 'TRABAJADORES %%' OR UPPER(placa) = 'PARA TRABAJADORES') DESC,
+          ultimo_uso DESC,
+          placa
+        """,
+        (dias_recientes - 1,),
     )
     return [dict(fila) for fila in filas]
 
