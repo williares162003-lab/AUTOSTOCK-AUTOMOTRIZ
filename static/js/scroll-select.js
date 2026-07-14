@@ -1,6 +1,7 @@
 (function () {
   const SELECTOR = "select:not([data-native-select])";
   const enhanced = new WeakSet();
+  const controllers = new WeakMap();
   const instances = new Set();
 
   function optionIsVisible(option) {
@@ -83,6 +84,7 @@
         item.addEventListener("click", () => {
           if (item.disabled) return;
           select.value = option.value;
+          select.dispatchEvent(new Event("input", { bubbles: true }));
           select.dispatchEvent(new Event("change", { bubbles: true }));
           if (select.validity.valid) validationShown = false;
           close();
@@ -113,6 +115,7 @@
 
     const instance = { close, wrapper };
     instances.add(instance);
+    controllers.set(select, { sync });
 
     button.addEventListener("click", () => {
       if (menu.hidden) open();
@@ -142,6 +145,12 @@
 
   window.enhanceScrollSelects = function (root = document) {
     root.querySelectorAll(SELECTOR).forEach(enhanceSelect);
+  };
+
+  window.refreshScrollSelects = function (root = document) {
+    root.querySelectorAll(SELECTOR).forEach((select) => {
+      controllers.get(select)?.sync();
+    });
   };
 
   document.addEventListener("DOMContentLoaded", () => {

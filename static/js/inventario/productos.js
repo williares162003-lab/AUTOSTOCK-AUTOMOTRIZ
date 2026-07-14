@@ -230,6 +230,7 @@ function syncFilterOptions() {
     option.disabled = !visible;
   });
   if (categoryFilter.selectedOptions[0]?.disabled) categoryFilter.value = "";
+  window.refreshScrollSelects?.(document.querySelector(".inventory-filters"));
 }
 
 [productSearch, areaFilter, typeFilter, categoryFilter, statusFilter].forEach((control) => {
