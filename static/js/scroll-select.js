@@ -18,6 +18,14 @@
     return placeholder?.textContent.trim() || "Selecciona";
   }
 
+  function normalizeTerm(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
   function closeAll(except = null) {
     instances.forEach((instance) => {
       if (instance !== except) instance.close();
@@ -58,7 +66,7 @@
       button.classList.toggle("is-invalid", validationShown && !select.validity.valid && select.required);
     }
 
-    function buildMenu() {
+    function buildMenu(initialSearch = "") {
       menu.innerHTML = "";
 
       const options = Array.from(select.options).filter((option) => !option.hidden);
@@ -69,6 +77,24 @@
         menu.appendChild(empty);
         return;
       }
+
+      const search = document.createElement("input");
+      search.type = "search";
+      search.className = "scroll-select-search";
+      search.placeholder = "Buscar...";
+      search.autocomplete = "off";
+      search.spellcheck = false;
+      search.value = initialSearch;
+
+      const list = document.createElement("div");
+      list.className = "scroll-select-list";
+
+      const filteredEmpty = document.createElement("div");
+      filteredEmpty.className = "scroll-select-empty";
+      filteredEmpty.textContent = "Sin coincidencias";
+      filteredEmpty.hidden = true;
+
+      const items = [];
 
       options.forEach((option) => {
         const item = document.createElement("button");
@@ -91,20 +117,65 @@
           sync();
         });
 
-        menu.appendChild(item);
+        list.appendChild(item);
+        items.push({ item, text: normalizeTerm(option.textContent) });
       });
+
+      function firstVisibleEnabledItem() {
+        return items.find(({ item }) => !item.hidden && !item.disabled)?.item || null;
+      }
+
+      function filterItems() {
+        const term = normalizeTerm(search.value);
+        let visible = 0;
+        items.forEach(({ item, text }) => {
+          const matches = !term || text.includes(term);
+          item.hidden = !matches;
+          if (matches) visible += 1;
+        });
+        filteredEmpty.hidden = visible !== 0;
+      }
+
+      search.addEventListener("input", filterItems);
+      search.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          firstVisibleEnabledItem()?.click();
+        }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          firstVisibleEnabledItem()?.focus();
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+          button.focus();
+        }
+      });
+
+      list.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+          button.focus();
+        }
+      });
+
+      menu.append(search, list, filteredEmpty);
+      filterItems();
     }
 
-    function open() {
+    function open(initialSearch = "") {
       if (select.disabled) return;
       closeAll(instance);
-      buildMenu();
+      buildMenu(initialSearch);
       wrapper.classList.add("open");
       button.setAttribute("aria-expanded", "true");
       menu.hidden = false;
 
       const active = menu.querySelector(".scroll-select-option.active");
       if (active) active.scrollIntoView({ block: "nearest" });
+      menu.querySelector(".scroll-select-search")?.focus();
     }
 
     function close() {
@@ -120,6 +191,17 @@
     button.addEventListener("click", () => {
       if (menu.hidden) open();
       else close();
+    });
+    button.addEventListener("keydown", (event) => {
+      const isPrintable = event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
+      if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+      if (isPrintable) {
+        event.preventDefault();
+        open(event.key);
+      }
     });
 
     select.addEventListener("change", () => {
