@@ -5,6 +5,13 @@
   margin-bottom: 18px;
 }
 
+.entry-form-panel,
+.bucket-panel {
+  position: relative;
+  z-index: 3;
+  overflow: visible;
+}
+
 .entry-form {
   padding: 0 22px 22px;
 }
