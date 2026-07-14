@@ -133,6 +133,72 @@ class InventarioAppTests(unittest.TestCase):
         self.assertFalse(correcto)
         self.assertIn("mayor que cero", mensaje)
 
+    @patch("inventario_productosAD.ejecutar_transaccion")
+    @patch("inventario_productosAD.consultar_todos")
+    @patch("inventario_productosAD.consultar_uno")
+    def test_product_allows_same_code_with_different_presentation(
+        self, consultar_uno, consultar_todos, ejecutar_transaccion
+    ):
+        consultar_uno.side_effect = [
+            {"id": 14},
+            {"id": 3, "permite_decimal": 1},
+        ]
+        consultar_todos.side_effect = [
+            [{"id": 9, "nombre": "Ultrabase 7000", "marca": "Sherwin Williams"}],
+            [{"producto_id": 9, "nombre": "1 litro", "factor": Decimal("1.000")}],
+        ]
+        datos = MultiDict(
+            [
+                ("nombre", "Ultrabase 7000"),
+                ("codigo", "UB-7000"),
+                ("tipo_id", "2"),
+                ("categoria_id", "14"),
+                ("marca", "Sherwin Williams"),
+                ("unidad_base_id", "3"),
+                ("stock_actual", "0"),
+                ("stock_minimo", "0"),
+                ("presentacion_nombre", "1/4 litro"),
+                ("presentacion_factor", "0.250"),
+            ]
+        )
+        correcto, mensaje = crear_producto(datos, usuario_id=2)
+        self.assertTrue(correcto)
+        self.assertIn("registrado", mensaje)
+        ejecutar_transaccion.assert_called_once()
+
+    @patch("inventario_productosAD.ejecutar_transaccion")
+    @patch("inventario_productosAD.consultar_todos")
+    @patch("inventario_productosAD.consultar_uno")
+    def test_product_rejects_same_code_and_same_presentation(
+        self, consultar_uno, consultar_todos, ejecutar_transaccion
+    ):
+        consultar_uno.side_effect = [
+            {"id": 14},
+            {"id": 3, "permite_decimal": 1},
+        ]
+        consultar_todos.side_effect = [
+            [{"id": 9, "nombre": "Ultrabase 7000", "marca": "Sherwin Williams"}],
+            [{"producto_id": 9, "nombre": "1/4 litro", "factor": Decimal("0.250")}],
+        ]
+        datos = MultiDict(
+            [
+                ("nombre", "Ultrabase 7000"),
+                ("codigo", "UB-7000"),
+                ("tipo_id", "2"),
+                ("categoria_id", "14"),
+                ("marca", "Sherwin Williams"),
+                ("unidad_base_id", "3"),
+                ("stock_actual", "0"),
+                ("stock_minimo", "0"),
+                ("presentacion_nombre", "1/4 litro"),
+                ("presentacion_factor", "0.250"),
+            ]
+        )
+        correcto, mensaje = crear_producto(datos, usuario_id=2)
+        self.assertFalse(correcto)
+        self.assertIn("codigo, nombre y presentacion", mensaje)
+        ejecutar_transaccion.assert_not_called()
+
     @patch("inventario_productosAD.consultar_uno")
     def test_unit_products_reject_fractional_stock(self, consultar_uno):
         consultar_uno.side_effect = [

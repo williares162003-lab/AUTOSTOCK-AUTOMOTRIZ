@@ -268,6 +268,46 @@ def _presentaciones_desde_formulario(datos):
     return presentaciones, None
 
 
+def _normalizar_texto(valor):
+    return (valor or "").strip().casefold()
+
+
+def _firma_presentaciones(presentaciones):
+    return tuple(
+        sorted(
+            (
+                _normalizar_texto(presentacion["nombre"]),
+                Decimal(str(presentacion["factor"])).quantize(Decimal("0.001")),
+            )
+            for presentacion in presentaciones
+        )
+    )
+
+
+def _firmas_presentaciones_por_producto(producto_ids):
+    if not producto_ids:
+        return {}
+    marcadores = ", ".join(["%s"] * len(producto_ids))
+    filas = consultar_todos(
+        f"""
+        SELECT producto_id, nombre, factor
+        FROM presentaciones_producto
+        WHERE producto_id IN ({marcadores})
+        ORDER BY producto_id, nombre
+        """,
+        tuple(producto_ids),
+    )
+    por_producto = {producto_id: [] for producto_id in producto_ids}
+    for fila in filas:
+        por_producto.setdefault(fila["producto_id"], []).append(
+            {"nombre": fila["nombre"], "factor": fila["factor"]}
+        )
+    return {
+        producto_id: _firma_presentaciones(presentaciones)
+        for producto_id, presentaciones in por_producto.items()
+    }
+
+
 def _datos_producto(datos, incluir_stock=False):
     valores = {
         "nombre": datos.get("nombre", "").strip(),
@@ -315,13 +355,25 @@ def _validar_producto(valores, producto_id=None):
             return "Las cantidades deben ser enteras para la unidad seleccionada."
 
     if valores.get("codigo"):
-        sql_codigo = "SELECT id FROM productos WHERE LOWER(codigo) = LOWER(%s)"
+        sql_codigo = """
+            SELECT id, nombre, marca
+            FROM productos
+            WHERE LOWER(codigo) = LOWER(%s)
+        """
         parametros_codigo = [valores["codigo"]]
         if producto_id:
             sql_codigo += " AND id <> %s"
             parametros_codigo.append(producto_id)
-        if consultar_uno(sql_codigo, tuple(parametros_codigo)):
-            return "Ya existe un producto con ese codigo."
+        candidatos = consultar_todos(sql_codigo, tuple(parametros_codigo))
+        firmas_existentes = _firmas_presentaciones_por_producto([fila["id"] for fila in candidatos])
+        firma_actual = _firma_presentaciones(valores["presentaciones"])
+        for candidato in candidatos:
+            mismo_producto = (
+                _normalizar_texto(candidato["nombre"]) == _normalizar_texto(valores["nombre"])
+                and _normalizar_texto(candidato["marca"]) == _normalizar_texto(valores["marca"])
+            )
+            if mismo_producto and firmas_existentes.get(candidato["id"], tuple()) == firma_actual:
+                return "Ya existe un producto con ese codigo, nombre y presentacion."
     else:
         sql = """
             SELECT id FROM productos
