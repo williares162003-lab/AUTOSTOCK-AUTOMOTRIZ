@@ -212,6 +212,9 @@ function addLine() {
     if (linesContainer.children.length > 1) row.remove();
   });
   linesContainer.appendChild(row);
+  if (window.enhanceScrollSelects) {
+    window.enhanceScrollSelects(row);
+  }
   syncProductPicker(areaSelect, typeSelect, categorySelect, productSelect);
   updateLine(row);
 }
