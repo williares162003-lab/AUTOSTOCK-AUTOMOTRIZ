@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS areas_almacen (
 
 INSERT IGNORE INTO areas_almacen (id, nombre) VALUES
     (1, 'Mecanica'),
-    (2, 'Pintura');
+    (2, 'Pintura'),
+    (3, 'General');
 
 CREATE TABLE IF NOT EXISTS tipos_producto (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -57,6 +58,18 @@ CREATE TABLE IF NOT EXISTS categorias (
         FOREIGN KEY (tipo_id) REFERENCES tipos_producto (id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO tipos_producto (area_id, nombre)
+SELECT id, 'Varios'
+FROM areas_almacen
+WHERE LOWER(nombre) = 'general';
+
+INSERT IGNORE INTO categorias (tipo_id, nombre)
+SELECT t.id, 'Sin clasificar'
+FROM tipos_producto t
+INNER JOIN areas_almacen a ON a.id = t.area_id
+WHERE LOWER(a.nombre) = 'general'
+  AND LOWER(t.nombre) = 'varios';
 
 CREATE TABLE IF NOT EXISTS productos (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,

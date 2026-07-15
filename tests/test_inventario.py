@@ -21,7 +21,7 @@ from reportesAD import normalizar_filtros_reportes
 from tests.test_app import USUARIO_ALMACEN
 
 
-AREAS = [{"id": 1, "nombre": "Mecanica"}, {"id": 2, "nombre": "Pintura"}]
+AREAS = [{"id": 1, "nombre": "Mecanica"}, {"id": 2, "nombre": "Pintura"}, {"id": 3, "nombre": "General"}]
 TIPOS = [
     {"id": 1, "nombre": "Repuesto", "area_id": 1, "area": "Mecanica"},
     {"id": 2, "nombre": "Lubricante", "area_id": 1, "area": "Mecanica"},
@@ -302,6 +302,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Nuevo tipo", response.data)
         self.assertIn(b"Nueva categoria", response.data)
         self.assertIn(b"Mecanica", response.data)
+        self.assertIn(b"General", response.data)
         self.assertNotIn(b"Editar categoria", response.data)
 
     @patch("app.listar_areas", return_value=AREAS)

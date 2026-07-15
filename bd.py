@@ -100,7 +100,8 @@ def _aplicar_migraciones(cursor):
         """
         INSERT IGNORE INTO areas_almacen (id, nombre) VALUES
             (1, 'Mecanica'),
-            (2, 'Pintura')
+            (2, 'Pintura'),
+            (3, 'General')
         """
     )
     _asegurar_columna(
@@ -124,6 +125,24 @@ def _aplicar_migraciones(cursor):
         cursor.execute(
             "ALTER TABLE tipos_producto ADD UNIQUE KEY uk_tipos_producto_area_nombre (area_id, nombre)"
         )
+    cursor.execute(
+        """
+        INSERT IGNORE INTO tipos_producto (area_id, nombre)
+        SELECT id, 'Varios'
+        FROM areas_almacen
+        WHERE LOWER(nombre) = 'general'
+        """
+    )
+    cursor.execute(
+        """
+        INSERT IGNORE INTO categorias (tipo_id, nombre)
+        SELECT t.id, 'Sin clasificar'
+        FROM tipos_producto t
+        INNER JOIN areas_almacen a ON a.id = t.area_id
+        WHERE LOWER(a.nombre) = 'general'
+          AND LOWER(t.nombre) = 'varios'
+        """
+    )
     _asegurar_columna(
         cursor,
         "productos",
