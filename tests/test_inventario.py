@@ -16,7 +16,7 @@ from inventario_productosAD import (
 )
 from movimientos_entradasAD import abrir_balde, abrir_caja, registrar_entrada
 from movimientos_kardexAD import listar_movimientos_kardex_con_errores
-from movimientos_salidasAD import registrar_salida
+from movimientos_salidasAD import listar_vehiculos, registrar_salida
 from reportesAD import normalizar_filtros_reportes
 from tests.test_app import USUARIO_ALMACEN
 
@@ -592,6 +592,11 @@ class InventarioAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/movimientos/salidas", response.location)
         registrar.assert_called_once()
+
+    @patch("movimientos_salidasAD.consultar_todos", return_value=[])
+    def test_output_destinations_default_to_today(self, consultar):
+        listar_vehiculos()
+        self.assertEqual(consultar.call_args.args[1], (0,))
 
     def test_output_requires_worker(self):
         correcto, mensaje = registrar_salida(

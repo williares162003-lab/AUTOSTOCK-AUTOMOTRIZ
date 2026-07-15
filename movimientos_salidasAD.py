@@ -39,8 +39,8 @@ def _origen_texto(origen):
     }.get(origen, "Suelto")
 
 
-def listar_vehiculos(dias_recientes=3):
-    dias_recientes = max(int(dias_recientes or 3), 1)
+def listar_vehiculos(dias_recientes=1):
+    dias_recientes = max(int(dias_recientes or 1), 1)
     filas = consultar_todos(
         """
         SELECT id, placa, modelo, ultimo_uso
