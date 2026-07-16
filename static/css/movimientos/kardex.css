@@ -66,10 +66,14 @@
 
 .kardex-filters {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(130px, 0.3fr)) auto auto;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(190px, 1fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr) auto auto;
   align-items: end;
   gap: 10px;
   padding: 18px 22px;
+}
+
+.kardex-filters label:first-child {
+  grid-column: 1 / -1;
 }
 
 .kardex-filters label,
@@ -100,6 +104,14 @@
 .kardex-filters input:focus {
   border-color: var(--primario);
   box-shadow: 0 0 0 3px rgba(78, 115, 152, 0.12);
+}
+
+.kardex-filters .scroll-select-menu {
+  max-width: 560px;
+}
+
+.kardex-filters .scroll-select-list {
+  max-height: 140px;
 }
 
 .kardex-stock-grid {
