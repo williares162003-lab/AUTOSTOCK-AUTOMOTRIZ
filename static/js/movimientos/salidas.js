@@ -147,11 +147,11 @@ function selectedProduct(row) {
 }
 
 function isGallonProduct(product) {
-  const unit = `${product?.dataset.unidad || ""} ${product?.dataset.abreviatura || ""}`
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  return unit.includes("gal");
+  return String(product?.dataset.abreviatura || "").toLowerCase().includes("gal");
+}
+
+function displayAbbreviation(product) {
+  return isGallonProduct(product) ? "L" : product.dataset.abreviatura;
 }
 
 function cylinderAvailable(product) {
@@ -181,20 +181,23 @@ function updateLine(row) {
   const origin = row.querySelector("[data-line-origin]");
   const quantity = row.querySelector("[data-line-quantity]");
   const stock = row.querySelector("[data-line-stock]");
-  const gallonShortcuts = row.querySelector("[data-gallon-shortcuts]");
+  const quantityHint = row.querySelector("[data-quantity-hint]");
   if (!product) {
     stock.textContent = "-";
-    if (gallonShortcuts) gallonShortcuts.hidden = true;
+    if (quantityHint) quantityHint.hidden = true;
     return;
   }
 
   chooseAvailableOrigin(product, origin);
   const originValue = origin.value;
-  const abbreviation = product.dataset.abreviatura;
+  const abbreviation = displayAbbreviation(product);
   const allowsDecimal = product.dataset.decimal === "1";
   quantity.step = allowsDecimal ? "0.001" : "1";
   quantity.min = allowsDecimal ? "0.001" : "1";
-  if (gallonShortcuts) gallonShortcuts.hidden = !isGallonProduct(product);
+  if (quantityHint) {
+    quantityHint.hidden = !isGallonProduct(product);
+    quantityHint.textContent = isGallonProduct(product) ? "Ingresa la salida en litros." : "";
+  }
   if (originValue === "balde_abierto") {
     const openBuckets = toNumber(product.dataset.baldesAbiertos);
     const used = toNumber(product.dataset.stockBaldeAbierto);
@@ -245,11 +248,6 @@ function addLine() {
   });
   productSelect.addEventListener("change", () => updateLine(row));
   row.querySelector("[data-line-origin]").addEventListener("change", () => updateLine(row));
-  row.querySelectorAll("[data-gallon-value]").forEach((button) => {
-    button.addEventListener("click", () => {
-      row.querySelector("[data-line-quantity]").value = button.dataset.gallonValue;
-    });
-  });
   row.querySelector("[data-remove-line]").addEventListener("click", () => {
     if (linesContainer.children.length > 1) row.remove();
   });

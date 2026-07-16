@@ -131,6 +131,14 @@ def listar_categorias():
     return [dict(fila) for fila in filas]
 
 
+def _es_galon(abreviatura):
+    return "gal" in (abreviatura or "").lower()
+
+
+def _unidad_operativa(abreviatura):
+    return "L" if _es_galon(abreviatura) else abreviatura
+
+
 def listar_productos():
     productos = [
         dict(fila)
@@ -140,7 +148,7 @@ def listar_productos():
                    p.stock_suelto, p.stock_balde_abierto, p.baldes_abiertos,
                    p.stock_baldes_cerrados, p.stock_cilindro_abierto,
                    p.cilindros_abiertos, p.stock_cilindros_cerrados,
-                   p.litros_por_cilindro, p.stock_cajas_cerradas,
+                   p.litros_por_cilindro, p.litros_por_galon, p.stock_cajas_cerradas,
                    p.unidades_por_caja,
                    p.stock_minimo,
                    p.observaciones, p.tipo_id, t.nombre AS tipo, t.area_id,
@@ -163,6 +171,7 @@ def listar_productos():
     for presentacion in presentaciones:
         por_producto.setdefault(presentacion["producto_id"], []).append(dict(presentacion))
     for producto in productos:
+        producto["unidad_operativa"] = _unidad_operativa(producto["abreviatura"])
         producto["presentaciones"] = por_producto.get(producto["id"], [])
         producto["stock_en_cajas"] = (
             producto.get("stock_cajas_cerradas", 0) * producto.get("unidades_por_caja", 0)
@@ -237,7 +246,12 @@ def listar_ajustes_stock(limite=20):
         """,
         (limite,),
     )
-    return [dict(fila) for fila in filas]
+    ajustes = []
+    for fila in filas:
+        ajuste = dict(fila)
+        ajuste["abreviatura"] = _unidad_operativa(ajuste["abreviatura"])
+        ajustes.append(ajuste)
+    return ajustes
 
 
 def _entero(valor):
@@ -460,7 +474,7 @@ def editar_producto(producto_id, datos):
         SELECT id, unidad_base_id, stock_actual, stock_suelto,
                stock_balde_abierto, baldes_abiertos, stock_baldes_cerrados,
                stock_cilindro_abierto, cilindros_abiertos, stock_cilindros_cerrados,
-               stock_cajas_cerradas, unidades_por_caja
+               litros_por_galon, stock_cajas_cerradas, unidades_por_caja
         FROM productos
         WHERE id = %s
         """,
@@ -546,6 +560,10 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
         datos.get("litros_por_cilindro_nuevo", "0"),
         "Los litros por cilindro",
     )
+    litros_por_galon, error_litros_galon = _decimal(
+        datos.get("litros_por_galon_nuevo", "0"),
+        "Los litros por galon",
+    )
     stock_cajas_cerradas, error_cajas_cerradas = _decimal(
         datos.get("stock_cajas_cerradas_nuevo", "0"),
         "Las cajas cerradas",
@@ -564,6 +582,7 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
         or error_cilindros_abiertos
         or error_cilindros_cerrados
         or error_litros_cilindro
+        or error_litros_galon
         or error_cajas_cerradas
         or error_unidades_caja
     )
@@ -586,7 +605,7 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
             SELECT p.id, p.stock_actual, p.stock_suelto, p.stock_balde_abierto,
                    p.baldes_abiertos, p.stock_baldes_cerrados,
                    p.stock_cilindro_abierto, p.cilindros_abiertos,
-                   p.stock_cilindros_cerrados, p.litros_por_cilindro,
+                   p.stock_cilindros_cerrados, p.litros_por_cilindro, p.litros_por_galon,
                    p.stock_cajas_cerradas, p.unidades_por_caja,
                    u.permite_decimal
             FROM productos p
@@ -619,6 +638,7 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
             and cilindros_abiertos == producto["cilindros_abiertos"]
             and stock_cilindros_cerrados == producto["stock_cilindros_cerrados"]
             and litros_por_cilindro == producto["litros_por_cilindro"]
+            and litros_por_galon == producto["litros_por_galon"]
             and stock_cajas_cerradas == producto["stock_cajas_cerradas"]
             and unidades_por_caja == producto["unidades_por_caja"]
         )
@@ -638,6 +658,7 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
                 cilindros_abiertos = %s,
                 stock_cilindros_cerrados = %s,
                 litros_por_cilindro = %s,
+                litros_por_galon = %s,
                 stock_cajas_cerradas = %s,
                 unidades_por_caja = %s,
                 stock_actual = %s
@@ -652,6 +673,7 @@ def ajustar_stock_producto(producto_id, datos, usuario_id):
                 cilindros_abiertos,
                 stock_cilindros_cerrados,
                 litros_por_cilindro,
+                litros_por_galon,
                 stock_cajas_cerradas,
                 unidades_por_caja,
                 stock_nuevo,
@@ -684,7 +706,7 @@ def eliminar_producto(producto_id):
         SELECT p.id, p.stock_actual, p.stock_suelto,
                p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
                p.stock_cilindro_abierto, p.cilindros_abiertos, p.stock_cilindros_cerrados,
-               p.stock_cajas_cerradas, p.unidades_por_caja
+               p.litros_por_galon, p.stock_cajas_cerradas, p.unidades_por_caja
         FROM productos p
         WHERE p.id = %s
         """,

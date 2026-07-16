@@ -52,6 +52,20 @@ def _filtro_placa(filtros, alias="s"):
     )
 
 
+def _es_galon(abreviatura):
+    return "gal" in (abreviatura or "").lower()
+
+
+def _unidad_producto(abreviatura):
+    return "L" if _es_galon(abreviatura) else abreviatura
+
+
+def _fila_con_unidad_operativa(fila):
+    fila = dict(fila)
+    fila["abreviatura"] = _unidad_producto(fila.get("abreviatura"))
+    return fila
+
+
 def obtener_reporte_general(filtros):
     filtros = normalizar_filtros_reportes(filtros)
     errores_reporte = []
@@ -388,7 +402,7 @@ def _resumen_reportes(filtros):
 
 def _stock_critico():
     return [
-        dict(fila)
+        _fila_con_unidad_operativa(fila)
         for fila in consultar_todos(
             """
             SELECT p.nombre, p.marca, p.stock_actual, p.stock_minimo,
@@ -415,7 +429,7 @@ def _stock_critico():
 def _productos_mas_retirados(filtros):
     placa_sql, placa_params = _filtro_placa(filtros)
     return [
-        dict(fila)
+        _fila_con_unidad_operativa(fila)
         for fila in consultar_todos(
             f"""
             SELECT p.nombre, p.marca, t.nombre AS tipo, c.nombre AS categoria,
@@ -535,7 +549,7 @@ def _salidas_agrupadas_por_dia(filtros):
                 "producto": fila["producto"],
                 "marca": fila["marca"],
                 "cantidad": fila["cantidad"],
-                "abreviatura": fila["abreviatura"],
+                "abreviatura": _unidad_producto(fila["abreviatura"]),
                 "origen_texto": _origen_salida_texto(fila["origen_stock"]),
             }
         )
@@ -574,7 +588,7 @@ def _detalle_por_placa(filtros):
     )
     detalles = []
     for fila in filas:
-        detalle = dict(fila)
+        detalle = _fila_con_unidad_operativa(fila)
         detalle["origen_texto"] = _origen_salida_texto(detalle["origen_stock"])
         detalles.append(detalle)
     return detalles
@@ -582,7 +596,7 @@ def _detalle_por_placa(filtros):
 
 def _entradas_recientes(filtros):
     return [
-        dict(fila)
+        _fila_con_unidad_operativa(fila)
         for fila in consultar_todos(
             """
             SELECT e.creado_en, e.cantidad, e.cantidad_base, e.origen_stock,
@@ -673,7 +687,7 @@ def _movimientos_por_dia(filtros):
 
 def _ajustes_recientes(filtros):
     return [
-        dict(fila)
+        _fila_con_unidad_operativa(fila)
         for fila in consultar_todos(
             """
             SELECT a.creado_en, a.diferencia, a.motivo,

@@ -163,6 +163,7 @@
             data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
             data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
             data-stock-cilindro-disponible="{{ producto.stock_cilindro_disponible|default(0) }}"
+            data-litros-por-galon="{{ producto.litros_por_galon|default(0) }}"
             data-unidad="{{ producto.unidad|e }}"
             data-abreviatura="{{ producto.abreviatura|e }}"
             data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
@@ -181,12 +182,7 @@
     <label>
       <span>Cantidad</span>
       <input name="cantidad" type="number" min="0.001" step="0.001" required data-line-quantity>
-      <div class="gallon-shortcuts" data-gallon-shortcuts hidden>
-        <button type="button" data-gallon-value="1">1 gal</button>
-        <button type="button" data-gallon-value="0.5">1/2</button>
-        <button type="button" data-gallon-value="0.25">1/4</button>
-        <button type="button" data-gallon-value="0.125">1/8</button>
-      </div>
+      <small class="quantity-hint" data-quantity-hint hidden></small>
     </label>
     <div class="line-stock">
       <span>Disponible</span>

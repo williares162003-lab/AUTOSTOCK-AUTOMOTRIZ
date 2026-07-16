@@ -38,6 +38,14 @@ def _origen_texto(origen):
     }.get(origen, "Stock suelto")
 
 
+def _es_galon(abreviatura):
+    return "gal" in (abreviatura or "").lower()
+
+
+def _unidad_producto(abreviatura):
+    return "L" if _es_galon(abreviatura) else abreviatura
+
+
 def _aplicar_filtros(
     base,
     parametros,
@@ -78,7 +86,7 @@ def _aplicar_filtros(
 def obtener_producto_kardex(producto_id):
     if not producto_id:
         return None
-    return consultar_uno(
+    producto = consultar_uno(
         """
         SELECT p.id, p.nombre, p.marca, p.stock_actual, p.stock_suelto,
                p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
@@ -94,6 +102,10 @@ def obtener_producto_kardex(producto_id):
         """,
         (producto_id,),
     )
+    if producto:
+        producto = dict(producto)
+        producto["abreviatura"] = _unidad_producto(producto["abreviatura"])
+    return producto
 
 
 def _entradas(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, categoria_id=None):
@@ -142,7 +154,7 @@ def _entradas(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, 
                 "salida": None,
                 "unidad": (
                     "balde(s)" if es_balde
-                    else ("cilindro(s)" if es_cilindro else ("caja(s)" if es_caja else fila["abreviatura"]))
+                    else ("cilindro(s)" if es_cilindro else ("caja(s)" if es_caja else _unidad_producto(fila["abreviatura"])))
                 ),
                 "stock_anterior": fila["stock_anterior"],
                 "stock_nuevo": fila["stock_nuevo"],
@@ -213,7 +225,7 @@ def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa, area_id=None
                 "referencia": fila["placa"],
                 "entrada": None,
                 "salida": fila["cantidad_base"],
-                "unidad": fila["abreviatura"],
+                "unidad": _unidad_producto(fila["abreviatura"]),
                 "stock_anterior": fila["stock_anterior"],
                 "stock_nuevo": fila["stock_nuevo"],
                 "usuario": fila["usuario"],
@@ -283,7 +295,7 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, c
                 "referencia": "-",
                 "entrada": diferencia if diferencia > 0 else None,
                 "salida": abs(diferencia) if diferencia < 0 else None,
-                "unidad": fila["abreviatura"],
+                "unidad": _unidad_producto(fila["abreviatura"]),
                 "stock_anterior": fila["stock_anterior"],
                 "stock_nuevo": fila["stock_nuevo"],
                 "usuario": fila["usuario"],
@@ -327,6 +339,7 @@ def _baldes(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, ca
         es_caja = fila["envase"] == "caja"
         envase = "Caja" if es_caja else ("Cilindro" if es_cilindro else "Balde")
         unidad_envase = "caja(s)" if es_caja else ("cilindro(s)" if es_cilindro else "balde(s)")
+        unidad_producto = _unidad_producto(fila["abreviatura"])
         movimientos.append(
             {
                 "fecha": fila["fecha"],
@@ -340,14 +353,14 @@ def _baldes(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, ca
                 "tipo_clase": "balde",
                 "origen": "Control de envases",
                 "detalle": (
-                    f"Consumo registrado: {fila['stock_abierto_anterior']} {fila['abreviatura']}"
+                    f"Consumo registrado: {fila['stock_abierto_anterior']} {unidad_producto}"
                     if es_cierre
                     else f"Se abre 1 {envase.lower()} para registrar salidas reales"
                 ),
                 "referencia": (
                     f"Cerrados {fila['stock_baldes_anterior']} -> {fila['stock_baldes_nuevo']}"
                     + (
-                        f" / Capacidad {fila['contenido_por_balde']} {fila['abreviatura']}"
+                        f" / Capacidad {fila['contenido_por_balde']} {unidad_producto}"
                         if es_cilindro or es_caja
                         else ""
                     )

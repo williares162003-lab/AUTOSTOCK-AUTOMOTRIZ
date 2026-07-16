@@ -52,6 +52,7 @@ PRODUCTO_ACEITE = {
     "cilindros_abiertos": Decimal("0.000"),
     "stock_cilindros_cerrados": Decimal("0.000"),
     "litros_por_cilindro": Decimal("0.000"),
+    "litros_por_galon": Decimal("0.000"),
     "stock_cajas_cerradas": Decimal("0.000"),
     "unidades_por_caja": Decimal("0.000"),
     "stock_minimo": Decimal("2.000"),
@@ -371,6 +372,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Mecanica", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Raqueta limpia parabrisas", response.data)
+        self.assertIn(b"Litros por galon/envase", response.data)
 
     @patch("app.registrar_entrada", return_value=(True, "Entrada registrada correctamente."))
     def test_almacen_can_submit_entry(self, registrar):
@@ -428,7 +430,8 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Salida por destino", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Sale de", response.data)
-        self.assertIn(b"data-gallon-value=\"0.125\"", response.data)
+        self.assertIn(b"data-quantity-hint", response.data)
+        self.assertNotIn(b"data-gallon-value", response.data)
 
     @patch("app.resumen_kardex", return_value={"total": 1, "entradas": 1, "salidas": 0, "ajustes": 0, "baldes": 0})
     @patch("app.obtener_producto_kardex", return_value=PRODUCTO_ACEITE)

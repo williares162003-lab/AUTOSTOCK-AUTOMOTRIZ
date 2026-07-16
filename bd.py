@@ -302,8 +302,14 @@ def _aplicar_migraciones(cursor):
     _asegurar_columna(
         cursor,
         "productos",
-        "stock_cajas_cerradas",
+        "litros_por_galon",
         "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER litros_por_cilindro",
+    )
+    _asegurar_columna(
+        cursor,
+        "productos",
+        "stock_cajas_cerradas",
+        "DECIMAL(14,3) NOT NULL DEFAULT 0 AFTER litros_por_galon",
     )
     _asegurar_columna(
         cursor,

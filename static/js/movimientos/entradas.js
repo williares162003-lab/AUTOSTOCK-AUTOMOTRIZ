@@ -8,6 +8,8 @@ const presentationSelect = document.querySelector("[data-presentation-select]");
 const quantityInput = document.querySelector("[data-entry-quantity]");
 const cylinderLitersField = document.querySelector("[data-cylinder-liters-field]");
 const cylinderLitersInput = document.querySelector("[data-cylinder-liters]");
+const gallonLitersField = document.querySelector("[data-gallon-liters-field]");
+const gallonLitersInput = document.querySelector("[data-gallon-liters]");
 const boxUnitsField = document.querySelector("[data-box-units-field]");
 const boxUnitsInput = document.querySelector("[data-box-units]");
 const quantityLabel = document.querySelector("[data-quantity-label]");
@@ -65,6 +67,14 @@ function formatQuantity(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 3,
   });
+}
+
+function isGallonProduct(product) {
+  return String(product?.dataset.abreviatura || "").toLowerCase().includes("gal");
+}
+
+function displayAbbreviation(product) {
+  return isGallonProduct(product) ? "L" : product.dataset.abreviatura;
 }
 
 function filterTypesByArea(areaSelect, typeSelect) {
@@ -241,17 +251,26 @@ function syncEntryMode() {
   const isBucket = entryType.value === "balde_cerrado";
   const isCylinder = entryType.value === "cilindro_cerrado";
   const isBox = entryType.value === "caja_cerrada";
-  toggleField(presentationField, isBucket || isCylinder || isBox);
-  presentationSelect.disabled = isBucket || isCylinder || isBox;
+  const product = selectedProduct();
+  const isGallonLoose = entryType.value === "suelto" && isGallonProduct(product);
+  toggleField(presentationField, isBucket || isCylinder || isBox || isGallonLoose);
+  presentationSelect.disabled = isBucket || isCylinder || isBox || isGallonLoose;
   toggleField(cylinderLitersField, !isCylinder);
   cylinderLitersInput.disabled = !isCylinder;
+  toggleField(gallonLitersField, !isGallonLoose);
+  gallonLitersInput.disabled = !isGallonLoose;
+  if (isGallonLoose && !gallonLitersInput.value) {
+    gallonLitersInput.value = product?.dataset.litrosPorGalon && product.dataset.litrosPorGalon !== "0.000"
+      ? product.dataset.litrosPorGalon
+      : "";
+  }
   toggleField(boxUnitsField, !isBox);
   boxUnitsInput.disabled = !isBox;
-  quantityInput.step = isBucket || isCylinder || isBox ? "1" : "0.001";
-  quantityInput.min = isBucket || isCylinder || isBox ? "1" : "0.001";
-  quantityLabel.textContent = isBucket ? "Cantidad de baldes" : (isCylinder ? "Cantidad de cilindros" : (isBox ? "Cantidad de cajas" : "Cantidad que ingresa"));
+  quantityInput.step = isBucket || isCylinder || isBox || isGallonLoose ? "1" : "0.001";
+  quantityInput.min = isBucket || isCylinder || isBox || isGallonLoose ? "1" : "0.001";
+  quantityLabel.textContent = isBucket ? "Cantidad de baldes" : (isCylinder ? "Cantidad de cilindros" : (isBox ? "Cantidad de cajas" : (isGallonLoose ? "Cantidad de galones/envases" : "Cantidad que ingresa")));
   currentLabel.textContent = isBucket ? "Baldes cerrados" : (isCylinder ? "Cilindros cerrados" : (isBox ? "Cajas cerradas" : "Stock disponible"));
-  entryLabel.textContent = isBucket ? "Entrada de baldes" : (isCylinder ? "Entrada de cilindros" : (isBox ? "Entrada de cajas" : "Entrada al stock"));
+  entryLabel.textContent = isBucket ? "Entrada de baldes" : (isCylinder ? "Entrada de cilindros" : (isBox ? "Entrada de cajas" : (isGallonLoose ? "Entrada en litros" : "Entrada al stock")));
   estimatedLabel.textContent = isBucket ? "Baldes estimados" : (isCylinder ? "Cilindros estimados" : (isBox ? "Cajas estimadas" : "Stock estimado"));
 }
 
@@ -267,7 +286,8 @@ function updatePreview() {
   const isBucket = entryType.value === "balde_cerrado";
   const isCylinder = entryType.value === "cilindro_cerrado";
   const isBox = entryType.value === "caja_cerrada";
-  const abbreviation = product.dataset.abreviatura;
+  const isGallonLoose = entryType.value === "suelto" && isGallonProduct(product);
+  const abbreviation = isGallonLoose ? "L" : product.dataset.abreviatura;
   const quantity = toNumber(quantityInput.value);
 
   if (isBucket) {
@@ -301,7 +321,9 @@ function updatePreview() {
   }
 
   const stock = toNumber(product.dataset.stock);
-  const factor = toNumber(presentationSelect.selectedOptions[0]?.dataset.factor || "1");
+  const factor = isGallonLoose
+    ? toNumber(gallonLitersInput.value || product.dataset.litrosPorGalon)
+    : toNumber(presentationSelect.selectedOptions[0]?.dataset.factor || "1");
   const base = quantity * factor;
 
   currentStock.textContent = `${formatQuantity(stock)} ${abbreviation}`;
@@ -318,7 +340,7 @@ function updateBucketPreview() {
     return;
   }
 
-  const abbreviation = product.dataset.abreviatura;
+  const abbreviation = displayAbbreviation(product);
   const closed = toNumber(product.dataset.stockBaldesCerrados);
   const inUse = toNumber(product.dataset.baldesAbiertos);
   const used = toNumber(product.dataset.stockBaldeAbierto);
@@ -336,7 +358,7 @@ function updateClosePreview() {
   }
 
   closeOpen.textContent = `${formatQuantity(product.dataset.baldesAbiertos)} balde(s)`;
-  closeUsed.textContent = `${formatQuantity(product.dataset.stockBaldeAbierto)} ${product.dataset.abreviatura}`;
+  closeUsed.textContent = `${formatQuantity(product.dataset.stockBaldeAbierto)} ${displayAbbreviation(product)}`;
 }
 
 function updateBoxPreview() {
@@ -349,7 +371,7 @@ function updateBoxPreview() {
     return;
   }
 
-  const abbreviation = product.dataset.abreviatura;
+  const abbreviation = displayAbbreviation(product);
   const closed = toNumber(product.dataset.stockCajasCerradas);
   const units = toNumber(product.dataset.unidadesPorCaja);
   const loose = toNumber(product.dataset.stockSuelto);
@@ -371,7 +393,7 @@ function updateCylinderPreview() {
     return;
   }
 
-  const abbreviation = product.dataset.abreviatura;
+  const abbreviation = displayAbbreviation(product);
   const closed = toNumber(product.dataset.stockCilindrosCerrados);
   const inUse = toNumber(product.dataset.cilindrosAbiertos);
   const used = toNumber(product.dataset.stockCilindroAbierto);
@@ -395,8 +417,8 @@ function updateCylinderClosePreview() {
   const capacity = toNumber(product.dataset.litrosPorCilindro);
   const left = Math.max(capacity - used, 0);
   cylinderCloseOpen.textContent = `${formatQuantity(product.dataset.cilindrosAbiertos)} cilindro(s)`;
-  cylinderCloseUsed.textContent = `${formatQuantity(used)} ${product.dataset.abreviatura}`;
-  cylinderCloseLeft.textContent = `${formatQuantity(left)} ${product.dataset.abreviatura}`;
+  cylinderCloseUsed.textContent = `${formatQuantity(used)} ${displayAbbreviation(product)}`;
+  cylinderCloseLeft.textContent = `${formatQuantity(left)} ${displayAbbreviation(product)}`;
 }
 
 function refreshEntry() {
@@ -412,11 +434,13 @@ entryProductType.addEventListener("change", refreshEntry);
 entryProductCategory.addEventListener("change", refreshEntry);
 productSelect.addEventListener("change", () => {
   rebuildPresentations();
+  syncEntryMode();
   updatePreview();
 });
 presentationSelect.addEventListener("change", updatePreview);
 quantityInput.addEventListener("input", updatePreview);
 cylinderLitersInput.addEventListener("input", updatePreview);
+gallonLitersInput.addEventListener("input", updatePreview);
 boxUnitsInput.addEventListener("input", updatePreview);
 
 if (bucketProduct) {

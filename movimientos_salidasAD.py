@@ -39,6 +39,14 @@ def _origen_texto(origen):
     }.get(origen, "Suelto")
 
 
+def _es_galon(abreviatura):
+    return "gal" in (abreviatura or "").lower()
+
+
+def _unidad_salida(abreviatura):
+    return "L" if _es_galon(abreviatura) else abreviatura
+
+
 def listar_vehiculos(dias_recientes=1):
     dias_recientes = max(int(dias_recientes or 1), 1)
     filas = consultar_todos(
@@ -103,6 +111,7 @@ def listar_salidas(limite=30):
     for detalle in detalles:
         detalle = dict(detalle)
         detalle["origen_texto"] = _origen_texto(detalle["origen_stock"])
+        detalle["abreviatura"] = _unidad_salida(detalle["abreviatura"])
         por_salida.setdefault(detalle["salida_id"], []).append(detalle)
     for salida in salidas:
         salida["detalles"] = por_salida.get(salida["id"], [])
@@ -292,7 +301,7 @@ def anular_salida(salida_id, motivo, usuario_id):
                     usuario_id,
                 ),
             )
-            nombres.append(f"{detalle['nombre']} +{cantidad} {detalle['abreviatura']}")
+            nombres.append(f"{detalle['nombre']} +{cantidad} {_unidad_salida(detalle['abreviatura'])}")
 
         cursor.execute(
             """
@@ -495,7 +504,7 @@ def registrar_salida(datos, usuario_id):
                 (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id),
             )
             nombres.append(
-                f"{producto['nombre']} -{cantidad} {producto['abreviatura']} ({_origen_texto(origen)})"
+                f"{producto['nombre']} -{cantidad} {_unidad_salida(producto['abreviatura'])} ({_origen_texto(origen)})"
             )
 
         cursor.execute(

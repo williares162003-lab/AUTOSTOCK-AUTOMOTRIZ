@@ -26,6 +26,14 @@ def _decimal(valor, nombre):
     return numero.quantize(Decimal("0.001")), None
 
 
+def _es_galon(abreviatura):
+    return "gal" in (abreviatura or "").lower()
+
+
+def _unidad_producto(abreviatura):
+    return "L" if _es_galon(abreviatura) else abreviatura
+
+
 def _origen_texto(origen):
     return {
         ORIGEN_SUELTO: "Stock suelto",
@@ -55,6 +63,7 @@ def listar_entradas(limite=30):
     for fila in filas:
         entrada = dict(fila)
         entrada["origen_texto"] = _origen_texto(entrada["origen_stock"])
+        entrada["abreviatura"] = _unidad_producto(entrada["abreviatura"])
         entradas.append(entrada)
     return entradas
 
@@ -80,6 +89,7 @@ def listar_aperturas_balde(limite=12):
     aperturas = []
     for fila in filas:
         apertura = dict(fila)
+        apertura["abreviatura"] = _unidad_producto(apertura["abreviatura"])
         envases = {"cilindro": "Cilindro", "caja": "Caja"}
         envase = envases.get(apertura["envase"], "Balde")
         apertura["envase_texto"] = envase
@@ -149,7 +159,7 @@ def registrar_entrada(datos, usuario_id):
             SELECT p.id, p.nombre, p.stock_actual, p.stock_suelto,
                    p.stock_balde_abierto, p.baldes_abiertos, p.stock_baldes_cerrados,
                    p.stock_cilindro_abierto, p.cilindros_abiertos,
-                   p.stock_cilindros_cerrados, p.litros_por_cilindro,
+                   p.stock_cilindros_cerrados, p.litros_por_cilindro, p.litros_por_galon,
                    p.stock_cajas_cerradas, p.unidades_por_caja,
                    u.abreviatura, u.permite_decimal
             FROM productos p
@@ -169,7 +179,19 @@ def registrar_entrada(datos, usuario_id):
         cantidad_base = cantidad
 
         if tipo_entrada == ORIGEN_SUELTO:
-            if presentacion_id and presentacion_id != "base":
+            es_galon = _es_galon(producto["abreviatura"])
+            if es_galon:
+                if cantidad != cantidad.to_integral_value():
+                    return False, "La cantidad de galones/envases debe ser entera."
+                litros_galon, error_litros_galon = _decimal(
+                    datos.get("litros_galon") or producto["litros_por_galon"],
+                    "Los litros por galon",
+                )
+                if error_litros_galon:
+                    return False, error_litros_galon
+                factor = litros_galon
+                presentacion_nombre = f"Galon de {litros_galon} L"
+            elif presentacion_id and presentacion_id != "base":
                 presentacion_bd_id = _entero(presentacion_id)
                 if not presentacion_bd_id:
                     return False, "La presentacion seleccionada no es valida."
@@ -197,13 +219,21 @@ def registrar_entrada(datos, usuario_id):
             cursor.execute(
                 """
                 UPDATE productos
-                SET stock_suelto = %s, stock_actual = %s
+                SET stock_suelto = %s,
+                    stock_actual = %s,
+                    litros_por_galon = %s
                 WHERE id = %s
                 """,
-                (stock_suelto_nuevo, stock_nuevo, producto_id),
+                (
+                    stock_suelto_nuevo,
+                    stock_nuevo,
+                    factor if es_galon else producto["litros_por_galon"],
+                    producto_id,
+                ),
             )
             diferencia_ajuste = cantidad_base
-            descripcion_movimiento = f"{producto['nombre']}: +{cantidad_base} {producto['abreviatura']}"
+            unidad_movimiento = "L" if es_galon else producto["abreviatura"]
+            descripcion_movimiento = f"{producto['nombre']}: +{cantidad_base} {unidad_movimiento}"
         elif tipo_entrada == ORIGEN_BALDE_CERRADO:
             cantidad_base = Decimal("0.000")
             presentacion_nombre = "Balde cerrado"
@@ -307,6 +337,8 @@ def registrar_entrada(datos, usuario_id):
             detalle += f" / {cantidad} cilindro(s) de {litros_cilindro} {producto['abreviatura']}"
         if tipo_entrada == ORIGEN_CAJA_CERRADA:
             detalle += f" / {cantidad} caja(s) de {unidades_caja} {producto['abreviatura']}"
+        if tipo_entrada == ORIGEN_SUELTO and _es_galon(producto["abreviatura"]):
+            detalle += f" / {cantidad} galon(es) de {factor} L"
         cursor.execute(
             """
             INSERT INTO ajustes_stock

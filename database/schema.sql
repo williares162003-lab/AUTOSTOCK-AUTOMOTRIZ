@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS productos (
     cilindros_abiertos DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_cilindros_cerrados DECIMAL(14,3) NOT NULL DEFAULT 0,
     litros_por_cilindro DECIMAL(14,3) NOT NULL DEFAULT 0,
+    litros_por_galon DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_cajas_cerradas DECIMAL(14,3) NOT NULL DEFAULT 0,
     unidades_por_caja DECIMAL(14,3) NOT NULL DEFAULT 0,
     stock_minimo DECIMAL(14,3) NOT NULL DEFAULT 0,

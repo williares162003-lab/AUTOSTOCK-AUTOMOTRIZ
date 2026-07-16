@@ -37,12 +37,13 @@
         {% set estado_stock = 'envases' if solo_envases else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
         {% set estado_texto = 'Solo envases' if solo_envases else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
         {% set stock_visible = stock_total if stock_total > producto.stock_actual else producto.stock_actual %}
+        {% set unidad_stock = producto.unidad_operativa|default(producto.abreviatura) %}
         <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.codigo or '') ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.area ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-area="{{ producto.area_id }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
           <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.codigo or producto.marca or "Sin marca" }}{% if producto.codigo and producto.marca %} / {{ producto.marca }}{% endif %}</small></div></div></td>
           <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.area }} / {{ producto.categoria }}</small></td>
           <td>
-            <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ stock_visible|float|round(3) }} {{ producto.abreviatura }}</strong>
-            <small>{% if stock_total > producto.stock_actual %}Total controlado / Suelto {{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}{% else %}Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}{% endif %}</small>
+            <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ stock_visible|float|round(3) }} {{ unidad_stock }}</strong>
+            <small>{% if stock_total > producto.stock_actual %}Total controlado / Suelto {{ producto.stock_actual|float|round(3) }} {{ unidad_stock }}{% else %}Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ unidad_stock }}{% endif %}</small>
             <div class="stock-breakdown">
               <span>Suelto: {{ producto.stock_suelto|float|round(3) }}</span>
               <span>Total: {{ stock_total|float|round(3) }}</span>
@@ -54,6 +55,7 @@
               <span>Cil. cerrados: {{ producto.stock_cilindros_cerrados|float|round(3) }}</span>
               <span>Cap/cil: {{ producto.litros_por_cilindro|float|round(3) }}</span>
               <span>Disp. cilindro: {{ producto.stock_cilindro_disponible|default(0)|float|round(3) }}</span>
+              <span>L/gal: {{ producto.litros_por_galon|default(0)|float|round(3) }}</span>
               <span>Cajas cerr.: {{ producto.stock_cajas_cerradas|default(0)|float|round(3) }}</span>
               <span>Und/caja: {{ producto.unidades_por_caja|default(0)|float|round(3) }}</span>
             </div>
@@ -79,6 +81,7 @@
                 data-categoria="{{ producto.categoria|e }}"
                 data-unidad="{{ producto.unidad|e }}"
                 data-abreviatura="{{ producto.abreviatura|e }}"
+                data-stock-unidad="{{ unidad_stock|e }}"
                 data-stock="{{ producto.stock_actual }}"
                 data-stock-suelto="{{ producto.stock_suelto }}"
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
@@ -88,6 +91,7 @@
                 data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
                 data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
                 data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+                data-litros-por-galon="{{ producto.litros_por_galon|default(0) }}"
                 data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
                 data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
                 data-stock-total="{{ stock_total }}"
@@ -131,10 +135,11 @@
                 data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
                 data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
                 data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+                data-litros-por-galon="{{ producto.litros_por_galon|default(0) }}"
                 data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
                 data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
                 data-stock-total="{{ stock_total }}"
-                data-unidad="{{ producto.abreviatura }}"
+                data-unidad="{{ unidad_stock }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
               ><span class="material-symbols-outlined">tune</span></button>
               <form method="post" action="{{ url_for('eliminar_producto', producto_id=producto.id) }}" data-delete-form data-name="{{ producto.nombre|e }}">
@@ -256,6 +261,7 @@
       <label><span>Usado del cilindro abierto</span><input name="stock_cilindro_abierto_nuevo" type="number" min="0" required data-new-stock-open-cylinder></label>
       <label><span>Cilindros cerrados</span><input name="stock_cilindros_cerrados_nuevo" type="number" min="0" step="1" required data-new-stock-closed-cylinders></label>
       <label><span>Litros por cilindro</span><input name="litros_por_cilindro_nuevo" type="number" min="0" step="0.001" required data-new-cylinder-liters></label>
+      <label><span>Litros por galon</span><input name="litros_por_galon_nuevo" type="number" min="0" step="0.001" required data-new-gallon-liters></label>
       <label><span>Cajas cerradas</span><input name="stock_cajas_cerradas_nuevo" type="number" min="0" step="1" required data-new-stock-closed-boxes></label>
       <label><span>Unidades por caja</span><input name="unidades_por_caja_nuevo" type="number" min="0" step="0.001" required data-new-box-units></label>
       <label><span>Motivo</span><textarea name="motivo" rows="3" required minlength="3" maxlength="255"></textarea></label>

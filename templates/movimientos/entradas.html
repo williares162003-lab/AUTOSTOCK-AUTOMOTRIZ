@@ -76,6 +76,7 @@
                 data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
                 data-stock-cilindros-cerrados="{{ producto.stock_cilindros_cerrados }}"
                 data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+                data-litros-por-galon="{{ producto.litros_por_galon|default(0) }}"
                 data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
                 data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
                 data-unidad="{{ producto.unidad|e }}"
@@ -97,6 +98,10 @@
         <label data-cylinder-liters-field hidden>
           <span>Litros por cilindro</span>
           <input name="litros_cilindro" type="number" min="0.001" step="0.001" data-cylinder-liters>
+        </label>
+        <label data-gallon-liters-field hidden>
+          <span>Litros por galon/envase</span>
+          <input name="litros_galon" type="number" min="0.001" step="0.001" data-gallon-liters>
         </label>
         <label data-box-units-field hidden>
           <span>Unidades por caja</span>
@@ -127,6 +132,7 @@
     <h2>Como suma el stock</h2>
     <p>El stock suelto queda disponible para entregar. Baldes, cilindros y cajas cerradas se guardan aparte hasta que abras uno.</p>
     <div><strong>Cajas</strong><span>Registra cuantas cajas entran y cuantas unidades trae cada una. Al abrir una caja, pasa a stock suelto.</span></div>
+    <div><strong>Galones</strong><span>Registra cuantos galones entran y cuantos litros trae cada uno. El stock se controla en litros.</span></div>
     <div><strong>Cilindros</strong><span>Registra cuantos cilindros entran y cuantos litros trae cada uno.</span></div>
   </aside>
 </section>
