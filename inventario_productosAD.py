@@ -350,10 +350,15 @@ def _datos_producto(datos, incluir_stock=False):
     valores["stock_minimo"], error_minimo = _decimal(datos.get("stock_minimo"), "El stock minimo")
     if incluir_stock:
         valores["stock_actual"], error_stock = _decimal(datos.get("stock_actual"), "El stock inicial")
+        valores["litros_por_galon"], error_litros_galon = _decimal(
+            datos.get("litros_por_galon"),
+            "Los litros por galon",
+        )
     else:
         error_stock = None
+        error_litros_galon = None
     valores["presentaciones"], error_presentaciones = _presentaciones_desde_formulario(datos)
-    return valores, error_minimo or error_stock or error_presentaciones
+    return valores, error_minimo or error_stock or error_litros_galon or error_presentaciones
 
 
 def _validar_producto(valores, producto_id=None):
@@ -369,11 +374,17 @@ def _validar_producto(valores, producto_id=None):
     if not categoria:
         return "La categoria no pertenece al tipo seleccionado."
     unidad = consultar_uno(
-        "SELECT id, permite_decimal FROM unidades_medida WHERE id = %s",
+        "SELECT id, permite_decimal, abreviatura FROM unidades_medida WHERE id = %s",
         (valores["unidad_base_id"],),
     )
     if not unidad:
         return "La unidad seleccionada no existe."
+    valores["es_galon"] = _es_galon(unidad.get("abreviatura", ""))
+    if valores["es_galon"] and "stock_actual" in valores:
+        if valores["stock_actual"] > 0 and valores["litros_por_galon"] <= 0:
+            return "Indica cuantos litros trae cada galon/envase."
+        if valores["stock_actual"] != valores["stock_actual"].to_integral_value():
+            return "La cantidad inicial de galones/envases debe ser entera."
     if not unidad["permite_decimal"]:
         cantidades = [valores["stock_minimo"]]
         if "stock_actual" in valores:
@@ -424,19 +435,24 @@ def crear_producto(datos, usuario_id):
     error = _validar_producto(valores)
     if error:
         return False, error
+    stock_inicial = valores["stock_actual"]
+    litros_por_galon = Decimal("0.000")
+    if valores.get("es_galon"):
+        litros_por_galon = valores["litros_por_galon"]
+        stock_inicial = (valores["stock_actual"] * litros_por_galon).quantize(Decimal("0.001"))
 
     def operacion(cursor):
         cursor.execute(
             """
             INSERT INTO productos
                 (nombre, codigo, tipo_id, categoria_id, marca, descripcion, unidad_base_id,
-                 stock_actual, stock_suelto, stock_minimo, observaciones, creado_por)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 stock_actual, stock_suelto, litros_por_galon, stock_minimo, observaciones, creado_por)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 valores["nombre"], valores["codigo"], valores["tipo_id"], valores["categoria_id"],
                 valores["marca"], valores["descripcion"], valores["unidad_base_id"],
-                valores["stock_actual"], valores["stock_actual"],
+                stock_inicial, stock_inicial, litros_por_galon,
                 valores["stock_minimo"], valores["observaciones"],
                 usuario_id,
             ),
@@ -447,7 +463,7 @@ def crear_producto(datos, usuario_id):
                 "INSERT INTO presentaciones_producto (producto_id, nombre, factor) VALUES (%s, %s, %s)",
                 (producto_id, presentacion["nombre"], presentacion["factor"]),
             )
-        if valores["stock_actual"] > 0:
+        if stock_inicial > 0:
             cursor.execute(
                 """
                 INSERT INTO ajustes_stock
@@ -456,9 +472,14 @@ def crear_producto(datos, usuario_id):
                 """,
                 (
                     producto_id,
-                    valores["stock_actual"],
-                    valores["stock_actual"],
-                    "Inventario inicial",
+                    stock_inicial,
+                    stock_inicial,
+                    (
+                        f"Inventario inicial: {valores['stock_actual']} galon(es) "
+                        f"de {litros_por_galon} L"
+                        if valores.get("es_galon")
+                        else "Inventario inicial"
+                    ),
                     usuario_id,
                 ),
             )

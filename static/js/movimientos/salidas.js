@@ -18,6 +18,12 @@ function formatQuantity(value) {
   });
 }
 
+function formatInputQuantity(value) {
+  return String(Math.round(toNumber(value) * 1000) / 1000)
+    .replace(/(\.\d*?)0+$/, "$1")
+    .replace(/\.$/, "");
+}
+
 function filterTypesByArea(areaSelect, typeSelect) {
   if (!areaSelect || !typeSelect) return;
 
@@ -154,6 +160,24 @@ function displayAbbreviation(product) {
   return isGallonProduct(product) ? "L" : product.dataset.abreviatura;
 }
 
+function gallonLiters(product) {
+  return toNumber(product?.dataset.litrosPorGalon);
+}
+
+function updateGallonShortcuts(row, product) {
+  const shortcuts = row.querySelector("[data-gallon-shortcuts]");
+  if (!shortcuts) return;
+  const liters = gallonLiters(product);
+  const visible = isGallonProduct(product) && liters > 0;
+  shortcuts.hidden = !visible;
+  if (!visible) return;
+  shortcuts.querySelectorAll("[data-gallon-fraction]").forEach((button) => {
+    const fraction = toNumber(button.dataset.gallonFraction);
+    const value = liters * fraction;
+    button.title = `${formatQuantity(value)} L`;
+  });
+}
+
 function cylinderAvailable(product) {
   const savedAvailable = toNumber(product?.dataset.stockCilindroDisponible);
   if (savedAvailable > 0) return savedAvailable;
@@ -185,6 +209,7 @@ function updateLine(row) {
   if (!product) {
     stock.textContent = "-";
     if (quantityHint) quantityHint.hidden = true;
+    updateGallonShortcuts(row, null);
     return;
   }
 
@@ -196,8 +221,11 @@ function updateLine(row) {
   quantity.min = allowsDecimal ? "0.001" : "1";
   if (quantityHint) {
     quantityHint.hidden = !isGallonProduct(product);
-    quantityHint.textContent = isGallonProduct(product) ? "Ingresa la salida en litros." : "";
+    quantityHint.textContent = isGallonProduct(product)
+      ? "Escribe litros o usa una fraccion de galon."
+      : "";
   }
+  updateGallonShortcuts(row, product);
   if (originValue === "balde_abierto") {
     const openBuckets = toNumber(product.dataset.baldesAbiertos);
     const used = toNumber(product.dataset.stockBaldeAbierto);
@@ -248,6 +276,17 @@ function addLine() {
   });
   productSelect.addEventListener("change", () => updateLine(row));
   row.querySelector("[data-line-origin]").addEventListener("change", () => updateLine(row));
+  row.querySelectorAll("[data-gallon-fraction]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const product = selectedProduct(row);
+      const liters = gallonLiters(product);
+      if (!liters) return;
+      row.querySelector("[data-line-quantity]").value = formatInputQuantity(
+        liters * toNumber(button.dataset.gallonFraction)
+      );
+      updateLine(row);
+    });
+  });
   row.querySelector("[data-remove-line]").addEventListener("click", () => {
     if (linesContainer.children.length > 1) row.remove();
   });

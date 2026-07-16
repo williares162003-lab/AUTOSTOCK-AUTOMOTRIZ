@@ -3,6 +3,12 @@ const productForm = document.querySelector("[data-product-form]");
 const areaSelect = productForm.querySelector("[data-form-area]");
 const typeSelect = productForm.elements.tipo_id;
 const categorySelect = productForm.elements.categoria_id;
+const unitSelect = productForm.elements.unidad_base_id;
+const initialStockField = productForm.querySelector("[data-initial-stock]");
+const initialStockLabel = productForm.querySelector("[data-initial-stock-label]");
+const initialStockInput = productForm.elements.stock_actual;
+const initialGallonLitersField = productForm.querySelector("[data-initial-gallon-liters]");
+const initialGallonLitersInput = productForm.elements.litros_por_galon;
 const presentationList = document.querySelector("[data-presentation-list]");
 
 function filterFormTypes(selectedType = "") {
@@ -49,15 +55,36 @@ function addPresentation(presentation = {}) {
   presentationList.appendChild(row);
 }
 
+function selectedUnitIsGallon() {
+  const option = unitSelect.selectedOptions[0];
+  const text = `${option?.dataset.abreviatura || ""} ${option?.textContent || ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return text.includes("gal");
+}
+
+function syncInitialStockFields() {
+  const showGallonLiters = !initialStockField.hidden && selectedUnitIsGallon();
+  initialGallonLitersField.hidden = !showGallonLiters;
+  initialGallonLitersInput.disabled = !showGallonLiters;
+  initialStockInput.step = showGallonLiters ? "1" : "0.001";
+  initialStockInput.min = "0";
+  initialStockLabel.textContent = showGallonLiters
+    ? "Cantidad inicial de galones/envases"
+    : "Stock inicial";
+}
+
 function openCreateProduct() {
   productForm.reset();
   productForm.action = window.productCreateUrl;
   document.querySelector("[data-dialog-title]").textContent = "Nuevo producto";
-  document.querySelector("[data-initial-stock]").hidden = false;
-  productForm.elements.stock_actual.disabled = false;
+  initialStockField.hidden = false;
+  initialStockInput.disabled = false;
   presentationList.innerHTML = "";
   filterFormTypes();
   filterFormCategories();
+  syncInitialStockFields();
   productDialog.showModal();
 }
 
@@ -67,6 +94,7 @@ areaSelect.addEventListener("change", () => {
   filterFormCategories();
 });
 typeSelect.addEventListener("change", () => filterFormCategories());
+unitSelect.addEventListener("change", syncInitialStockFields);
 document.querySelector("[data-add-presentation]").addEventListener("click", () => addPresentation());
 
 document.querySelectorAll("[data-edit-product]").forEach((button) => {
@@ -89,10 +117,11 @@ document.querySelectorAll("[data-edit-product]").forEach((button) => {
     areaSelect.value = button.dataset.areaId;
     filterFormTypes(button.dataset.tipoId);
     filterFormCategories(button.dataset.categoriaId);
-    document.querySelector("[data-initial-stock]").hidden = true;
-    productForm.elements.stock_actual.disabled = true;
+    initialStockField.hidden = true;
+    initialStockInput.disabled = true;
     presentationList.innerHTML = "";
     JSON.parse(button.dataset.presentaciones || "[]").forEach(addPresentation);
+    syncInitialStockFields();
     productDialog.showModal();
   });
 });
