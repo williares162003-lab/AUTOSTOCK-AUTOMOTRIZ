@@ -37,12 +37,39 @@
 
 <section class="inventory-table kardex-filters-panel">
   <form method="get" action="{{ url_for('kardex') }}" class="kardex-filters">
-    <label>
+    <label class="kardex-filter-compact">
+      <span>Area</span>
+      <select name="area_id" data-kardex-area>
+        <option value="">Todas las areas</option>
+        {% for area in areas %}
+          <option value="{{ area.id }}" {% if filtros.area_id|string == area.id|string %}selected{% endif %}>{{ area.nombre }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="kardex-filter-compact">
+      <span>Tipo</span>
+      <select name="tipo_id" data-kardex-type>
+        <option value="">Todos los tipos</option>
+        {% for tipo_item in tipos %}
+          <option value="{{ tipo_item.id }}" data-area="{{ tipo_item.area_id }}" {% if filtros.tipo_id|string == tipo_item.id|string %}selected{% endif %}>{{ tipo_item.nombre }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="kardex-filter-compact">
+      <span>Categoria</span>
+      <select name="categoria_id" data-kardex-category>
+        <option value="">Todas las categorias</option>
+        {% for categoria in categorias %}
+          <option value="{{ categoria.id }}" data-area="{{ categoria.area_id }}" data-type="{{ categoria.tipo_id }}" {% if filtros.categoria_id|string == categoria.id|string %}selected{% endif %}>{{ categoria.nombre }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="kardex-filter-product">
       <span>Producto</span>
-      <select name="producto_id">
+      <select name="producto_id" data-kardex-product>
         <option value="">Todos los productos</option>
         {% for producto in productos %}
-          <option value="{{ producto.id }}" {% if filtros.producto_id|string == producto.id|string %}selected{% endif %}>
+          <option value="{{ producto.id }}" data-area="{{ producto.area_id }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" {% if filtros.producto_id|string == producto.id|string %}selected{% endif %}>
             {% if producto.codigo %}{{ producto.codigo }} - {% endif %}{{ producto.nombre }}{% if producto.marca %} - {{ producto.marca }}{% endif %}
           </option>
         {% endfor %}
@@ -138,4 +165,8 @@
     </table>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/movimientos/kardex.js') }}"></script>
 {% endblock %}

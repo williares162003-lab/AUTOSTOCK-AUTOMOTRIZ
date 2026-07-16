@@ -456,13 +456,27 @@ class InventarioAppTests(unittest.TestCase):
             [],
         ),
     )
+    @patch("app.listar_categorias", return_value=CATEGORIAS)
+    @patch("app.listar_tipos", return_value=TIPOS)
+    @patch("app.listar_areas", return_value=AREAS)
     @patch("app.listar_productos", return_value=[PRODUCTO_ACEITE])
-    def test_almacen_can_open_kardex(self, _productos, _movimientos, _producto, _resumen):
+    def test_almacen_can_open_kardex(
+        self,
+        _productos,
+        _areas,
+        _tipos,
+        _categorias,
+        _movimientos,
+        _producto,
+        _resumen,
+    ):
         response = self.client.get("/movimientos/kardex?producto_id=1")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Kardex", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Compra", response.data)
+        self.assertIn(b"Area", response.data)
+        self.assertIn(b"Categoria", response.data)
         self.assertIn(b"/movimientos/kardex", response.data)
 
     @patch(
@@ -599,6 +613,20 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn("Balde terminado%%", sql)
         self.assertIn("Cilindro abierto%%", sql)
         self.assertIn("Cilindro terminado%%", sql)
+
+    @patch("movimientos_kardexAD.consultar_todos", return_value=[])
+    def test_kardex_can_filter_by_product_family(self, consultar):
+        movimientos, errores = listar_movimientos_kardex_con_errores(
+            {"tipo": "entrada", "area_id": "2", "tipo_id": "8", "categoria_id": "13"}
+        )
+        self.assertEqual(movimientos, [])
+        self.assertEqual(errores, [])
+        sql = consultar.call_args.args[0]
+        parametros = consultar.call_args.args[1]
+        self.assertIn("p.tipo_id IN", sql)
+        self.assertIn("p.tipo_id = %s", sql)
+        self.assertIn("p.categoria_id = %s", sql)
+        self.assertEqual(parametros, (2, 8, 13))
 
     @patch("app.registrar_salida", return_value=(True, "Salida registrada correctamente."))
     def test_almacen_can_submit_output(self, registrar):

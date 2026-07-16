@@ -46,11 +46,24 @@ def _aplicar_filtros(
     fecha_inicio,
     fecha_fin,
     columna_producto,
+    area_id=None,
+    tipo_id=None,
+    categoria_id=None,
+    alias_producto="p",
 ):
     filtros = []
     if producto_id:
         filtros.append(f"{columna_producto} = %s")
         parametros.append(producto_id)
+    if area_id:
+        filtros.append(f"{alias_producto}.tipo_id IN (SELECT id FROM tipos_producto WHERE area_id = %s)")
+        parametros.append(area_id)
+    if tipo_id:
+        filtros.append(f"{alias_producto}.tipo_id = %s")
+        parametros.append(tipo_id)
+    if categoria_id:
+        filtros.append(f"{alias_producto}.categoria_id = %s")
+        parametros.append(categoria_id)
     if fecha_inicio:
         filtros.append(f"DATE({columna_fecha}) >= %s")
         parametros.append(fecha_inicio)
@@ -83,7 +96,7 @@ def obtener_producto_kardex(producto_id):
     )
 
 
-def _entradas(producto_id, fecha_inicio, fecha_fin):
+def _entradas(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, categoria_id=None):
     parametros = []
     sql = """
         SELECT e.id, e.producto_id, e.creado_en AS fecha, e.origen_stock,
@@ -97,7 +110,16 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
         LEFT JOIN usuarios us ON us.id = e.usuario_id
     """
     sql = _aplicar_filtros(
-        sql, parametros, "e.creado_en", producto_id, fecha_inicio, fecha_fin, "e.producto_id"
+        sql,
+        parametros,
+        "e.creado_en",
+        producto_id,
+        fecha_inicio,
+        fecha_fin,
+        "e.producto_id",
+        area_id,
+        tipo_id,
+        categoria_id,
     )
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
@@ -130,11 +152,11 @@ def _entradas(producto_id, fecha_inicio, fecha_fin):
     return movimientos
 
 
-def _salidas(producto_id, fecha_inicio, fecha_fin):
-    return _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, "")
+def _salidas(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, categoria_id=None):
+    return _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, "", area_id, tipo_id, categoria_id)
 
 
-def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa):
+def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa, area_id=None, tipo_id=None, categoria_id=None):
     parametros = []
     sql = """
         SELECT d.id, d.producto_id, d.cantidad_base, d.origen_stock,
@@ -149,7 +171,16 @@ def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa):
         LEFT JOIN usuarios us ON us.id = s.usuario_id
     """
     sql = _aplicar_filtros(
-        sql, parametros, "s.creado_en", producto_id, fecha_inicio, fecha_fin, "d.producto_id"
+        sql,
+        parametros,
+        "s.creado_en",
+        producto_id,
+        fecha_inicio,
+        fecha_fin,
+        "d.producto_id",
+        area_id,
+        tipo_id,
+        categoria_id,
     )
     sql += (" AND " if " WHERE " in sql else " WHERE ") + "COALESCE(s.estado, 'activa') = 'activa'"
     if placa:
@@ -191,7 +222,7 @@ def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa):
     return movimientos
 
 
-def _ajustes(producto_id, fecha_inicio, fecha_fin):
+def _ajustes(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, categoria_id=None):
     parametros = []
     sql = """
         SELECT a.id, a.producto_id, a.creado_en AS fecha, a.stock_anterior,
@@ -204,7 +235,16 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin):
         LEFT JOIN usuarios us ON us.id = a.usuario_id
     """
     sql = _aplicar_filtros(
-        sql, parametros, "a.creado_en", producto_id, fecha_inicio, fecha_fin, "a.producto_id"
+        sql,
+        parametros,
+        "a.creado_en",
+        producto_id,
+        fecha_inicio,
+        fecha_fin,
+        "a.producto_id",
+        area_id,
+        tipo_id,
+        categoria_id,
     )
     if " WHERE " in sql:
         sql += """
@@ -252,7 +292,7 @@ def _ajustes(producto_id, fecha_inicio, fecha_fin):
     return movimientos
 
 
-def _baldes(producto_id, fecha_inicio, fecha_fin):
+def _baldes(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, categoria_id=None):
     parametros = []
     sql = """
         SELECT a.id, a.producto_id, a.envase, a.tipo, a.baldes_abiertos, a.cantidad_base,
@@ -268,7 +308,16 @@ def _baldes(producto_id, fecha_inicio, fecha_fin):
         LEFT JOIN usuarios us ON us.id = a.usuario_id
     """
     sql = _aplicar_filtros(
-        sql, parametros, "a.creado_en", producto_id, fecha_inicio, fecha_fin, "a.producto_id"
+        sql,
+        parametros,
+        "a.creado_en",
+        producto_id,
+        fecha_inicio,
+        fecha_fin,
+        "a.producto_id",
+        area_id,
+        tipo_id,
+        categoria_id,
     )
     filas = consultar_todos(sql, tuple(parametros))
     movimientos = []
@@ -323,6 +372,9 @@ def listar_movimientos_kardex(filtros):
 
 def listar_movimientos_kardex_con_errores(filtros):
     producto_id = _entero(filtros.get("producto_id"))
+    area_id = _entero(filtros.get("area_id"))
+    tipo_id = _entero(filtros.get("tipo_id"))
+    categoria_id = _entero(filtros.get("categoria_id"))
     fecha_inicio = _fecha_valida(filtros.get("fecha_inicio"))
     fecha_fin = _fecha_valida(filtros.get("fecha_fin"))
     tipo = filtros.get("tipo", "")
@@ -332,7 +384,19 @@ def listar_movimientos_kardex_con_errores(filtros):
     errores = []
     consultas = (
         ("entrada", "entradas", _entradas),
-        ("salida", "salidas", lambda producto, inicio, fin: _salidas_filtradas(producto, inicio, fin, placa)),
+        (
+            "salida",
+            "salidas",
+            lambda producto, inicio, fin, area, tipo_producto, categoria: _salidas_filtradas(
+                producto,
+                inicio,
+                fin,
+                placa,
+                area,
+                tipo_producto,
+                categoria,
+            ),
+        ),
         ("ajuste", "ajustes", _ajustes),
         ("balde", "baldes", _baldes),
     )
@@ -342,7 +406,7 @@ def listar_movimientos_kardex_con_errores(filtros):
         if tipo not in ("", clave):
             continue
         try:
-            movimientos.extend(consulta(producto_id, fecha_inicio, fecha_fin))
+            movimientos.extend(consulta(producto_id, fecha_inicio, fecha_fin, area_id, tipo_id, categoria_id))
         except Exception as error:
             logger.exception("No se pudo cargar kardex de %s", etiqueta)
             errores.append(

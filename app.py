@@ -335,6 +335,9 @@ def anular_salida(salida_id):
 def kardex():
     filtros = {
         "producto_id": request.args.get("producto_id", ""),
+        "area_id": request.args.get("area_id", ""),
+        "tipo_id": request.args.get("tipo_id", ""),
+        "categoria_id": request.args.get("categoria_id", ""),
         "fecha_inicio": request.args.get("fecha_inicio", ""),
         "fecha_fin": request.args.get("fecha_fin", ""),
         "tipo": request.args.get("tipo", ""),
@@ -370,6 +373,9 @@ def kardex():
         {
             "page_title": "Kardex",
             "page_subtitle": "Consulta el historial de entradas, salidas, ajustes y control de envases.",
+            "areas": listar_areas(),
+            "tipos": listar_tipos(),
+            "categorias": listar_categorias(),
             "productos": listar_productos(),
             "producto_seleccionado": producto_seleccionado,
             "movimientos": movimientos,
