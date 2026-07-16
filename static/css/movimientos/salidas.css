@@ -15,14 +15,26 @@
 
 .output-line {
   display: grid;
-  grid-template-columns: minmax(115px, 0.28fr) minmax(120px, 0.3fr) minmax(145px, 0.38fr) minmax(220px, 1fr) minmax(135px, 0.34fr) minmax(115px, 0.24fr) minmax(125px, 0.24fr) 36px;
-  align-items: end;
-  gap: 10px;
-  padding: 12px;
+  grid-template-columns: minmax(115px, 0.9fr) minmax(120px, 1fr) minmax(140px, 1.1fr) minmax(250px, 2.4fr) minmax(155px, 1.2fr) 38px;
+  grid-template-areas:
+    "area tipo categoria producto producto producto"
+    "origen cantidad cantidad disponible disponible quitar";
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
   background: #f7f9fb;
   border: 1px solid var(--borde);
   border-radius: 8px;
 }
+
+.output-line label:nth-of-type(1) { grid-area: area; }
+.output-line label:nth-of-type(2) { grid-area: tipo; }
+.output-line label:nth-of-type(3) { grid-area: categoria; }
+.output-line label:nth-of-type(4) { grid-area: producto; }
+.output-line label:nth-of-type(5) { grid-area: origen; }
+.output-line label:nth-of-type(6) { grid-area: cantidad; }
+.output-line .line-stock { grid-area: disponible; }
+.output-line .icon-action.danger { grid-area: quitar; align-self: end; }
 
 .output-line label,
 .output-line label > span,
@@ -69,15 +81,17 @@
 .gallon-shortcuts {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 6px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .gallon-shortcuts button {
-  min-height: 26px;
-  padding: 0 8px;
+  min-width: 42px;
+  min-height: 28px;
+  padding: 0 10px;
   color: var(--primario);
-  background: #eef6ff;
+  background: #ffffff;
   border: 1px solid #cfe0f2;
   border-radius: 6px;
   font-size: 11px;
@@ -90,8 +104,8 @@
 }
 
 .line-stock {
-  min-height: 42px;
-  padding: 8px 10px;
+  min-height: 68px;
+  padding: 12px;
   background: #ffffff;
   border: 1px solid #edf0f5;
   border-radius: 8px;
@@ -105,7 +119,8 @@
 
 .line-stock strong {
   color: #263447;
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .output-detail-tags {
@@ -167,6 +182,15 @@
 @media (max-width: 900px) {
   .output-line {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "area"
+      "tipo"
+      "categoria"
+      "producto"
+      "origen"
+      "cantidad"
+      "disponible"
+      "quitar";
   }
 
   .output-line .icon-action {

@@ -164,6 +164,16 @@ function gallonLiters(product) {
   return toNumber(product?.dataset.litrosPorGalon);
 }
 
+function formatStockForProduct(value, product) {
+  const quantity = formatQuantity(value);
+  const abbreviation = displayAbbreviation(product);
+  if (!isGallonProduct(product)) return `${quantity} ${abbreviation}`;
+
+  const liters = gallonLiters(product);
+  if (liters <= 0) return `${quantity} L`;
+  return `${quantity} L (${formatQuantity(toNumber(value) / liters)} gal)`;
+}
+
 function updateGallonShortcuts(row, product) {
   const shortcuts = row.querySelector("[data-gallon-shortcuts]");
   if (!shortcuts) return;
@@ -231,7 +241,7 @@ function updateLine(row) {
     const used = toNumber(product.dataset.stockBaldeAbierto);
     quantity.removeAttribute("max");
     stock.textContent = openBuckets > 0
-      ? `${formatQuantity(openBuckets)} balde(s) / usado ${formatQuantity(used)} ${abbreviation}`
+      ? `${formatQuantity(openBuckets)} balde(s) / usado ${formatStockForProduct(used, product)}`
       : "Sin balde abierto";
     return;
   }
@@ -243,7 +253,7 @@ function updateLine(row) {
     const available = cylinderAvailable(product);
     quantity.max = String(available);
     stock.textContent = openCylinders > 0 && capacity > 0
-      ? `${formatQuantity(openCylinders)} cilindro(s) / queda ${formatQuantity(available)} ${abbreviation}`
+      ? `${formatQuantity(openCylinders)} cilindro(s) / queda ${formatStockForProduct(available, product)}`
       : openCylinders > 0
         ? "Falta capacidad del cilindro"
       : "Sin cilindro abierto";
@@ -252,7 +262,7 @@ function updateLine(row) {
 
   const available = toNumber(product.dataset.stockSuelto);
   quantity.max = String(available);
-  stock.textContent = `${formatQuantity(available)} ${abbreviation}`;
+  stock.textContent = formatStockForProduct(available, product);
 }
 
 function addLine() {
