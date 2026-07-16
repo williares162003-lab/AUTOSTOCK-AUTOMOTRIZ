@@ -145,13 +145,23 @@ function selectedProduct(row) {
   return option?.value ? option : null;
 }
 
+function isGallonProduct(product) {
+  const unit = `${product?.dataset.unidad || ""} ${product?.dataset.abreviatura || ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return unit.includes("gal");
+}
+
 function updateLine(row) {
   const product = selectedProduct(row);
   const origin = row.querySelector("[data-line-origin]");
   const quantity = row.querySelector("[data-line-quantity]");
   const stock = row.querySelector("[data-line-stock]");
+  const gallonShortcuts = row.querySelector("[data-gallon-shortcuts]");
   if (!product) {
     stock.textContent = "-";
+    if (gallonShortcuts) gallonShortcuts.hidden = true;
     return;
   }
 
@@ -160,6 +170,7 @@ function updateLine(row) {
   const allowsDecimal = product.dataset.decimal === "1";
   quantity.step = allowsDecimal ? "0.001" : "1";
   quantity.min = allowsDecimal ? "0.001" : "1";
+  if (gallonShortcuts) gallonShortcuts.hidden = !isGallonProduct(product);
   if (originValue === "balde_abierto") {
     const openBuckets = toNumber(product.dataset.baldesAbiertos);
     const used = toNumber(product.dataset.stockBaldeAbierto);
@@ -208,6 +219,11 @@ function addLine() {
   });
   productSelect.addEventListener("change", () => updateLine(row));
   row.querySelector("[data-line-origin]").addEventListener("change", () => updateLine(row));
+  row.querySelectorAll("[data-gallon-value]").forEach((button) => {
+    button.addEventListener("click", () => {
+      row.querySelector("[data-line-quantity]").value = button.dataset.gallonValue;
+    });
+  });
   row.querySelector("[data-remove-line]").addEventListener("click", () => {
     if (linesContainer.children.length > 1) row.remove();
   });

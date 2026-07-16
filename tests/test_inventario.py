@@ -405,6 +405,7 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn(b"Salida por destino", response.data)
         self.assertIn(b"Aceite 20W50", response.data)
         self.assertIn(b"Sale de", response.data)
+        self.assertIn(b"data-gallon-value=\"0.125\"", response.data)
 
     @patch("app.resumen_kardex", return_value={"total": 1, "entradas": 1, "salidas": 0, "ajustes": 0, "baldes": 0})
     @patch("app.obtener_producto_kardex", return_value=PRODUCTO_ACEITE)
