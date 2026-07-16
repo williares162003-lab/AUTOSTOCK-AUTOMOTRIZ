@@ -64,13 +64,18 @@ def listar_salidas(limite=30):
         for fila in consultar_todos(
             """
             SELECT s.id, s.placa, s.modelo, s.trabajador, s.creado_en,
+                   COALESCE(s.estado, 'activa') AS estado,
+                   s.anulada_en, s.motivo_anulacion,
                    COALESCE(u.nombre, 'Usuario eliminado') AS usuario,
+                   COALESCE(ua.nombre, '') AS anulada_por_nombre,
                    COUNT(d.id) AS items,
                    COALESCE(SUM(d.cantidad_base), 0) AS total_base
             FROM salidas_stock s
             LEFT JOIN salidas_stock_detalle d ON d.salida_id = s.id
             LEFT JOIN usuarios u ON u.id = s.usuario_id
-            GROUP BY s.id, s.placa, s.modelo, s.trabajador, s.creado_en, u.nombre
+            LEFT JOIN usuarios ua ON ua.id = s.anulada_por
+            GROUP BY s.id, s.placa, s.modelo, s.trabajador, s.creado_en,
+                     s.estado, s.anulada_en, s.motivo_anulacion, u.nombre, ua.nombre
             ORDER BY s.id DESC
             LIMIT %s
             """,
@@ -113,6 +118,7 @@ def resumen_salidas():
           COALESCE(SUM(YEAR(creado_en) = YEAR(CURDATE()) AND MONTH(creado_en) = MONTH(CURDATE())), 0) AS mes,
           COUNT(DISTINCT vehiculo_id) AS vehiculos
         FROM salidas_stock
+        WHERE COALESCE(estado, 'activa') = 'activa'
         """
     )
     return {
@@ -193,6 +199,122 @@ def renombrar_destino(origen, nuevo):
 
     resultado = ejecutar_transaccion(operacion)
     return True, "Destino actualizado correctamente.", resultado
+
+
+def anular_salida(salida_id, motivo, usuario_id):
+    motivo = (motivo or "").strip()
+    if not motivo:
+        return False, "Indica el motivo de la anulacion."
+    if len(motivo) > 255:
+        return False, "El motivo no puede superar 255 caracteres."
+
+    def operacion(cursor):
+        cursor.execute(
+            """
+            SELECT id, placa, modelo, trabajador, COALESCE(estado, 'activa') AS estado
+            FROM salidas_stock
+            WHERE id = %s
+            FOR UPDATE
+            """,
+            (salida_id,),
+        )
+        salida = cursor.fetchone()
+        if not salida:
+            return False, "La salida no existe."
+        if salida["estado"] == "anulada":
+            return False, "La salida ya estaba anulada."
+
+        cursor.execute(
+            """
+            SELECT d.producto_id, d.cantidad_base, d.origen_stock,
+                   p.nombre, p.stock_actual, p.stock_suelto,
+                   p.stock_balde_abierto, p.stock_cilindro_abierto,
+                   u.abreviatura
+            FROM salidas_stock_detalle d
+            INNER JOIN productos p ON p.id = d.producto_id
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            WHERE d.salida_id = %s
+            FOR UPDATE
+            """,
+            (salida_id,),
+        )
+        detalles = cursor.fetchall()
+        if not detalles:
+            return False, "La salida no tiene detalle para devolver."
+
+        nombres = []
+        for detalle in detalles:
+            cantidad = Decimal(detalle["cantidad_base"]).quantize(Decimal("0.001"))
+            stock_anterior = Decimal(detalle["stock_actual"]).quantize(Decimal("0.001"))
+            stock_suelto_nuevo = Decimal(detalle["stock_suelto"]).quantize(Decimal("0.001"))
+            stock_balde_abierto_nuevo = Decimal(detalle["stock_balde_abierto"]).quantize(Decimal("0.001"))
+            stock_cilindro_abierto_nuevo = Decimal(detalle["stock_cilindro_abierto"]).quantize(Decimal("0.001"))
+            diferencia = Decimal("0.000")
+
+            if detalle["origen_stock"] == ORIGEN_BALDE_ABIERTO:
+                stock_balde_abierto_nuevo = max(stock_balde_abierto_nuevo - cantidad, Decimal("0.000"))
+            elif detalle["origen_stock"] == ORIGEN_CILINDRO_ABIERTO:
+                stock_cilindro_abierto_nuevo = max(stock_cilindro_abierto_nuevo - cantidad, Decimal("0.000"))
+            else:
+                stock_suelto_nuevo += cantidad
+                diferencia = cantidad
+
+            stock_nuevo = stock_suelto_nuevo
+            cursor.execute(
+                """
+                UPDATE productos
+                SET stock_suelto = %s,
+                    stock_balde_abierto = %s,
+                    stock_cilindro_abierto = %s,
+                    stock_actual = %s
+                WHERE id = %s
+                """,
+                (
+                    stock_suelto_nuevo,
+                    stock_balde_abierto_nuevo,
+                    stock_cilindro_abierto_nuevo,
+                    stock_nuevo,
+                    detalle["producto_id"],
+                ),
+            )
+            cursor.execute(
+                """
+                INSERT INTO ajustes_stock
+                    (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    detalle["producto_id"],
+                    stock_anterior,
+                    stock_nuevo,
+                    diferencia,
+                    f"Anulacion salida {salida['placa']}: {motivo}",
+                    usuario_id,
+                ),
+            )
+            nombres.append(f"{detalle['nombre']} +{cantidad} {detalle['abreviatura']}")
+
+        cursor.execute(
+            """
+            UPDATE salidas_stock
+            SET estado = 'anulada',
+                anulada_en = CURRENT_TIMESTAMP,
+                anulada_por = %s,
+                motivo_anulacion = %s
+            WHERE id = %s
+            """,
+            (usuario_id, motivo, salida_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO movimientos (tipo, descripcion, usuario_id)
+            VALUES (%s, %s, %s)
+            """,
+            ("Anulacion", f"{salida['placa']}: {', '.join(nombres)} / {motivo}", usuario_id),
+        )
+        return True, "Salida anulada y stock devuelto correctamente."
+
+    return ejecutar_transaccion(operacion)
 
 
 def _lineas_desde_formulario(datos):

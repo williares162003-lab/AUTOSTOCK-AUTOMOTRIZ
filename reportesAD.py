@@ -127,6 +127,7 @@ def _destinos_por_periodo(filtros):
             FROM salidas_stock s
             LEFT JOIN salidas_stock_detalle d ON d.salida_id = s.id
             WHERE DATE(s.creado_en) BETWEEN %s AND %s
+              AND COALESCE(s.estado, 'activa') = 'activa'
             {destino_sql}
             GROUP BY s.placa
             ORDER BY ultimo_movimiento DESC, productos DESC, s.placa
@@ -362,6 +363,7 @@ def _resumen_reportes(filtros):
         FROM salidas_stock s
         LEFT JOIN salidas_stock_detalle d ON d.salida_id = s.id
         WHERE DATE(s.creado_en) BETWEEN %s AND %s
+          AND COALESCE(s.estado, 'activa') = 'activa'
         {placa_sql}
         """,
         _parametros_fecha(filtros) + placa_params,
@@ -426,6 +428,7 @@ def _productos_mas_retirados(filtros):
             INNER JOIN categorias c ON c.id = p.categoria_id
             INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
             WHERE DATE(s.creado_en) BETWEEN %s AND %s
+              AND COALESCE(s.estado, 'activa') = 'activa'
             {placa_sql}
             GROUP BY p.id, p.nombre, p.marca, t.nombre, c.nombre, u.abreviatura
             ORDER BY cantidad DESC, movimientos DESC, p.nombre
@@ -448,6 +451,7 @@ def _salidas_por_vehiculo(filtros):
             FROM salidas_stock s
             LEFT JOIN salidas_stock_detalle d ON d.salida_id = s.id
             WHERE DATE(s.creado_en) BETWEEN %s AND %s
+              AND COALESCE(s.estado, 'activa') = 'activa'
             {placa_sql}
             GROUP BY s.placa, s.modelo, s.trabajador
             ORDER BY salidas DESC, productos DESC, ultimo_movimiento DESC
@@ -481,6 +485,7 @@ def _salidas_agrupadas_por_dia(filtros):
         INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
         LEFT JOIN usuarios us ON us.id = s.usuario_id
         WHERE DATE(s.creado_en) BETWEEN %s AND %s
+          AND COALESCE(s.estado, 'activa') = 'activa'
         {placa_sql}
         ORDER BY DATE(s.creado_en) DESC, s.placa ASC, s.creado_en DESC, d.id ASC
         LIMIT 300
@@ -560,6 +565,7 @@ def _detalle_por_placa(filtros):
         INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
         LEFT JOIN usuarios us ON us.id = s.usuario_id
         WHERE DATE(s.creado_en) BETWEEN %s AND %s
+          AND COALESCE(s.estado, 'activa') = 'activa'
         {placa_sql}
         ORDER BY s.creado_en DESC, d.id DESC
         LIMIT 120
@@ -630,6 +636,7 @@ def _movimientos_por_dia(filtros):
         SELECT DATE(s.creado_en) AS fecha, COUNT(*) AS salidas
         FROM salidas_stock s
         WHERE DATE(s.creado_en) BETWEEN %s AND %s
+          AND COALESCE(s.estado, 'activa') = 'activa'
         {placa_sql}
         GROUP BY DATE(s.creado_en)
         """,

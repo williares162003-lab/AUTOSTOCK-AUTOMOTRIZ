@@ -57,6 +57,7 @@ from movimientos_kardexAD import (
     resumen_kardex,
 )
 from movimientos_salidasAD import (
+    anular_salida as anular_salida_ad,
     listar_salidas,
     listar_vehiculos,
     registrar_salida,
@@ -312,6 +313,19 @@ def salidas():
 @csrf_requerido
 def crear_salida():
     correcto, mensaje = registrar_salida(request.form, session["usuario"]["id"])
+    flash(mensaje, "success" if correcto else "error")
+    return redirect(url_for("salidas"))
+
+
+@app.post("/movimientos/salidas/<int:salida_id>/anular")
+@login_requerido
+@csrf_requerido
+def anular_salida(salida_id):
+    correcto, mensaje = anular_salida_ad(
+        salida_id,
+        request.form.get("motivo", ""),
+        session["usuario"]["id"],
+    )
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("salidas"))
 

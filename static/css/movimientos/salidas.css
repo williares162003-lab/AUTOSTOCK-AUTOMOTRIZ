@@ -121,6 +121,46 @@
   font-weight: 800;
 }
 
+.output-row-cancelled {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.output-row-cancelled .output-detail-tags span {
+  color: #64748b;
+  background: #eef2f7;
+  text-decoration: line-through;
+}
+
+.output-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.output-status.active {
+  color: #047857;
+  background: #dff8ea;
+}
+
+.output-status.cancelled {
+  color: #b42318;
+  background: #fee4e2;
+}
+
+.cancel-output-form {
+  margin: 0;
+}
+
+.muted-action {
+  color: #94a3b8;
+  font-weight: 800;
+}
+
 @media (max-width: 900px) {
   .output-line {
     grid-template-columns: 1fr;

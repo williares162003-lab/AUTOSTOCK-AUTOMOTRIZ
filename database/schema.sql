@@ -204,14 +204,23 @@ CREATE TABLE IF NOT EXISTS salidas_stock (
     trabajador VARCHAR(160) NOT NULL,
     usuario_id INT UNSIGNED NULL,
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(20) NOT NULL DEFAULT 'activa',
+    anulada_en DATETIME NULL,
+    anulada_por INT UNSIGNED NULL,
+    motivo_anulacion VARCHAR(255) NULL,
     PRIMARY KEY (id),
     KEY idx_salidas_stock_vehiculo (vehiculo_id),
     KEY idx_salidas_stock_usuario (usuario_id),
+    KEY idx_salidas_stock_estado (estado),
+    KEY idx_salidas_stock_anulada_por (anulada_por),
     CONSTRAINT fk_salidas_stock_vehiculo
         FOREIGN KEY (vehiculo_id) REFERENCES vehiculos_atendidos (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_salidas_stock_usuario
         FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_salidas_stock_anulada_por
+        FOREIGN KEY (anulada_por) REFERENCES usuarios (id)
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -69,10 +69,10 @@
   </div>
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Fecha</th><th>Destino</th><th>Trabajador</th><th>Productos</th><th>Usuario</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Destino</th><th>Trabajador</th><th>Productos</th><th>Estado</th><th>Usuario</th><th>Accion</th></tr></thead>
       <tbody>
         {% for salida in salidas %}
-        <tr>
+        <tr class="{{ 'output-row-cancelled' if salida.estado == 'anulada' else '' }}">
           <td>{{ salida.creado_en }}</td>
           <td><strong>{{ salida.placa }}</strong><small>{{ salida.modelo or "Sin modelo" }}</small></td>
           <td>{{ salida.trabajador }}</td>
@@ -85,10 +85,31 @@
               {% endfor %}
             </div>
           </td>
+          <td>
+            {% if salida.estado == 'anulada' %}
+              <span class="output-status cancelled">Anulada</span>
+              <small>{{ salida.motivo_anulacion or "Sin motivo" }}</small>
+            {% else %}
+              <span class="output-status active">Activa</span>
+            {% endif %}
+          </td>
           <td>{{ salida.usuario }}</td>
+          <td>
+            {% if salida.estado != 'anulada' %}
+              <form method="post" action="{{ url_for('anular_salida', salida_id=salida.id) }}" class="cancel-output-form" data-cancel-output-form data-destination="{{ salida.placa|e }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="motivo" value="">
+                <button class="icon-action danger" type="submit" title="Anular salida">
+                  <span class="material-symbols-outlined">undo</span>
+                </button>
+              </form>
+            {% else %}
+              <span class="muted-action">-</span>
+            {% endif %}
+          </td>
         </tr>
         {% else %}
-        <tr><td class="empty-row" colspan="5">Todavia no hay salidas registradas.</td></tr>
+        <tr><td class="empty-row" colspan="7">Todavia no hay salidas registradas.</td></tr>
         {% endfor %}
       </tbody>
     </table>

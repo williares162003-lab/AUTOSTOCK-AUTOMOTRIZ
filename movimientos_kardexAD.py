@@ -151,6 +151,7 @@ def _salidas_filtradas(producto_id, fecha_inicio, fecha_fin, placa):
     sql = _aplicar_filtros(
         sql, parametros, "s.creado_en", producto_id, fecha_inicio, fecha_fin, "d.producto_id"
     )
+    sql += (" AND " if " WHERE " in sql else " WHERE ") + "COALESCE(s.estado, 'activa') = 'activa'"
     if placa:
         sql += (
             " AND " if " WHERE " in sql else " WHERE "

@@ -4,6 +4,7 @@ const vehicleList = document.querySelector("#vehiculos-atendidos");
 const linesContainer = document.querySelector("[data-output-lines]");
 const lineTemplate = document.querySelector("[data-output-line-template]");
 const addLineButton = document.querySelector("[data-add-output-line]");
+const cancelOutputForms = document.querySelectorAll("[data-cancel-output-form]");
 
 function toNumber(value) {
   const number = Number.parseFloat(String(value || "0").replace(",", "."));
@@ -238,5 +239,17 @@ function addLine() {
 vehiclePlate.addEventListener("change", syncVehicleModel);
 vehiclePlate.addEventListener("blur", syncVehicleModel);
 addLineButton.addEventListener("click", addLine);
+
+cancelOutputForms.forEach((form) => {
+  form.addEventListener("submit", (event) => {
+    const destination = form.dataset.destination || "esta salida";
+    const reason = window.prompt(`Motivo para anular la salida de ${destination}:`);
+    if (!reason || !reason.trim()) {
+      event.preventDefault();
+      return;
+    }
+    form.querySelector("input[name='motivo']").value = reason.trim();
+  });
+});
 
 addLine();

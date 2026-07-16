@@ -403,6 +403,34 @@ def _aplicar_migraciones(cursor):
     )
     _asegurar_columna(
         cursor,
+        "salidas_stock",
+        "estado",
+        "VARCHAR(20) NOT NULL DEFAULT 'activa' AFTER creado_en",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "anulada_en",
+        "DATETIME NULL AFTER estado",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "anulada_por",
+        "INT UNSIGNED NULL AFTER anulada_en",
+    )
+    _asegurar_columna(
+        cursor,
+        "salidas_stock",
+        "motivo_anulacion",
+        "VARCHAR(255) NULL AFTER anulada_por",
+    )
+    if not _indice_existe(cursor, "salidas_stock", "idx_salidas_stock_estado"):
+        cursor.execute("ALTER TABLE salidas_stock ADD INDEX idx_salidas_stock_estado (estado)")
+    if not _indice_existe(cursor, "salidas_stock", "idx_salidas_stock_anulada_por"):
+        cursor.execute("ALTER TABLE salidas_stock ADD INDEX idx_salidas_stock_anulada_por (anulada_por)")
+    _asegurar_columna(
+        cursor,
         "aperturas_balde",
         "envase",
         "VARCHAR(20) NOT NULL DEFAULT 'balde' AFTER producto_id",

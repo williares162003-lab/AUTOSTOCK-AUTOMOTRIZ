@@ -43,6 +43,7 @@ def _salidas_mes():
         FROM salidas_stock
         WHERE YEAR(creado_en) = YEAR(CURDATE())
           AND MONTH(creado_en) = MONTH(CURDATE())
+          AND COALESCE(estado, 'activa') = 'activa'
         """
     )
     return fila["total"]
@@ -95,6 +96,7 @@ def obtener_serie_movimientos():
         SELECT DATE(creado_en) AS fecha, COUNT(*) AS salidas
         FROM salidas_stock
         WHERE creado_en >= DATE_SUB(CURDATE(), INTERVAL 5 DAY)
+          AND COALESCE(estado, 'activa') = 'activa'
         GROUP BY DATE(creado_en)
         """
     )

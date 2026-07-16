@@ -16,7 +16,7 @@ from inventario_productosAD import (
 )
 from movimientos_entradasAD import abrir_balde, abrir_caja, registrar_entrada
 from movimientos_kardexAD import listar_movimientos_kardex_con_errores
-from movimientos_salidasAD import listar_vehiculos, registrar_salida
+from movimientos_salidasAD import anular_salida, listar_vehiculos, registrar_salida
 from reportesAD import normalizar_filtros_reportes
 from tests.test_app import USUARIO_ALMACEN
 
@@ -595,10 +595,25 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn("/movimientos/salidas", response.location)
         registrar.assert_called_once()
 
+    @patch("app.anular_salida_ad", return_value=(True, "Salida anulada y stock devuelto correctamente."))
+    def test_almacen_can_cancel_output(self, anular):
+        response = self.client.post(
+            "/movimientos/salidas/7/anular",
+            data={"csrf_token": "csrf-inventario", "motivo": "Producto devuelto"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/movimientos/salidas", response.location)
+        anular.assert_called_once_with(7, "Producto devuelto", USUARIO_ALMACEN["id"])
+
     @patch("movimientos_salidasAD.consultar_todos", return_value=[])
     def test_output_destinations_default_to_today(self, consultar):
         listar_vehiculos()
         self.assertEqual(consultar.call_args.args[1], (0,))
+
+    def test_output_cancel_requires_reason(self):
+        correcto, mensaje = anular_salida(1, "", usuario_id=2)
+        self.assertFalse(correcto)
+        self.assertIn("motivo", mensaje)
 
     def test_output_requires_worker(self):
         correcto, mensaje = registrar_salida(
