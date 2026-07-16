@@ -106,11 +106,14 @@
   box-shadow: 0 0 0 3px rgba(78, 115, 152, 0.12);
 }
 
-.kardex-filters .scroll-select-menu {
-  max-width: 560px;
+.kardex-filters label:first-child .scroll-select-menu {
+  position: static;
+  margin-top: 6px;
+  max-width: none;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
-.kardex-filters .scroll-select-list {
+.kardex-filters label:first-child .scroll-select-list {
   max-height: 140px;
 }
 
