@@ -162,6 +162,7 @@
             data-stock-cilindro-abierto="{{ producto.stock_cilindro_abierto }}"
             data-cilindros-abiertos="{{ producto.cilindros_abiertos }}"
             data-litros-por-cilindro="{{ producto.litros_por_cilindro }}"
+            data-stock-cilindro-disponible="{{ producto.stock_cilindro_disponible|default(0) }}"
             data-unidad="{{ producto.unidad|e }}"
             data-abreviatura="{{ producto.abreviatura|e }}"
             data-decimal="{{ 1 if producto.permite_decimal else 0 }}"

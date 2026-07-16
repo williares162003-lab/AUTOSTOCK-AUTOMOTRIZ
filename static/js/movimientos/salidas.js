@@ -154,6 +154,28 @@ function isGallonProduct(product) {
   return unit.includes("gal");
 }
 
+function cylinderAvailable(product) {
+  const savedAvailable = toNumber(product?.dataset.stockCilindroDisponible);
+  if (savedAvailable > 0) return savedAvailable;
+  const openCylinders = toNumber(product?.dataset.cilindrosAbiertos);
+  const used = toNumber(product?.dataset.stockCilindroAbierto);
+  const capacity = toNumber(product?.dataset.litrosPorCilindro);
+  return Math.max((openCylinders * capacity) - used, 0);
+}
+
+function chooseAvailableOrigin(product, origin) {
+  if (!product || origin.value !== "suelto") return;
+  const loose = toNumber(product.dataset.stockSuelto);
+  if (loose > 0) return;
+  if (cylinderAvailable(product) > 0) {
+    origin.value = "cilindro_abierto";
+    return;
+  }
+  if (toNumber(product.dataset.baldesAbiertos) > 0) {
+    origin.value = "balde_abierto";
+  }
+}
+
 function updateLine(row) {
   const product = selectedProduct(row);
   const origin = row.querySelector("[data-line-origin]");
@@ -166,6 +188,7 @@ function updateLine(row) {
     return;
   }
 
+  chooseAvailableOrigin(product, origin);
   const originValue = origin.value;
   const abbreviation = product.dataset.abreviatura;
   const allowsDecimal = product.dataset.decimal === "1";
@@ -186,10 +209,12 @@ function updateLine(row) {
     const openCylinders = toNumber(product.dataset.cilindrosAbiertos);
     const used = toNumber(product.dataset.stockCilindroAbierto);
     const capacity = toNumber(product.dataset.litrosPorCilindro);
-    const available = Math.max(capacity - used, 0);
+    const available = cylinderAvailable(product);
     quantity.max = String(available);
-    stock.textContent = openCylinders > 0
+    stock.textContent = openCylinders > 0 && capacity > 0
       ? `${formatQuantity(openCylinders)} cilindro(s) / queda ${formatQuantity(available)} ${abbreviation}`
+      : openCylinders > 0
+        ? "Falta capacidad del cilindro"
       : "Sin cilindro abierto";
     return;
   }

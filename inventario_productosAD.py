@@ -167,7 +167,21 @@ def listar_productos():
         producto["stock_en_cajas"] = (
             producto.get("stock_cajas_cerradas", 0) * producto.get("unidades_por_caja", 0)
         )
-        producto["stock_total"] = producto["stock_actual"] + producto["stock_en_cajas"]
+        capacidad_cilindro = producto.get("litros_por_cilindro", 0)
+        cilindros_abiertos = producto.get("cilindros_abiertos", 0)
+        cilindros_cerrados = producto.get("stock_cilindros_cerrados", 0)
+        usado_cilindro = producto.get("stock_cilindro_abierto", 0)
+        producto["stock_cilindro_disponible"] = max(
+            (cilindros_abiertos * capacidad_cilindro) - usado_cilindro,
+            0,
+        )
+        producto["stock_cilindros_cerrados_litros"] = cilindros_cerrados * capacidad_cilindro
+        producto["stock_total"] = (
+            producto["stock_actual"]
+            + producto["stock_en_cajas"]
+            + producto["stock_cilindro_disponible"]
+            + producto["stock_cilindros_cerrados_litros"]
+        )
     return productos
 
 

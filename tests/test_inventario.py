@@ -11,6 +11,7 @@ from inventario_productosAD import (
     eliminar_categoria,
     eliminar_producto,
     eliminar_tipo,
+    listar_productos,
     preparar_categorias_generales,
     resumen_productos,
 )
@@ -227,6 +228,28 @@ class InventarioAppTests(unittest.TestCase):
         )
         self.assertFalse(correcto)
         self.assertIn("motivo", mensaje)
+
+    @patch("inventario_productosAD.consultar_todos")
+    def test_product_list_calculates_open_cylinder_available_liters(self, consultar):
+        consultar.side_effect = [
+            [
+                {
+                    **PRODUCTO_ACEITE,
+                    "stock_actual": Decimal("0.000"),
+                    "stock_suelto": Decimal("0.000"),
+                    "stock_cilindro_abierto": Decimal("0.000"),
+                    "cilindros_abiertos": Decimal("1.000"),
+                    "stock_cilindros_cerrados": Decimal("0.000"),
+                    "litros_por_cilindro": Decimal("208.000"),
+                }
+            ],
+            [],
+        ]
+
+        producto = listar_productos()[0]
+
+        self.assertEqual(producto["stock_cilindro_disponible"], Decimal("208.000"))
+        self.assertEqual(producto["stock_total"], Decimal("208.000"))
 
     @patch(
         "inventario_productosAD.consultar_uno",

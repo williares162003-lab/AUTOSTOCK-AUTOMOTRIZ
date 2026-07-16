@@ -427,11 +427,16 @@ def registrar_salida(datos, usuario_id):
                 return False, f"No hay balde abierto en uso para {producto['nombre']}."
             if origen == ORIGEN_CILINDRO_ABIERTO and producto["cilindros_abiertos"] <= 0:
                 return False, f"No hay cilindro abierto en uso para {producto['nombre']}."
+            if origen == ORIGEN_CILINDRO_ABIERTO and producto["litros_por_cilindro"] <= 0:
+                return False, f"Falta registrar los litros por cilindro para {producto['nombre']}."
             if (
                 origen == ORIGEN_CILINDRO_ABIERTO
-                and producto["stock_cilindro_abierto"] + cantidad > producto["litros_por_cilindro"]
+                and producto["stock_cilindro_abierto"] + cantidad
+                > producto["litros_por_cilindro"] * producto["cilindros_abiertos"]
             ):
-                disponible_cilindro = producto["litros_por_cilindro"] - producto["stock_cilindro_abierto"]
+                disponible_cilindro = (
+                    producto["litros_por_cilindro"] * producto["cilindros_abiertos"]
+                ) - producto["stock_cilindro_abierto"]
                 return False, (
                     f"No hay litros suficientes en el cilindro abierto de {producto['nombre']}. "
                     f"Disponible: {disponible_cilindro} {producto['abreviatura']}."

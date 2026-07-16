@@ -36,12 +36,13 @@
         {% set bajo_stock = stock_total > 0 and producto.stock_minimo > 0 and stock_total <= producto.stock_minimo %}
         {% set estado_stock = 'envases' if solo_envases else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
         {% set estado_texto = 'Solo envases' if solo_envases else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
+        {% set stock_visible = stock_total if stock_total > producto.stock_actual else producto.stock_actual %}
         <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.codigo or '') ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.area ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-area="{{ producto.area_id }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
           <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.codigo or producto.marca or "Sin marca" }}{% if producto.codigo and producto.marca %} / {{ producto.marca }}{% endif %}</small></div></div></td>
           <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.area }} / {{ producto.categoria }}</small></td>
           <td>
-            <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}</strong>
-            <small>Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}</small>
+            <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ stock_visible|float|round(3) }} {{ producto.abreviatura }}</strong>
+            <small>{% if stock_total > producto.stock_actual %}Total controlado / Suelto {{ producto.stock_actual|float|round(3) }} {{ producto.abreviatura }}{% else %}Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ producto.abreviatura }}{% endif %}</small>
             <div class="stock-breakdown">
               <span>Suelto: {{ producto.stock_suelto|float|round(3) }}</span>
               <span>Total: {{ stock_total|float|round(3) }}</span>
@@ -51,6 +52,8 @@
               <span>Cil. uso: {{ producto.cilindros_abiertos|float|round(3) }}</span>
               <span>Usado cilindro: {{ producto.stock_cilindro_abierto|float|round(3) }}</span>
               <span>Cil. cerrados: {{ producto.stock_cilindros_cerrados|float|round(3) }}</span>
+              <span>Cap/cil: {{ producto.litros_por_cilindro|float|round(3) }}</span>
+              <span>Disp. cilindro: {{ producto.stock_cilindro_disponible|default(0)|float|round(3) }}</span>
               <span>Cajas cerr.: {{ producto.stock_cajas_cerradas|default(0)|float|round(3) }}</span>
               <span>Und/caja: {{ producto.unidades_por_caja|default(0)|float|round(3) }}</span>
             </div>
