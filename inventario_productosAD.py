@@ -139,6 +139,17 @@ def _unidad_operativa(abreviatura):
     return "L" if _es_galon(abreviatura) else abreviatura
 
 
+def _a_decimal(valor):
+    return Decimal(str(valor or "0"))
+
+
+def _dividir_stock(valor, divisor):
+    divisor = _a_decimal(divisor)
+    if divisor <= 0:
+        return Decimal("0.000")
+    return (_a_decimal(valor) / divisor).quantize(Decimal("0.001"))
+
+
 def listar_productos():
     productos = [
         dict(fila)
@@ -171,6 +182,7 @@ def listar_productos():
     for presentacion in presentaciones:
         por_producto.setdefault(presentacion["producto_id"], []).append(dict(presentacion))
     for producto in productos:
+        producto["es_galon"] = _es_galon(producto["abreviatura"])
         producto["unidad_operativa"] = _unidad_operativa(producto["abreviatura"])
         producto["presentaciones"] = por_producto.get(producto["id"], [])
         producto["stock_en_cajas"] = (
@@ -191,6 +203,10 @@ def listar_productos():
             + producto["stock_cilindro_disponible"]
             + producto["stock_cilindros_cerrados_litros"]
         )
+        litros_por_galon = producto.get("litros_por_galon", 0)
+        producto["stock_actual_envases"] = _dividir_stock(producto["stock_actual"], litros_por_galon)
+        producto["stock_suelto_envases"] = _dividir_stock(producto["stock_suelto"], litros_por_galon)
+        producto["stock_total_envases"] = _dividir_stock(producto["stock_total"], litros_por_galon)
     return productos
 
 

@@ -37,13 +37,16 @@
         {% set estado_stock = 'envases' if solo_envases else ('sin_stock' if sin_stock else ('bajo' if bajo_stock else 'disponible')) %}
         {% set estado_texto = 'Solo envases' if solo_envases else ('Sin stock' if sin_stock else ('Bajo minimo' if bajo_stock else 'Disponible')) %}
         {% set stock_visible = stock_total if stock_total > producto.stock_actual else producto.stock_actual %}
-        {% set unidad_stock = producto.unidad_operativa|default(producto.abreviatura) %}
+        {% set unidad_operativa = producto.unidad_operativa|default(producto.abreviatura) %}
+        {% set muestra_galones = producto.es_galon|default(false) and producto.litros_por_galon|default(0) > 0 %}
+        {% set stock_principal = (producto.stock_total_envases if stock_total > producto.stock_actual else producto.stock_actual_envases) if muestra_galones else stock_visible %}
+        {% set unidad_principal = 'gal' if muestra_galones else unidad_operativa %}
         <tr data-product-row data-search="{{ (producto.nombre ~ ' ' ~ (producto.codigo or '') ~ ' ' ~ (producto.marca or '') ~ ' ' ~ producto.area ~ ' ' ~ producto.tipo ~ ' ' ~ producto.categoria ~ ' ' ~ producto.unidad ~ ' ' ~ producto.abreviatura)|lower|e }}" data-area="{{ producto.area_id }}" data-type="{{ producto.tipo_id }}" data-category="{{ producto.categoria_id }}" data-status="{{ estado_stock }}">
           <td><div class="product-name"><span class="material-symbols-outlined">inventory_2</span><div><strong>{{ producto.nombre }}</strong><small>{{ producto.codigo or producto.marca or "Sin marca" }}{% if producto.codigo and producto.marca %} / {{ producto.marca }}{% endif %}</small></div></div></td>
           <td><strong class="type-label">{{ producto.tipo }}</strong><small class="category-label">{{ producto.area }} / {{ producto.categoria }}</small></td>
           <td>
-            <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ stock_visible|float|round(3) }} {{ unidad_stock }}</strong>
-            <small>{% if stock_total > producto.stock_actual %}Total controlado / Suelto {{ producto.stock_actual|float|round(3) }} {{ unidad_stock }}{% else %}Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ unidad_stock }}{% endif %}</small>
+            <strong class="stock-value {{ 'empty' if sin_stock else ('low' if bajo_stock else '') }}">{{ stock_principal|float|round(3) }} {{ unidad_principal }}</strong>
+            <small>{% if muestra_galones %}{{ stock_visible|float|round(3) }} L disponibles / {{ producto.litros_por_galon|float|round(3) }} L por galon{% elif stock_total > producto.stock_actual %}Total controlado / Suelto {{ producto.stock_actual|float|round(3) }} {{ unidad_operativa }}{% else %}Disponible / Min. {{ producto.stock_minimo|float|round(3) }} {{ unidad_operativa }}{% endif %}</small>
             <div class="stock-breakdown">
               <span>Suelto: {{ producto.stock_suelto|float|round(3) }}</span>
               <span>Total: {{ stock_total|float|round(3) }}</span>
@@ -81,7 +84,9 @@
                 data-categoria="{{ producto.categoria|e }}"
                 data-unidad="{{ producto.unidad|e }}"
                 data-abreviatura="{{ producto.abreviatura|e }}"
-                data-stock-unidad="{{ unidad_stock|e }}"
+                data-stock-unidad="{{ unidad_operativa|e }}"
+                data-stock-resumen="{{ stock_principal|float|round(3) }} {{ unidad_principal }}{% if muestra_galones %} / {{ stock_visible|float|round(3) }} L{% endif %}"
+                data-stock-suelto-resumen="{% if muestra_galones %}{{ producto.stock_suelto_envases|float|round(3) }} gal / {{ producto.stock_suelto|float|round(3) }} L{% endif %}"
                 data-stock="{{ producto.stock_actual }}"
                 data-stock-suelto="{{ producto.stock_suelto }}"
                 data-stock-balde-abierto="{{ producto.stock_balde_abierto }}"
@@ -139,7 +144,7 @@
                 data-stock-cajas-cerradas="{{ producto.stock_cajas_cerradas|default(0) }}"
                 data-unidades-por-caja="{{ producto.unidades_por_caja|default(0) }}"
                 data-stock-total="{{ stock_total }}"
-                data-unidad="{{ unidad_stock }}"
+                data-unidad="{{ unidad_operativa }}"
                 data-decimal="{{ 1 if producto.permite_decimal else 0 }}"
               ><span class="material-symbols-outlined">tune</span></button>
               <form method="post" action="{{ url_for('eliminar_producto', producto_id=producto.id) }}" data-delete-form data-name="{{ producto.nombre|e }}">

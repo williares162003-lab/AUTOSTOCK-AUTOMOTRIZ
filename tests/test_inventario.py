@@ -310,6 +310,27 @@ class InventarioAppTests(unittest.TestCase):
         self.assertEqual(producto["stock_cilindro_disponible"], Decimal("208.000"))
         self.assertEqual(producto["stock_total"], Decimal("208.000"))
 
+    @patch("inventario_productosAD.consultar_todos")
+    def test_product_list_calculates_gallon_display_stock(self, consultar):
+        consultar.side_effect = [
+            [
+                {
+                    **PRODUCTO_ACEITE,
+                    "stock_actual": Decimal("4.000"),
+                    "stock_suelto": Decimal("4.000"),
+                    "litros_por_galon": Decimal("4.000"),
+                }
+            ],
+            [],
+        ]
+
+        producto = listar_productos()[0]
+
+        self.assertTrue(producto["es_galon"])
+        self.assertEqual(producto["unidad_operativa"], "L")
+        self.assertEqual(producto["stock_actual_envases"], Decimal("1.000"))
+        self.assertEqual(producto["stock_total_envases"], Decimal("1.000"))
+
     @patch(
         "inventario_productosAD.consultar_uno",
         return_value={
