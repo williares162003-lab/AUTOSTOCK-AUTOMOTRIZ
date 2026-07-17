@@ -79,7 +79,23 @@
           <td>
             <div class="output-detail-tags">
               {% for detalle in salida.detalles %}
-                <span>{{ detalle.producto }}: -{{ detalle.cantidad_base|float|round(3) }} {{ detalle.abreviatura }} / {{ detalle.origen_texto }}</span>
+                <div class="output-detail-chip">
+                  <span>{{ detalle.producto }}: -{{ detalle.cantidad_base|float|round(3) }} {{ detalle.abreviatura }} / {{ detalle.origen_texto }}</span>
+                  {% if salida.estado != 'anulada' %}
+                    <button
+                      type="button"
+                      class="chip-action"
+                      title="Corregir cantidad"
+                      data-correct-output-detail
+                      data-action="{{ url_for('corregir_detalle_salida', detalle_id=detalle.id) }}"
+                      data-product="{{ detalle.producto|e }}"
+                      data-current="{{ detalle.cantidad_base|float|round(3) }}"
+                      data-unit="{{ detalle.abreviatura|e }}"
+                    >
+                      <span class="material-symbols-outlined">edit</span>
+                    </button>
+                  {% endif %}
+                </div>
               {% else %}
                 <small>Sin detalle</small>
               {% endfor %}
@@ -115,6 +131,37 @@
     </table>
   </div>
 </section>
+
+<dialog class="correction-dialog" data-output-correction-dialog>
+  <form method="post" data-output-correction-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="return_to" value="{{ request.full_path if request.query_string else request.path }}">
+    <div class="correction-dialog-header">
+      <div>
+        <h2>Corregir salida</h2>
+        <p data-output-correction-product>Producto seleccionado</p>
+      </div>
+      <button type="button" class="icon-action" title="Cerrar" data-close-output-correction>
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <label>
+      <span>Cantidad correcta</span>
+      <input name="cantidad" type="number" min="0.001" step="0.001" required data-output-correction-quantity>
+      <small data-output-correction-help></small>
+    </label>
+    <label>
+      <span>Motivo</span>
+      <textarea name="motivo" maxlength="180" required placeholder="Ej. Debia salir solo 1 filtro"></textarea>
+    </label>
+    <div class="dialog-actions">
+      <button type="button" class="secondary-button" data-close-output-correction>Cancelar</button>
+      <button class="primary-button" type="submit">
+        <span class="material-symbols-outlined">save</span>Guardar correccion
+      </button>
+    </div>
+  </form>
+</dialog>
 
 <template data-output-line-template>
   <div class="output-line" data-output-line>

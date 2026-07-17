@@ -17,7 +17,7 @@ from inventario_productosAD import (
 )
 from movimientos_entradasAD import abrir_balde, abrir_caja, registrar_entrada
 from movimientos_kardexAD import listar_movimientos_kardex_con_errores
-from movimientos_salidasAD import anular_salida, listar_vehiculos, registrar_salida
+from movimientos_salidasAD import anular_salida, corregir_detalle_salida, listar_vehiculos, registrar_salida
 from reportesAD import normalizar_filtros_reportes
 from tests.test_app import USUARIO_ALMACEN
 
@@ -739,6 +739,18 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn("/movimientos/salidas", response.location)
         anular.assert_called_once_with(7, "Producto devuelto", USUARIO_ALMACEN["id"])
 
+    @patch("app.corregir_detalle_salida_ad", return_value=(True, "Salida corregida y stock actualizado correctamente."))
+    def test_almacen_can_correct_output_detail(self, corregir):
+        response = self.client.post(
+            "/movimientos/salidas/detalle/11/corregir",
+            data={"csrf_token": "csrf-inventario", "cantidad": "1", "motivo": "Debia salir uno"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/movimientos/salidas", response.location)
+        corregir.assert_called_once()
+        self.assertEqual(corregir.call_args.args[0], 11)
+        self.assertEqual(corregir.call_args.args[2], USUARIO_ALMACEN["id"])
+
     @patch("movimientos_salidasAD.consultar_todos", return_value=[])
     def test_output_destinations_default_to_today(self, consultar):
         listar_vehiculos()
@@ -764,6 +776,58 @@ class InventarioAppTests(unittest.TestCase):
         )
         self.assertFalse(correcto)
         self.assertIn("mayor que cero", mensaje)
+
+    def test_output_correction_requires_reason(self):
+        correcto, mensaje = corregir_detalle_salida(1, {"cantidad": "1", "motivo": ""}, usuario_id=2)
+        self.assertFalse(correcto)
+        self.assertIn("motivo", mensaje)
+
+    @patch("movimientos_salidasAD.ejecutar_transaccion")
+    def test_output_correction_returns_extra_loose_stock(self, ejecutar_transaccion):
+        ejecuciones = []
+
+        class CursorFalso:
+            def execute(self, sql, parametros=()):
+                ejecuciones.append((sql, parametros))
+
+            def fetchone(self):
+                return {
+                    "id": 11,
+                    "salida_id": 7,
+                    "producto_id": 1,
+                    "cantidad_base": Decimal("3.000"),
+                    "origen_stock": "suelto",
+                    "stock_anterior": Decimal("7.000"),
+                    "placa": "BTH-931",
+                    "trabajador": "IVAN",
+                    "estado": "activa",
+                    "nombre": "Filtro de aceite",
+                    "stock_actual": Decimal("4.000"),
+                    "stock_suelto": Decimal("4.000"),
+                    "stock_balde_abierto": Decimal("0.000"),
+                    "baldes_abiertos": Decimal("0.000"),
+                    "stock_cilindro_abierto": Decimal("0.000"),
+                    "cilindros_abiertos": Decimal("0.000"),
+                    "litros_por_cilindro": Decimal("0.000"),
+                    "abreviatura": "und",
+                    "permite_decimal": 0,
+                }
+
+        ejecutar_transaccion.side_effect = lambda operacion: operacion(CursorFalso())
+        correcto, mensaje = corregir_detalle_salida(
+            11,
+            {"cantidad": "1", "motivo": "Debia salir uno"},
+            usuario_id=2,
+        )
+
+        self.assertTrue(correcto)
+        self.assertIn("corregida", mensaje)
+        actualizar_producto = next(item for item in ejecuciones if "UPDATE productos" in item[0])
+        actualizar_detalle = next(item for item in ejecuciones if "UPDATE salidas_stock_detalle" in item[0])
+        self.assertEqual(actualizar_producto[1][0], Decimal("6.000"))
+        self.assertEqual(actualizar_producto[1][3], Decimal("6.000"))
+        self.assertEqual(actualizar_detalle[1][0], Decimal("1.000"))
+        self.assertEqual(actualizar_detalle[1][1], Decimal("6.000"))
 
     def test_product_summary_tracks_stock_states(self):
         productos = [

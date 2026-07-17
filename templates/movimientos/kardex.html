@@ -143,6 +143,7 @@
           <th>Stock</th>
           <th>Referencia</th>
           <th>Usuario</th>
+          <th>Accion</th>
         </tr>
       </thead>
       <tbody>
@@ -157,14 +158,63 @@
           <td>{{ movimiento.stock_anterior|float|round(3) }} -> <strong>{{ movimiento.stock_nuevo|float|round(3) }}</strong></td>
           <td>{{ movimiento.referencia }}</td>
           <td>{{ movimiento.usuario }}</td>
+          <td>
+            {% if movimiento.tipo_clase == "salida" and movimiento.detalle_id %}
+              <button
+                type="button"
+                class="icon-action"
+                title="Corregir salida"
+                data-correct-kardex-output
+                data-action="{{ url_for('corregir_detalle_salida', detalle_id=movimiento.detalle_id) }}"
+                data-product="{{ movimiento.producto|e }}"
+                data-current="{{ movimiento.salida|float|round(3) }}"
+                data-unit="{{ movimiento.unidad|e }}"
+              >
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+            {% else %}
+              <span class="muted-action">-</span>
+            {% endif %}
+          </td>
         </tr>
         {% else %}
-        <tr><td class="empty-row" colspan="9">Todavia no hay movimientos para los filtros seleccionados.</td></tr>
+        <tr><td class="empty-row" colspan="10">Todavia no hay movimientos para los filtros seleccionados.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </section>
+
+<dialog class="kardex-correction-dialog" data-kardex-correction-dialog>
+  <form method="post" data-kardex-correction-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="return_to" value="{{ request.full_path if request.query_string else request.path }}">
+    <div class="kardex-correction-header">
+      <div>
+        <h2>Corregir salida</h2>
+        <p data-kardex-correction-product>Producto seleccionado</p>
+      </div>
+      <button type="button" class="icon-action" title="Cerrar" data-close-kardex-correction>
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <label>
+      <span>Cantidad correcta</span>
+      <input name="cantidad" type="number" min="0.001" step="0.001" required data-kardex-correction-quantity>
+      <small data-kardex-correction-help></small>
+    </label>
+    <label>
+      <span>Motivo</span>
+      <textarea name="motivo" maxlength="180" required placeholder="Ej. Debia salir solo 1 filtro"></textarea>
+    </label>
+    <div class="dialog-actions">
+      <button type="button" class="secondary-button" data-close-kardex-correction>Cancelar</button>
+      <button class="primary-button" type="submit">
+        <span class="material-symbols-outlined">save</span>Guardar correccion
+      </button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
 
 {% block extra_scripts %}

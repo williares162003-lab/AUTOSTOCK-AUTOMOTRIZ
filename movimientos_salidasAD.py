@@ -25,6 +25,10 @@ def _decimal(valor, nombre):
     return numero.quantize(Decimal("0.001")), None
 
 
+def _stock(valor):
+    return Decimal(valor or 0).quantize(Decimal("0.001"))
+
+
 def _lista(datos, nombre):
     if hasattr(datos, "getlist"):
         return datos.getlist(nombre)
@@ -96,7 +100,7 @@ def listar_salidas(limite=30):
         marcadores = ", ".join(["%s"] * len(ids))
         detalles = consultar_todos(
             f"""
-            SELECT d.salida_id, d.cantidad_base, d.origen_stock,
+            SELECT d.id, d.salida_id, d.cantidad_base, d.origen_stock,
                    d.stock_anterior, d.stock_nuevo,
                    p.nombre AS producto, p.marca, u.abreviatura
             FROM salidas_stock_detalle d
@@ -322,6 +326,148 @@ def anular_salida(salida_id, motivo, usuario_id):
             ("Anulacion", f"{salida['placa']}: {', '.join(nombres)} / {motivo}", usuario_id),
         )
         return True, "Salida anulada y stock devuelto correctamente."
+
+    return ejecutar_transaccion(operacion)
+
+
+def corregir_detalle_salida(detalle_id, datos, usuario_id):
+    detalle_id = _entero(detalle_id)
+    if not detalle_id:
+        return False, "Selecciona una linea de salida valida."
+
+    nueva_cantidad, error = _decimal(datos.get("cantidad"), "La cantidad corregida")
+    if error:
+        return False, error
+
+    motivo = (datos.get("motivo") or "").strip()
+    if len(motivo) < 3:
+        return False, "Indica el motivo de la correccion."
+    if len(motivo) > 180:
+        return False, "El motivo no puede superar 180 caracteres."
+
+    def operacion(cursor):
+        cursor.execute(
+            """
+            SELECT d.id, d.salida_id, d.producto_id, d.cantidad_base, d.origen_stock,
+                   d.stock_anterior,
+                   s.placa, s.trabajador, COALESCE(s.estado, 'activa') AS estado,
+                   p.nombre, p.stock_actual, p.stock_suelto,
+                   p.stock_balde_abierto, p.baldes_abiertos,
+                   p.stock_cilindro_abierto, p.cilindros_abiertos, p.litros_por_cilindro,
+                   u.abreviatura, u.permite_decimal
+            FROM salidas_stock_detalle d
+            INNER JOIN salidas_stock s ON s.id = d.salida_id
+            INNER JOIN productos p ON p.id = d.producto_id
+            INNER JOIN unidades_medida u ON u.id = p.unidad_base_id
+            WHERE d.id = %s
+            FOR UPDATE
+            """,
+            (detalle_id,),
+        )
+        detalle = cursor.fetchone()
+        if not detalle:
+            return False, "La linea de salida no existe."
+        if detalle["estado"] == "anulada":
+            return False, "No se puede corregir una salida anulada."
+        if not detalle["permite_decimal"] and nueva_cantidad != nueva_cantidad.to_integral_value():
+            return False, f"{detalle['nombre']} debe quedar en cantidades enteras."
+
+        cantidad_actual = _stock(detalle["cantidad_base"])
+        if nueva_cantidad == cantidad_actual:
+            return False, "La cantidad corregida es igual a la actual."
+
+        diferencia = cantidad_actual - nueva_cantidad
+        stock_anterior_producto = _stock(detalle["stock_actual"])
+        stock_suelto_nuevo = _stock(detalle["stock_suelto"])
+        stock_balde_abierto_nuevo = _stock(detalle["stock_balde_abierto"])
+        stock_cilindro_abierto_nuevo = _stock(detalle["stock_cilindro_abierto"])
+
+        if detalle["origen_stock"] == ORIGEN_BALDE_ABIERTO:
+            stock_balde_abierto_nuevo -= diferencia
+            if stock_balde_abierto_nuevo < 0:
+                return False, "La correccion dejaria el consumo del balde en negativo."
+            diferencia_stock = Decimal("0.000")
+            stock_detalle_nuevo = _stock(detalle["stock_anterior"])
+        elif detalle["origen_stock"] == ORIGEN_CILINDRO_ABIERTO:
+            stock_cilindro_abierto_nuevo -= diferencia
+            capacidad = _stock(detalle["litros_por_cilindro"]) * _stock(detalle["cilindros_abiertos"])
+            if stock_cilindro_abierto_nuevo < 0:
+                return False, "La correccion dejaria el consumo del cilindro en negativo."
+            if capacidad and stock_cilindro_abierto_nuevo > capacidad:
+                return False, "La correccion supera los litros disponibles del cilindro abierto."
+            diferencia_stock = Decimal("0.000")
+            stock_detalle_nuevo = _stock(detalle["stock_anterior"])
+        else:
+            stock_suelto_nuevo += diferencia
+            if stock_suelto_nuevo < 0:
+                return False, "No hay stock suelto suficiente para aumentar esa salida."
+            diferencia_stock = diferencia
+            stock_detalle_nuevo = _stock(detalle["stock_anterior"]) - nueva_cantidad
+            if stock_detalle_nuevo < 0:
+                return False, "La cantidad corregida supera el stock que habia en esa salida."
+
+        stock_nuevo_producto = stock_suelto_nuevo
+        cursor.execute(
+            """
+            UPDATE productos
+            SET stock_suelto = %s,
+                stock_balde_abierto = %s,
+                stock_cilindro_abierto = %s,
+                stock_actual = %s
+            WHERE id = %s
+            """,
+            (
+                stock_suelto_nuevo,
+                stock_balde_abierto_nuevo,
+                stock_cilindro_abierto_nuevo,
+                stock_nuevo_producto,
+                detalle["producto_id"],
+            ),
+        )
+        cursor.execute(
+            """
+            UPDATE salidas_stock_detalle
+            SET cantidad_base = %s,
+                stock_nuevo = %s
+            WHERE id = %s
+            """,
+            (nueva_cantidad, stock_detalle_nuevo, detalle_id),
+        )
+        motivo_ajuste = (
+            f"Correccion salida {detalle['placa']}: {detalle['nombre']} "
+            f"de {cantidad_actual} a {nueva_cantidad}. {motivo}"
+        )[:255]
+        cursor.execute(
+            """
+            INSERT INTO ajustes_stock
+                (producto_id, stock_anterior, stock_nuevo, diferencia, motivo, usuario_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                detalle["producto_id"],
+                stock_anterior_producto,
+                stock_nuevo_producto,
+                diferencia_stock,
+                motivo_ajuste,
+                usuario_id,
+            ),
+        )
+        cursor.execute(
+            """
+            INSERT INTO movimientos (tipo, descripcion, usuario_id)
+            VALUES (%s, %s, %s)
+            """,
+            (
+                "Correccion",
+                (
+                    f"{detalle['placa']}: {detalle['nombre']} "
+                    f"de -{cantidad_actual} a -{nueva_cantidad} "
+                    f"{_unidad_salida(detalle['abreviatura'])} / {motivo}"
+                )[:255],
+                usuario_id,
+            ),
+        )
+        return True, "Salida corregida y stock actualizado correctamente."
 
     return ejecutar_transaccion(operacion)
 

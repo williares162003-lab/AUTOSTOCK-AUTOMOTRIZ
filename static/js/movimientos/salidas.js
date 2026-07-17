@@ -5,6 +5,11 @@ const linesContainer = document.querySelector("[data-output-lines]");
 const lineTemplate = document.querySelector("[data-output-line-template]");
 const addLineButton = document.querySelector("[data-add-output-line]");
 const cancelOutputForms = document.querySelectorAll("[data-cancel-output-form]");
+const correctionDialog = document.querySelector("[data-output-correction-dialog]");
+const correctionForm = document.querySelector("[data-output-correction-form]");
+const correctionProduct = document.querySelector("[data-output-correction-product]");
+const correctionQuantity = document.querySelector("[data-output-correction-quantity]");
+const correctionHelp = document.querySelector("[data-output-correction-help]");
 
 function toNumber(value) {
   const number = Number.parseFloat(String(value || "0").replace(",", "."));
@@ -321,6 +326,25 @@ cancelOutputForms.forEach((form) => {
       return;
     }
     form.querySelector("input[name='motivo']").value = reason.trim();
+  });
+});
+
+document.querySelectorAll("[data-correct-output-detail]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!correctionDialog || !correctionForm) return;
+    correctionForm.action = button.dataset.action;
+    correctionQuantity.value = formatInputQuantity(button.dataset.current);
+    correctionProduct.textContent = button.dataset.product || "Producto seleccionado";
+    correctionHelp.textContent = `Actual: ${formatQuantity(button.dataset.current)} ${button.dataset.unit || ""}`;
+    correctionDialog.showModal();
+    correctionQuantity.focus();
+    correctionQuantity.select();
+  });
+});
+
+document.querySelectorAll("[data-close-output-correction]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (correctionDialog?.open) correctionDialog.close();
   });
 });
 

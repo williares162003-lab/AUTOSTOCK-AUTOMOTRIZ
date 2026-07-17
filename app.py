@@ -58,6 +58,7 @@ from movimientos_kardexAD import (
 )
 from movimientos_salidasAD import (
     anular_salida as anular_salida_ad,
+    corregir_detalle_salida as corregir_detalle_salida_ad,
     listar_salidas,
     listar_vehiculos,
     registrar_salida,
@@ -328,6 +329,22 @@ def anular_salida(salida_id):
     )
     flash(mensaje, "success" if correcto else "error")
     return redirect(url_for("salidas"))
+
+
+@app.post("/movimientos/salidas/detalle/<int:detalle_id>/corregir")
+@login_requerido
+@csrf_requerido
+def corregir_detalle_salida(detalle_id):
+    correcto, mensaje = corregir_detalle_salida_ad(
+        detalle_id,
+        request.form,
+        session["usuario"]["id"],
+    )
+    flash(mensaje, "success" if correcto else "error")
+    return_to = request.form.get("return_to", "")
+    if not return_to.startswith("/") or return_to.startswith("//"):
+        return_to = url_for("salidas")
+    return redirect(return_to)
 
 
 @app.get("/movimientos/kardex")

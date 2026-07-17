@@ -141,6 +141,7 @@ def _entradas(producto_id, fecha_inicio, fecha_fin, area_id=None, tipo_id=None, 
         es_caja = fila["origen_stock"] == "caja_cerrada"
         movimientos.append(
             {
+                "detalle_id": fila["id"],
                 "fecha": fila["fecha"],
                 "producto_id": fila["producto_id"],
                 "producto": fila["producto"],

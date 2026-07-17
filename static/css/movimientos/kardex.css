@@ -190,6 +190,92 @@
   color: #b91c1c;
 }
 
+.muted-action {
+  color: #94a3b8;
+  font-weight: 800;
+}
+
+.kardex-correction-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 0;
+  color: #263447;
+  background: #ffffff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+}
+
+.kardex-correction-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.kardex-correction-dialog form {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.kardex-correction-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.kardex-correction-dialog h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.kardex-correction-dialog p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kardex-correction-dialog label,
+.kardex-correction-dialog label > span,
+.kardex-correction-dialog small {
+  display: block;
+}
+
+.kardex-correction-dialog label > span {
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.kardex-correction-dialog input,
+.kardex-correction-dialog textarea {
+  width: 100%;
+  padding: 10px 12px;
+  color: #263447;
+  background: #ffffff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  outline: 0;
+}
+
+.kardex-correction-dialog textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.kardex-correction-dialog input:focus,
+.kardex-correction-dialog textarea:focus {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px rgba(78, 115, 152, 0.12);
+}
+
+.kardex-correction-dialog small {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 @media (max-width: 1100px) {
   .kardex-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
