@@ -711,6 +711,33 @@ class InventarioAppTests(unittest.TestCase):
         self.assertIn("p.categoria_id = %s", sql)
         self.assertEqual(parametros, (2, 8, 13))
 
+    @patch("movimientos_kardexAD.consultar_todos")
+    def test_kardex_output_exposes_detail_id_for_corrections(self, consultar):
+        consultar.return_value = [
+            {
+                "id": 55,
+                "producto_id": 9,
+                "cantidad_base": Decimal("3.000"),
+                "origen_stock": "suelto",
+                "stock_anterior": Decimal("7.000"),
+                "stock_nuevo": Decimal("4.000"),
+                "fecha": "2026-07-14 13:59:29",
+                "placa": "BTH-931",
+                "modelo": "Toyota Hilux",
+                "trabajador": "Ivan",
+                "producto": "Filtro de aceite",
+                "marca": None,
+                "abreviatura": "und",
+                "usuario": "William",
+            }
+        ]
+
+        movimientos, errores = listar_movimientos_kardex_con_errores({"tipo": "salida"})
+
+        self.assertEqual(errores, [])
+        self.assertEqual(movimientos[0]["detalle_id"], 55)
+        self.assertEqual(movimientos[0]["tipo_clase"], "salida")
+
     @patch("app.registrar_salida", return_value=(True, "Salida registrada correctamente."))
     def test_almacen_can_submit_output(self, registrar):
         response = self.client.post(
